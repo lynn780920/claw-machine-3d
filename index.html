@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="zh-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>3D 娃娃機模擬器 - TOY STORY 自由暢玩版</title>
+  </head>
+  <body>
+    <div id="app">
+      <!-- 3D Viewport -->
+      <div id="canvas-container">
+        <canvas id="three-canvas"></canvas>
+      </div>
+
+      <!-- Minimal Floating Status Badge (Top-Center) -->
+      <div class="top-status-bar">
+        <div class="status-badge" id="claw-status">狀態: 準備就緒，請操控下爪</div>
+      </div>
+
+      <!-- Floating Toggle Settings Button (Top-Right) -->
+      <button class="toggle-settings-btn" id="toggle-settings-btn">
+        ⚙️ DIP 主板設定
+      </button>
+
+      <!-- Desktop & Mobile Control Console -->
+      <div class="console-overlay">
+        <div class="drop-action">
+          <button class="drop-arcade-btn" id="drop-btn">
+            <span>下爪 / 二收</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Mobile Touch Screen Control Overlay (Touch Joystick & Touch Button) -->
+      <div class="mobile-touch-ui" id="mobile-touch-ui">
+        <!-- Touch Virtual Joystick Base -->
+        <div class="joystick-touch-base" id="joystick-touch-base">
+          <div class="joystick-touch-stick" id="joystick-touch-stick"></div>
+        </div>
+
+        <!-- Touch Action Drop Button -->
+        <button class="mobile-touch-drop-btn" id="mobile-drop-btn">
+          <span>下爪 / 二收</span>
+        </button>
+      </div>
+
+      <!-- Settings & Stats Panel (Collapsible Drawer) -->
+      <div class="settings-panel collapsed" id="settings-panel">
+        <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center;">
+          <h2>DIP 後台主板設定</h2>
+          <button id="close-settings-btn" class="close-panel-btn">✖</button>
+        </div>
+
+        <h3 class="section-title">遊玩數據統計</h3>
+        <div class="stats-grid">
+          <div class="stat-box">
+            <div class="stat-label">剩餘幣數</div>
+            <div class="stat-val" id="stat-coins">0</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">累計遊玩</div>
+            <div class="stat-val" id="stat-plays">0</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">出貨次數</div>
+            <div class="stat-val highlight" id="stat-wins">0</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">出貨率</div>
+            <div class="stat-val" id="stat-rate">0%</div>
+          </div>
+        </div>
+
+        <h3 class="section-title">主板微調開關 (DIP SWITCH)</h3>
+        
+        <div class="setting-group" style="flex-direction: row; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 6px; border: 1px solid rgba(0, 240, 255, 0.2);">
+          <label style="margin: 0; color: #00f0ff; font-weight: bold;">防甩片功能 (Anti-Swing)</label>
+          <select id="setting-antiswing" style="padding: 4px 10px; border-color: #00f0ff;">
+            <option value="disabled" selected>關閉 (允許甩爪 擬真擺幅)</option>
+            <option value="enabled">開啟 (極小擺幅)</option>
+          </select>
+        </div>
+
+        <div class="setting-group">
+          <label>底爪強電壓 (底夾最高力矩) <span class="value" id="val-strong">100%</span></label>
+          <input type="range" id="setting-strong" min="10" max="100" step="5" value="100">
+        </div>
+
+        <div class="setting-group">
+          <label>電壓轉弱觸發高度 (上升門檻) <span class="value" id="val-height">45%</span></label>
+          <input type="range" id="setting-height" min="10" max="90" step="5" value="45">
+        </div>
+
+        <div class="setting-group">
+          <label>轉弱維持電壓 (弱爪維持力) <span class="value" id="val-weak">40%</span></label>
+          <input type="range" id="setting-weak" min="5" max="60" step="5" value="40">
+        </div>
+
+        <div class="setting-group">
+          <label>觸頂震落機率 (撞天車震落) <span class="value" id="val-tophit">25%</span></label>
+          <input type="range" id="setting-tophit" min="0" max="100" step="5" value="25">
+        </div>
+
+        <div class="setting-group">
+          <label>天車平移速度 <span class="value" id="val-speed">4.0</span></label>
+          <input type="range" id="setting-speed" min="1.5" max="8.0" step="0.5" value="4.0">
+        </div>
+
+        <div class="setting-group">
+          <label>下爪長度 (最大下線深度) <span class="value" id="val-length">10.0</span></label>
+          <input type="range" id="setting-length" min="5.0" max="12.0" step="0.5" value="10.0">
+        </div>
+
+        <div class="setting-group">
+          <label>出貨口擋板高度 <span class="value" id="val-baffle">1.2</span></label>
+          <input type="range" id="setting-baffle" min="0.3" max="3.0" step="0.1" value="1.2">
+        </div>
+
+        <div class="setting-group">
+          <label>鋪貨娃娃數量 <span class="value" id="val-dolls">20</span></label>
+          <input type="range" id="setting-dolls" min="5" max="50" step="1" value="20">
+        </div>
+
+        <div class="setting-group" style="flex-direction: row; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.3); padding: 8px 10px; border-radius: 6px; border: 1px solid rgba(234, 179, 8, 0.3); margin-top: 5px;">
+          <label style="margin: 0; color: #eab308; font-weight: bold;">鋪貨形狀種類</label>
+          <select id="setting-prizetype" style="padding: 4px 10px; border-color: #eab308; background: #0f172a; color: #fff; border-radius: 4px;">
+            <option value="mixed" selected>🧸 混合 (熊熊 + 公仔盒)</option>
+            <option value="bear">🧸 純熊熊玩偶</option>
+            <option value="block">📦 純港版標準公仔盒</option>
+            <option value="sphere">🔮 圓形扭蛋球</option>
+          </select>
+        </div>
+
+        <div style="display: flex; gap: 10px; margin-top: 5px;">
+          <button class="btn btn-cyan" style="flex: 1;" id="reset-toys-btn">重置鋪貨</button>
+          <button class="btn" style="flex: 1;" id="reset-stats-btn">清除統計</button>
+        </div>
+
+        <button class="btn btn-cyan" style="width: 100%; margin-top: 8px; background: linear-gradient(135deg, #059669, #10b981); border: 1px solid #34d399; color: #ffffff;" id="reset-presets-btn">⚡ 恢復黃金最佳推薦設定</button>
+
+        <button class="btn" style="width: 100%; margin-top: 8px; background: linear-gradient(135deg, #7c3aed, #4c1d95); border: 1px solid #a78bfa;" id="open-manual-btn">📖 檢視主板微調說明書</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Manual Modal Overlay -->
+  <div id="manual-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); backdrop-filter: blur(6px); z-index: 9999; justify-content: center; align-items: center; padding: 20px;">
+    <div style="background: #1e293b; color: #f8fafc; border: 1px solid #00f0ff; border-radius: 12px; max-width: 650px; width: 100%; max-height: 85vh; overflow-y: auto; padding: 24px; box-shadow: 0 20px 50px rgba(0,240,255,0.25);">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; padding-bottom: 12px; margin-bottom: 16px;">
+        <h2 style="margin: 0; color: #00f0ff; font-size: 1.25rem;">📋 3D 娃娃機 專業甩爪術語與 DIP SWITCH 調校說明書</h2>
+        <button id="close-manual-btn" style="background: transparent; border: none; color: #94a3b8; font-size: 1.5rem; cursor: pointer;">✕</button>
+      </div>
+      <div style="font-size: 0.9rem; line-height: 1.6; color: #cbd5e1;">
+        <h4 style="color: #eab308; margin-top: 0; margin-bottom: 8px;">🎯 台灣街機專業「甩爪拍數」定義 (Swing Beats)：</h4>
+        <ul>
+          <li><strong style="color: #39ff14;">一拍 (1 Beat)：</strong> 天車移動向外擺動第 1 次擺幅時，直接下爪。</li>
+          <li><strong style="color: #39ff14;">二拍 (2 Beats)：</strong> 天車向外擺動後回擺，在第 2 次正向擺幅最高點時下爪（標準甩爪）。</li>
+          <li><strong style="color: #39ff14;">2.5 拍 (2.5 Beats)：</strong> 在第 2 次擺幅回擺的反向半拍點下爪（用反向甩幅斜向深入娃娃堆）。</li>
+          <li><strong style="color: #39ff14;">三拍 (3 Beats)：</strong> 來回擺動 3 次積累極限最大擺幅後下爪（適合大甩出貨口）。</li>
+        </ul>
+        <hr style="border-color: #334155; margin: 12px 0;">
+        <h4 style="color: #38bdf8; margin-bottom: 8px;">⚡ 電壓爪力與主板參數說明：</h4>
+        <p><strong style="color: #f43f5e;">底爪強電壓 (底夾最高力矩)：</strong> 下爪到底合爪時的最高抓住力矩。數值越高抱盒越扎實。</p>
+        <p><strong style="color: #f43f5e;">電壓轉弱觸發高度：</strong> 抓到娃娃上升途中，強爪轉為弱爪的高度界線（如 45% 代表升到 45% 高度時電壓轉弱）。</p>
+        <p><strong style="color: #f43f5e;">轉弱維持電壓：</strong> 電壓轉弱後維持娃娃不掉落的基礎電壓。設為 40% 剛好能保持適度握力。</p>
+        <p><strong style="color: #f43f5e;">觸頂震落機率：</strong> 上升觸頂瞬間 (Top Hit) 撞擊頂軌的震落概率。</p>
+        <p><strong style="color: #f43f5e;">出貨口擋板高度：</strong> 可調壓克力擋板高低。越高越難出貨，越低越容易槍位出貨。</p>
+        <p><strong style="color: #f43f5e;">鋪貨數量：</strong> 支援 5~50 隻高密度娃娃實體碰撞，絕不穿透。</p>
+      </div>
+    </div>
+  </div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
