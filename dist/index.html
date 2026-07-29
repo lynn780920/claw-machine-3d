@@ -5,8 +5,8 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>3D 娃娃機模擬器 - TOY STORY 自由暢玩版</title>
-    <script type="module" crossorigin src="./assets/index-D45NvkiG.js"></script>
-    <link rel="stylesheet" crossorigin href="./assets/index-Ya-8Ctqb.css">
+    <script type="module" crossorigin src="/claw-machine-3d/assets/index-Bhz_NFyH.js"></script>
+    <link rel="stylesheet" crossorigin href="/claw-machine-3d/assets/index-F0NK_aw4.css">
   </head>
   <body>
     <div id="app">
@@ -34,17 +34,17 @@
         </div>
       </div>
 
-      <!-- Mobile Touch Screen Control Overlay (Touch Joystick & Touch Button) -->
+      <!-- Mobile Touch Screen Control Overlay (Touch Button on Left, Touch Joystick on Right) -->
       <div class="mobile-touch-ui" id="mobile-touch-ui">
-        <!-- Touch Virtual Joystick Base -->
-        <div class="joystick-touch-base" id="joystick-touch-base">
-          <div class="joystick-touch-stick" id="joystick-touch-stick"></div>
-        </div>
-
-        <!-- Touch Action Drop Button -->
+        <!-- Touch Action Drop Button (Left Side) -->
         <button class="mobile-touch-drop-btn" id="mobile-drop-btn">
           <span>下爪 / 二收</span>
         </button>
+
+        <!-- Touch Virtual Joystick Base (Right Side) -->
+        <div class="joystick-touch-base" id="joystick-touch-base">
+          <div class="joystick-touch-stick" id="joystick-touch-stick"></div>
+        </div>
       </div>
 
       <!-- Settings & Stats Panel (Collapsible Drawer) -->
@@ -56,10 +56,6 @@
 
         <h3 class="section-title">遊玩數據統計</h3>
         <div class="stats-grid">
-          <div class="stat-box">
-            <div class="stat-label">剩餘幣數</div>
-            <div class="stat-val" id="stat-coins">0</div>
-          </div>
           <div class="stat-box">
             <div class="stat-label">累計遊玩</div>
             <div class="stat-val" id="stat-plays">0</div>
