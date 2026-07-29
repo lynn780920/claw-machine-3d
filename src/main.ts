@@ -409,8 +409,8 @@ function setupUIEventListeners() {
     };
 
     const handleTouchMove = (e: TouchEvent) => {
-      e.preventDefault();
       if (touchId === null) return;
+      e.preventDefault();
       for (let i = 0; i < e.changedTouches.length; i++) {
         if (e.changedTouches[i].identifier === touchId) {
           const touch = e.changedTouches[i];
