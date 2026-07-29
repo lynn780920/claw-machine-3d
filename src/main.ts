@@ -278,12 +278,12 @@ function applyDIPSettings() {
 }
 
 function updateStatsUI() {
-  coinsEl.textContent = coins.toString();
-  playsEl.textContent = plays.toString();
-  winsEl.textContent = wins.toString();
+  if (coinsEl) coinsEl.textContent = coins.toString();
+  if (playsEl) playsEl.textContent = plays.toString();
+  if (winsEl) winsEl.textContent = wins.toString();
 
   const rate = plays > 0 ? Math.round((wins / plays) * 100) : 0;
-  rateEl.textContent = rate + '%';
+  if (rateEl) rateEl.textContent = rate + '%';
 
   // Enable action button if coins exist
   updateActionButtonState();

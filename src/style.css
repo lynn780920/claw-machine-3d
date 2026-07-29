@@ -221,11 +221,34 @@ body {
   font-weight: 600;
 }
 
-/* Stats dashboard */
+/* Stats dashboard (3 columns) */
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+@media (max-width: 900px) {
+  .settings-panel {
+    width: 88vw;
+    max-width: 380px;
+    height: 100vh;
+    position: fixed;
+    top: 0;
+    right: 0;
+    z-index: 200;
+    box-shadow: -10px 0 30px rgba(0, 0, 0, 0.25);
+    background: rgba(255, 255, 255, 0.96);
+    backdrop-filter: blur(20px);
+  }
+
+  .settings-panel.collapsed {
+    transform: translateX(100%);
+  }
+
+  .settings-panel.open {
+    transform: translateX(0);
+  }
 }
 
 .stat-box {
@@ -416,15 +439,5 @@ body {
 @media (max-width: 900px) {
   #app {
     flex-direction: column;
-  }
-  .settings-panel {
-    width: 100%;
-    height: auto;
-    max-height: 40vh;
-    border-left: none;
-    border-top: 2px solid var(--neon-pink);
-  }
-  .console-overlay {
-    bottom: calc(40vh + 15px);
   }
 }
