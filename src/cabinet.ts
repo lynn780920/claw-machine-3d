@@ -19,7 +19,7 @@ export class Cabinet {
   public chuteMaxX = -1.5;
   public chuteMinZ = 1.5;
   public chuteMaxZ = 4.5;
-  public chuteWallHeight = 1.2;
+  public chuteWallHeight = 0.5;
 
   // Drop Target Indicator
   public dropIndicatorGroup: THREE.Group;

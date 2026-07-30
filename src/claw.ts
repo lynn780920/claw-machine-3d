@@ -45,10 +45,10 @@ export class Claw {
 
   /* ── Configuration ── */
   public config = {
-    moveSpeed: 4.2,
+    moveSpeed: 4.0,
     dropSpeed: 3.8,
     raiseSpeed: 3.0,
-    maxRopeLength: 5.8,
+    maxRopeLength: 13.5,
     minRopeLength: 1.0,
 
     strongStiffness: 250.0,
@@ -57,7 +57,7 @@ export class Claw {
 
     antiSwingEnabled: false, // Default: false (允許甩爪 擬真大擺幅)
     topHitProbability: 0.25,
-    weakHeightThreshold: 0.45,
+    weakHeightThreshold: 0.60, // 60%
     topHitForce: 6.0,
 
     clawOpenAngle: 0.85,       // Wide open angle (~49 deg outward)

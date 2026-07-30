@@ -541,18 +541,19 @@ function setupUIEventListeners() {
   // Reset to Optimal Presets
   document.getElementById('reset-presets-btn')!.addEventListener('click', () => {
     (document.getElementById('setting-strong') as HTMLInputElement).value = '100';
-    (document.getElementById('setting-height') as HTMLInputElement).value = '45';
+    (document.getElementById('setting-height') as HTMLInputElement).value = '60';
     (document.getElementById('setting-weak') as HTMLInputElement).value = '40';
     (document.getElementById('setting-tophit') as HTMLInputElement).value = '25';
     (document.getElementById('setting-speed') as HTMLInputElement).value = '4.0';
-    (document.getElementById('setting-length') as HTMLInputElement).value = '10.0';
-    (document.getElementById('setting-baffle') as HTMLInputElement).value = '1.2';
-    (document.getElementById('setting-dolls') as HTMLInputElement).value = '20';
+    (document.getElementById('setting-length') as HTMLInputElement).value = '13.5';
+    (document.getElementById('setting-baffle') as HTMLInputElement).value = '0.5';
+    (document.getElementById('setting-dolls') as HTMLInputElement).value = '100';
     (document.getElementById('setting-antiswing') as HTMLSelectElement).value = 'disabled';
 
     applyDIPSettings();
-    document.getElementById('val-dolls')!.textContent = '20';
-    prizesManager.spawnPrizes(20);
+    document.getElementById('val-dolls')!.textContent = '100';
+    const prizeType = (document.getElementById('setting-prizetype') as HTMLSelectElement)?.value || 'mixed';
+    prizesManager.spawnPrizes(100, prizeType);
   });
 
   // Live update sliders mapping
