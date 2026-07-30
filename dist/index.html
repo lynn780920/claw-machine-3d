@@ -5,8 +5,8 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>3D 娃娃機模擬器 - TOY STORY 自由暢玩版</title>
-    <script type="module" crossorigin src="/claw-machine-3d/assets/index-B_LXEWIo.js"></script>
-    <link rel="stylesheet" crossorigin href="/claw-machine-3d/assets/index-GELSZa1P.css">
+    <script type="module" crossorigin src="/claw-machine-3d/assets/index-BH7jvn1S.js"></script>
+    <link rel="stylesheet" crossorigin href="/claw-machine-3d/assets/index-uDc9OjrV.css">
   </head>
   <body>
     <div id="app">
@@ -23,29 +23,26 @@
         </div>
       </div>
 
-      <!-- Manual Placement Active Floating Banner (Top Center) -->
-      <div class="win-toast hidden" id="manual-place-banner" style="top: 70px; pointer-events: auto;">
-        <div class="win-toast-content" style="background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%); border-color: #c4b5fd; box-shadow: 0 10px 30px rgba(124, 58, 237, 0.5);">
-          <span class="win-toast-icon">📍</span>
-          <span class="win-toast-text" style="font-size: 0.95rem;">手動擺台模式：在機台內點擊即可放置物品！</span>
-          <button id="exit-manual-place-btn" style="background: #fbbf24; color: #000; border: none; font-weight: bold; padding: 6px 14px; border-radius: 12px; margin-left: 10px; cursor: pointer;">✅ 完成擺台</button>
+      <!-- Unified Floating Top Nav Bar (Responsive Header, Never Overlaps) -->
+      <div class="top-nav-bar">
+        <button id="bgm-toggle-btn" class="nav-pill-btn bgm">
+          🎵 <span class="nav-btn-label">背景音樂</span>
+        </button>
+        <button id="open-scratch-btn" class="nav-pill-btn scratch">
+          🎟️ <span class="nav-btn-label">金好刮</span> (<span id="scratch-chance-val-badge">0</span>)
+        </button>
+        <button id="toggle-settings-btn" class="nav-pill-btn settings">
+          ⚙️ <span class="nav-btn-label">DIP 設定</span>
+        </button>
+      </div>
+
+      <!-- Sleek Horizontal Manual Placement Capsule Bar (Top Center) -->
+      <div class="manual-place-capsule hidden" id="manual-place-banner">
+        <div class="capsule-content">
+          <span class="capsule-text">📍 點擊機台即可放置物品</span>
+          <button id="exit-manual-place-btn" class="capsule-finish-btn">✅ 完成擺台</button>
         </div>
       </div>
-
-      <!-- Floating Top Bar Buttons (BGM & Scratchcard) -->
-      <div style="position: fixed; top: 15px; left: 15px; z-index: 100; display: flex; gap: 10px;">
-        <button id="bgm-toggle-btn" class="toggle-settings-btn" style="position: static; background: linear-gradient(135deg, #0284c7, #0369a1); border-color: #38bdf8;">
-          🎵 背景音樂 (開啟)
-        </button>
-        <button id="open-scratch-btn" class="toggle-settings-btn" style="position: static; background: linear-gradient(135deg, #b91c1c, #881337); border-color: #fbbf24;">
-          🎟️ 金好刮 50 刮 (<span id="scratch-chance-val-badge">0</span>)
-        </button>
-      </div>
-
-      <!-- Floating Toggle Settings Button (Top-Right) -->
-      <button class="toggle-settings-btn" id="toggle-settings-btn">
-        ⚙️ DIP 主板設定
-      </button>
 
       <!-- Desktop & Mobile Control Console -->
       <div class="console-overlay">

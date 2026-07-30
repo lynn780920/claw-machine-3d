@@ -453,7 +453,7 @@ function setupUIEventListeners() {
   if (bgmBtn) {
     bgmBtn.addEventListener('click', () => {
       const isMuted = soundEngine.toggleMute();
-      bgmBtn.textContent = isMuted ? '🎵 背景音樂 (靜音)' : '🎵 背景音樂 (開啟)';
+      bgmBtn.innerHTML = `🎵 <span class="nav-btn-label">${isMuted ? '背景音樂 (關)' : '背景音樂 (開)'}</span>`;
     });
   }
 
