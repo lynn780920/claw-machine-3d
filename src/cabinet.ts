@@ -105,7 +105,8 @@ export class Cabinet {
       roughness: 0.3
     });
 
-    const holeMat = new THREE.MeshBasicMaterial({ color: 0x09090b });
+    const holeMat = new THREE.MeshStandardMaterial({ color: 0x09090b, roughness: 0.9, metalness: 0.1 });
+    const holeRimMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.4 });
 
     // ── 2. Cabinet Base Floor (with hole for prize chute) ──
     const addFloorSection = (minX: number, maxX: number, minZ: number, maxZ: number) => {
@@ -137,11 +138,17 @@ export class Cabinet {
     // ── 3. Chute Baffles ──
     this.rebuildBaffles(this.chuteWallHeight, physics);
 
-    // Chute Pit Hole Visual Black Box
-    const holeGeo = new THREE.BoxGeometry(3.0, 0.4, 3.0);
+    // Chute Pit Hole Visual Dark Slate Box (出貨口黑洞口)
+    const holeGeo = new THREE.BoxGeometry(3.0, 0.6, 3.0);
     const holeMesh = new THREE.Mesh(holeGeo, holeMat);
-    holeMesh.position.set(-3.0, -0.45, 3.0);
+    holeMesh.position.set(-3.0, -0.55, 3.0);
     this.mesh.add(holeMesh);
+
+    // Dark Rim Frame around the chute hole
+    const rimGeo = new THREE.BoxGeometry(3.1, 0.05, 3.1);
+    const rimMesh = new THREE.Mesh(rimGeo, holeRimMat);
+    rimMesh.position.set(-3.0, -0.01, 3.0);
+    this.mesh.add(rimMesh);
 
     // ── 4. Bright Yellow Frame Pillars ──
     const colSize = 0.38;
@@ -355,23 +362,23 @@ export class Cabinet {
     this.actionButtonMesh.name = 'actionButton';
     this.mesh.add(this.actionButtonMesh);
 
-    // Target Indicator
+    // Target Indicator (Sleek Cyan Neon Glow Ring)
     const outerIndicatorGeo = new THREE.RingGeometry(0.55, 0.6, 32);
     const outerIndicatorMat = new THREE.MeshBasicMaterial({
-      color: 0x00ff66,
+      color: 0x38bdf8,
       transparent: true,
-      opacity: 0.8,
+      opacity: 0.6,
       side: THREE.DoubleSide
     });
     this.outerRing = new THREE.Mesh(outerIndicatorGeo, outerIndicatorMat);
     this.outerRing.rotation.x = -Math.PI / 2;
     this.dropIndicatorGroup.add(this.outerRing);
 
-    const innerIndicatorGeo = new THREE.RingGeometry(0.08, 0.12, 8);
+    const innerIndicatorGeo = new THREE.RingGeometry(0.08, 0.12, 16);
     const innerIndicatorMat = new THREE.MeshBasicMaterial({
-      color: 0x00ff66,
+      color: 0x38bdf8,
       transparent: true,
-      opacity: 0.8,
+      opacity: 0.6,
       side: THREE.DoubleSide
     });
     this.innerCircle = new THREE.Mesh(innerIndicatorGeo, innerIndicatorMat);

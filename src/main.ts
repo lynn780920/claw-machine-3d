@@ -693,34 +693,46 @@ function setupKeyboardListeners() {
 }
 
 function createArcadeEnvironment(scene: THREE.Scene) {
-  // Cute Pastel Macaron Arcade Ambient Background
-  scene.background = new THREE.Color(0xfff0f5);
-  scene.fog = new THREE.FogExp2(0xfff0f5, 0.008);
+  // Cozy Professional Pastel Arcade Ambient
+  scene.background = new THREE.Color(0xfdf2f8);
+  scene.fog = new THREE.FogExp2(0xfdf2f8, 0.006);
 
-  // 1. Cute Pastel Warm Floor (Checkered Pastel Tile)
+  // 1. Polished Honey-Wood Parquet Arcade Floor (高質感日系木質地板)
   const floorCanvas = document.createElement('canvas');
-  floorCanvas.width = 512;
-  floorCanvas.height = 512;
+  floorCanvas.width = 1024;
+  floorCanvas.height = 1024;
   const fctx = floorCanvas.getContext('2d')!;
-  fctx.fillStyle = '#fff7ed';
-  fctx.fillRect(0, 0, 512, 512);
-  fctx.fillStyle = '#fed7aa';
-  for (let r = 0; r < 8; r++) {
-    for (let c = 0; c < 8; c++) {
-      if ((r + c) % 2 === 1) {
-        fctx.fillRect(c * 64, r * 64, 64, 64);
-      }
+
+  // Warm Honey Wood Base
+  fctx.fillStyle = '#fde68a';
+  fctx.fillRect(0, 0, 1024, 1024);
+
+  // Parquet Planks Texture
+  const plankH = 64;
+  const plankW = 256;
+  for (let r = 0; r < 16; r++) {
+    for (let c = 0; c < 4; c++) {
+      const offsetX = (r % 2) * 128;
+      const x = (c * plankW + offsetX) % 1024;
+      const y = r * plankH;
+
+      fctx.fillStyle = (r + c) % 2 === 0 ? '#f59e0b' : '#fbbf24';
+      fctx.fillRect(x + 2, y + 2, plankW - 4, plankH - 4);
+
+      fctx.fillStyle = '#d97706';
+      fctx.fillRect(x, y, plankW, 2);
     }
   }
+
   const floorTex = new THREE.CanvasTexture(floorCanvas);
   floorTex.wrapS = THREE.RepeatWrapping;
   floorTex.wrapT = THREE.RepeatWrapping;
-  floorTex.repeat.set(6, 6);
+  floorTex.repeat.set(4, 4);
 
   const floorMat = new THREE.MeshStandardMaterial({
     map: floorTex,
-    roughness: 0.35,
-    metalness: 0.05
+    roughness: 0.22,
+    metalness: 0.08
   });
   const floorMesh = new THREE.Mesh(new THREE.PlaneGeometry(60, 60), floorMat);
   floorMesh.rotation.x = -Math.PI / 2;
@@ -728,25 +740,32 @@ function createArcadeEnvironment(scene: THREE.Scene) {
   floorMesh.receiveShadow = true;
   scene.add(floorMesh);
 
-  // 2. Cute Wallpaper Back Wall (Pastel Pink with Star & Polka Dot Decals)
+  // 2. Professional Cute Wallpaper Back Wall (馬卡龍夢幻背景牆)
   const wallCanvas = document.createElement('canvas');
   wallCanvas.width = 1024;
   wallCanvas.height = 512;
   const wctx = wallCanvas.getContext('2d')!;
-  wctx.fillStyle = '#fce7f3';
+
+  // Gradient Pastel Pink & Cream
+  const grad = wctx.createLinearGradient(0, 0, 0, 512);
+  grad.addColorStop(0, '#fce7f3');
+  grad.addColorStop(1, '#fbcfe8');
+  wctx.fillStyle = grad;
   wctx.fillRect(0, 0, 1024, 512);
 
-  // Pastel Stripes & Dots
-  wctx.fillStyle = '#fbcfe8';
+  // Cute Soft Vertical Ribbons
+  wctx.fillStyle = 'rgba(244, 114, 182, 0.25)';
   for (let x = 0; x < 1024; x += 64) {
-    wctx.fillRect(x, 0, 32, 512);
+    wctx.fillRect(x, 0, 24, 512);
   }
-  wctx.fillStyle = '#f472b6';
-  for (let i = 0; i < 40; i++) {
-    const rx = (i * 137) % 1024;
-    const ry = (i * 243) % 512;
+
+  // Floating Hearts & Stars
+  wctx.fillStyle = '#ec4899';
+  for (let i = 0; i < 35; i++) {
+    const rx = (i * 157 + 30) % 1024;
+    const ry = (i * 211 + 20) % 512;
     wctx.beginPath();
-    wctx.arc(rx, ry, 12, 0, Math.PI * 2);
+    wctx.arc(rx, ry, 8, 0, Math.PI * 2);
     wctx.fill();
   }
 
@@ -757,14 +776,14 @@ function createArcadeEnvironment(scene: THREE.Scene) {
 
   const wallMat = new THREE.MeshStandardMaterial({
     map: wallTex,
-    roughness: 0.6,
+    roughness: 0.5,
     metalness: 0.05
   });
   const wallMesh = new THREE.Mesh(new THREE.PlaneGeometry(60, 30), wallMat);
   wallMesh.position.set(0, 12, -12);
   scene.add(wallMesh);
 
-  // 3. Cute Glowing Store Header Banner
+  // 3. Glowing Neon Store Header Banner
   const bannerGroup = new THREE.Group();
   bannerGroup.position.set(0, 12.5, -11.8);
 

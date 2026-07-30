@@ -204,8 +204,8 @@ export class PrizesManager {
       const bodyDesc = RAPIER.RigidBodyDesc.dynamic()
         .setTranslation(x, y, z)
         .setCcdEnabled(true)
-        .setLinearDamping(0.4)
-        .setAngularDamping(0.4);
+        .setLinearDamping(0.8)
+        .setAngularDamping(2.8);
       const body = this.physics.world.createRigidBody(bodyDesc);
 
       // Main Torso collider
@@ -285,8 +285,8 @@ export class PrizesManager {
       const bodyDesc = RAPIER.RigidBodyDesc.dynamic()
         .setTranslation(x, y, z)
         .setCcdEnabled(true)
-        .setLinearDamping(0.2)
-        .setAngularDamping(0.2);
+        .setLinearDamping(0.8)
+        .setAngularDamping(2.8);
       const body = this.physics.world.createRigidBody(bodyDesc);
       
       const colDesc = RAPIER.ColliderDesc.cuboid(w / 2, h / 2, d / 2)
@@ -322,14 +322,15 @@ export class PrizesManager {
     if (this.physics.world) {
       const bodyDesc = RAPIER.RigidBodyDesc.dynamic()
         .setTranslation(x, y, z)
-        .setLinearDamping(0.1)
-        .setAngularDamping(0.1);
+        .setCcdEnabled(true)
+        .setLinearDamping(0.5)
+        .setAngularDamping(2.0);
       const body = this.physics.world.createRigidBody(bodyDesc);
       
       const colDesc = RAPIER.ColliderDesc.ball(r)
         .setMass(0.25)
         .setFriction(0.5)
-        .setRestitution(0.6); // springy ball
+        .setRestitution(0.3);
       this.physics.world.createCollider(colDesc, body);
 
       this.physics.registerBody(body, mesh);
@@ -363,7 +364,7 @@ export class PrizesManager {
     this.prizes.push(pouchGroup);
 
     if (this.physics.world) {
-      const bodyDesc = RAPIER.RigidBodyDesc.dynamic().setTranslation(x, y, z).setCcdEnabled(true);
+      const bodyDesc = RAPIER.RigidBodyDesc.dynamic().setTranslation(x, y, z).setCcdEnabled(true).setLinearDamping(0.8).setAngularDamping(2.8);
       const body = this.physics.world.createRigidBody(bodyDesc);
       const colDesc = RAPIER.ColliderDesc.cuboid(0.45, 0.3, 0.2).setMass(0.25).setFriction(0.7);
       this.physics.world.createCollider(colDesc, body);
@@ -424,7 +425,7 @@ export class PrizesManager {
     this.prizes.push(catGroup);
 
     if (this.physics.world) {
-      const bodyDesc = RAPIER.RigidBodyDesc.dynamic().setTranslation(x, y, z).setCcdEnabled(true);
+      const bodyDesc = RAPIER.RigidBodyDesc.dynamic().setTranslation(x, y, z).setCcdEnabled(true).setLinearDamping(0.8).setAngularDamping(2.8);
       const body = this.physics.world.createRigidBody(bodyDesc);
       const c1 = RAPIER.ColliderDesc.ball(0.42).setFriction(0.7);
       const c2 = RAPIER.ColliderDesc.ball(0.35).setTranslation(0, 0.55, 0).setFriction(0.7);
@@ -452,7 +453,7 @@ export class PrizesManager {
     this.prizes.push(mesh);
 
     if (this.physics.world) {
-      const bodyDesc = RAPIER.RigidBodyDesc.dynamic().setTranslation(x, y, z).setCcdEnabled(true);
+      const bodyDesc = RAPIER.RigidBodyDesc.dynamic().setTranslation(x, y, z).setCcdEnabled(true).setLinearDamping(0.8).setAngularDamping(2.8);
       const body = this.physics.world.createRigidBody(bodyDesc);
       const colDesc = RAPIER.ColliderDesc.cylinder(len / 2, r).setMass(0.4).setFriction(0.6);
       this.physics.world.createCollider(colDesc, body);
@@ -478,7 +479,7 @@ export class PrizesManager {
     this.prizes.push(mesh);
 
     if (this.physics.world) {
-      const bodyDesc = RAPIER.RigidBodyDesc.dynamic().setTranslation(x, y, z).setCcdEnabled(true);
+      const bodyDesc = RAPIER.RigidBodyDesc.dynamic().setTranslation(x, y, z).setCcdEnabled(true).setLinearDamping(0.8).setAngularDamping(2.8);
       const body = this.physics.world.createRigidBody(bodyDesc);
       const colDesc = RAPIER.ColliderDesc.cuboid(w / 2, h / 2, d / 2).setMass(0.4).setFriction(0.5);
       this.physics.world.createCollider(colDesc, body);

@@ -12,8 +12,9 @@ export class PhysicsSystem {
     const gravity = { x: 0.0, y: -9.81, z: 0.0 };
     this.world = new RAPIER.World(gravity);
 
-    // Increase solver iterations for joint stability (default is 4)
-    this.world.integrationParameters.numSolverIterations = 8;
+    // Increase solver iterations for maximum stability and zero interpenetration/merging
+    this.world.integrationParameters.numSolverIterations = 16;
+    this.world.integrationParameters.numAdditionalSolverIterations = 8;
 
     this.isInitialized = true;
   }
