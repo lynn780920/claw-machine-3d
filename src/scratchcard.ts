@@ -148,12 +148,35 @@ export class ScratchcardManager {
       spot.appendChild(canvas);
       gridEl.appendChild(spot);
 
-      // Scratching logic with touch & mouse
-      let isScratching = false;
+      // Non-blocking toast notification helper
+      let toastTimer: number | null = null;
+      let lastNoChanceTime = 0;
+
+      const showScratchToast = (msg: string) => {
+        let toastEl = this.modalEl?.querySelector('#scratch-modal-toast') as HTMLElement;
+        if (!toastEl) {
+          toastEl = document.createElement('div');
+          toastEl.id = 'scratch-modal-toast';
+          toastEl.className = 'scratch-modal-toast';
+          this.modalEl?.querySelector('.scratch-card-container')?.appendChild(toastEl);
+        }
+        toastEl.textContent = msg;
+        toastEl.classList.remove('hidden');
+
+        if (toastTimer !== null) clearTimeout(toastTimer);
+        toastTimer = window.setTimeout(() => {
+          toastEl?.classList.add('hidden');
+          toastTimer = null;
+        }, 2500);
+      };
 
       const scratchPoint = (x: number, y: number) => {
         if (this.scratchChances <= 0 && !this.revealedGrid[i]) {
-          alert('🎟️ 刮刮卡次數已用完！請繼續夾娃娃獲得刮刮卡資格！');
+          const now = Date.now();
+          if (now - lastNoChanceTime > 2500) {
+            lastNoChanceTime = now;
+            showScratchToast('🎟️ 刮刮卡次數已用完！請繼續夾娃娃獲得資格！');
+          }
           return;
         }
 
@@ -170,9 +193,7 @@ export class ScratchcardManager {
 
           if (prizeVal.includes('獎')) {
             soundEngine.playWinSFX();
-            setTimeout(() => {
-              alert(`🎉 恭喜刮中【${prizeVal}】大獎！大吉大利！🏆`);
-            }, 300);
+            showScratchToast(`🎉 恭喜刮中【${prizeVal}】大獎！大吉大利！🏆`);
           }
         }
       };

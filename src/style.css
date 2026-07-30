@@ -869,3 +869,28 @@ body {
     padding: 10px 14px;
   }
 }
+
+/* Non-blocking scratchcard modal toast */
+.scratch-modal-toast {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(15, 23, 42, 0.95);
+  color: #fef08a;
+  border: 2px solid #fbbf24;
+  padding: 14px 24px;
+  border-radius: 30px;
+  font-size: 0.95rem;
+  font-weight: bold;
+  z-index: 10005;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+}
+
+.scratch-modal-toast.hidden {
+  opacity: 0;
+  transform: translate(-50%, -40%) scale(0.85);
+}
