@@ -27,6 +27,7 @@ let prizesManager: PrizesManager;
 
 // Interactive Mouse Joystick State
 let isMouseDraggingJoystick = false;
+let isManualPlaceMode = false;
 
 // Keyboard input buffer
 const keys: Record<string, boolean> = {
@@ -467,6 +468,52 @@ function setupUIEventListeners() {
   // Preset Random Barrier Layout (🎯 經典槍位隨機擺台)
   document.getElementById('preset-barrier-btn')?.addEventListener('click', () => {
     prizesManager.spawnRandomPresetBarrier();
+  });
+
+  // Manual Placement Mode Toggle (📍 手動擺台模式)
+  const manualBanner = document.getElementById('manual-place-banner');
+  const toggleManualBtn = document.getElementById('toggle-manual-place-btn');
+  const exitManualBtn = document.getElementById('exit-manual-place-btn');
+
+  const setManualMode = (active: boolean) => {
+    isManualPlaceMode = active;
+    if (manualBanner) {
+      if (active) {
+        manualBanner.classList.remove('hidden');
+        settingsPanel?.classList.remove('open');
+        settingsPanel?.classList.add('collapsed');
+      } else {
+        manualBanner.classList.add('hidden');
+      }
+    }
+  };
+
+  toggleManualBtn?.addEventListener('click', () => setManualMode(true));
+  exitManualBtn?.addEventListener('click', () => setManualMode(false));
+
+  // 3D Canvas Raycast Click for Manual Stock Placement (即點即擺)
+  const canvasContainer = document.getElementById('canvas-container');
+  const placePlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -0.5);
+
+  canvasContainer?.addEventListener('pointerdown', (e) => {
+    if (!isManualPlaceMode) return;
+
+    // Convert mouse to NDCs
+    const rect = renderer.domElement.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+    const y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+
+    raycaster.setFromCamera(new THREE.Vector2(x, y), camera);
+    const targetPoint = new THREE.Vector3();
+    if (raycaster.ray.intersectPlane(placePlane, targetPoint)) {
+      // Clamp position inside machine cabinet boundaries
+      const clampedX = Math.max(-3.2, Math.min(3.2, targetPoint.x));
+      const clampedZ = Math.max(-3.2, Math.min(3.2, targetPoint.z));
+      const prizeType = (document.getElementById('setting-prizetype') as HTMLSelectElement).value;
+
+      prizesManager.spawnSinglePrize(clampedX, 1.2, clampedZ, prizeType);
+      soundEngine.playScratchSFX();
+    }
   });
 
   // Reset toys

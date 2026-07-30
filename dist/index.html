@@ -5,7 +5,7 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>3D 娃娃機模擬器 - TOY STORY 自由暢玩版</title>
-    <script type="module" crossorigin src="/claw-machine-3d/assets/index-Dgp6LBqk.js"></script>
+    <script type="module" crossorigin src="/claw-machine-3d/assets/index-B_LXEWIo.js"></script>
     <link rel="stylesheet" crossorigin href="/claw-machine-3d/assets/index-GELSZa1P.css">
   </head>
   <body>
@@ -20,6 +20,15 @@
         <div class="win-toast-content">
           <span class="win-toast-icon">🎉</span>
           <span class="win-toast-text">恭喜中獎！成功夾出娃娃！🏆</span>
+        </div>
+      </div>
+
+      <!-- Manual Placement Active Floating Banner (Top Center) -->
+      <div class="win-toast hidden" id="manual-place-banner" style="top: 70px; pointer-events: auto;">
+        <div class="win-toast-content" style="background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%); border-color: #c4b5fd; box-shadow: 0 10px 30px rgba(124, 58, 237, 0.5);">
+          <span class="win-toast-icon">📍</span>
+          <span class="win-toast-text" style="font-size: 0.95rem;">手動擺台模式：在機台內點擊即可放置物品！</span>
+          <button id="exit-manual-place-btn" style="background: #fbbf24; color: #000; border: none; font-weight: bold; padding: 6px 14px; border-radius: 12px; margin-left: 10px; cursor: pointer;">✅ 完成擺台</button>
         </div>
       </div>
 
@@ -151,6 +160,8 @@
           <button class="settings-action-btn primary" id="reset-toys-btn">🔄 重置鋪貨</button>
           <button class="settings-action-btn danger" id="reset-stats-btn">🗑️ 清除統計</button>
         </div>
+
+        <button class="settings-action-btn manual" style="width: 100%; margin-top: 8px; background: linear-gradient(135deg, #8b5cf6, #7c3aed); border-color: #ddd6fe;" id="toggle-manual-place-btn">📍 進入手動擺台模式 (即點即擺)</button>
 
         <button class="settings-action-btn primary" style="width: 100%; margin-top: 8px; background: linear-gradient(135deg, #d97706, #b45309); border-color: #fcd34d;" id="preset-barrier-btn">🎯 經典槍位隨機擺台</button>
 
