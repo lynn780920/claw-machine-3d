@@ -697,42 +697,48 @@ function createArcadeEnvironment(scene: THREE.Scene) {
   scene.background = new THREE.Color(0xfdf2f8);
   scene.fog = new THREE.FogExp2(0xfdf2f8, 0.006);
 
-  // 1. Polished Honey-Wood Parquet Arcade Floor (高質感日系木質地板)
+  // 1. Sleek Modern Cream & Pastel Slate Marble Floor (時尚簡約大理石奶油大理石地磚)
   const floorCanvas = document.createElement('canvas');
-  floorCanvas.width = 1024;
-  floorCanvas.height = 1024;
+  floorCanvas.width = 512;
+  floorCanvas.height = 512;
   const fctx = floorCanvas.getContext('2d')!;
 
-  // Warm Honey Wood Base
-  fctx.fillStyle = '#fde68a';
-  fctx.fillRect(0, 0, 1024, 1024);
+  fctx.fillStyle = '#f8fafc';
+  fctx.fillRect(0, 0, 512, 512);
 
-  // Parquet Planks Texture
-  const plankH = 64;
-  const plankW = 256;
-  for (let r = 0; r < 16; r++) {
+  // Soft Pastel Slate Marble Tiles
+  fctx.fillStyle = '#e2e8f0';
+  for (let r = 0; r < 4; r++) {
     for (let c = 0; c < 4; c++) {
-      const offsetX = (r % 2) * 128;
-      const x = (c * plankW + offsetX) % 1024;
-      const y = r * plankH;
-
-      fctx.fillStyle = (r + c) % 2 === 0 ? '#f59e0b' : '#fbbf24';
-      fctx.fillRect(x + 2, y + 2, plankW - 4, plankH - 4);
-
-      fctx.fillStyle = '#d97706';
-      fctx.fillRect(x, y, plankW, 2);
+      if ((r + c) % 2 === 1) {
+        fctx.fillRect(c * 128, r * 128, 128, 128);
+      }
     }
+  }
+
+  // Subtle Gold Seam Lines
+  fctx.strokeStyle = '#cbd5e1';
+  fctx.lineWidth = 4;
+  for (let i = 0; i <= 512; i += 128) {
+    fctx.beginPath();
+    fctx.moveTo(i, 0);
+    fctx.lineTo(i, 512);
+    fctx.stroke();
+    fctx.beginPath();
+    fctx.moveTo(0, i);
+    fctx.lineTo(512, i);
+    fctx.stroke();
   }
 
   const floorTex = new THREE.CanvasTexture(floorCanvas);
   floorTex.wrapS = THREE.RepeatWrapping;
   floorTex.wrapT = THREE.RepeatWrapping;
-  floorTex.repeat.set(4, 4);
+  floorTex.repeat.set(8, 8);
 
   const floorMat = new THREE.MeshStandardMaterial({
     map: floorTex,
-    roughness: 0.22,
-    metalness: 0.08
+    roughness: 0.15,
+    metalness: 0.1
   });
   const floorMesh = new THREE.Mesh(new THREE.PlaneGeometry(60, 60), floorMat);
   floorMesh.rotation.x = -Math.PI / 2;

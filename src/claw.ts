@@ -554,6 +554,36 @@ export class Claw {
         }
         break;
 
+      case 'OPENING':
+        // Outward physical push force & flip torque on nearby prize corners when opening (放爪推角翻肉物理)
+        if (prizesManager && prizesManager.bodies.length > 0) {
+          const clawPos = this.baseMesh.position;
+          const clawTipY = clawPos.y - 0.7;
+          for (const pBody of prizesManager.bodies) {
+            const pos = pBody.translation();
+            const dx = pos.x - clawPos.x;
+            const dy = pos.y - clawTipY;
+            const dz = pos.z - clawPos.z;
+            const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+
+            if (dist < 1.25) {
+              const nx = dx / (dist || 1);
+              const nz = dz / (dist || 1);
+              const pushForce = 0.28 * (1.25 - dist);
+
+              // Apply outward impulse & rotational flip torque
+              pBody.applyImpulse({ x: nx * pushForce, y: pushForce * 0.45, z: nz * pushForce }, true);
+              pBody.applyTorqueImpulse({ x: nz * pushForce * 0.25, y: pushForce * 0.15, z: -nx * pushForce * 0.25 }, true);
+            }
+          }
+        }
+
+        if (this.stateTimer > 0.6) {
+          this.state = 'RETURNING';
+          this.stateTimer = 0;
+        }
+        break;
+
       case 'RETURNING': {
         const homeX = -3.0;
         const homeZ = 3.0;
