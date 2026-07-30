@@ -62,9 +62,9 @@ export class ScratchcardManager {
     if (this.countEl) {
       this.countEl.textContent = this.scratchChances.toString();
     }
-    const chanceBadge = document.getElementById('scratch-chance-badge');
-    if (chanceBadge) {
-      chanceBadge.textContent = `🎟️ 剩餘刮刮卡次數: ${this.scratchChances}`;
+    const navBadge = document.getElementById('scratch-chance-val-badge');
+    if (navBadge) {
+      navBadge.textContent = this.scratchChances.toString();
     }
   }
 
@@ -139,8 +139,8 @@ export class ScratchcardManager {
 
       // Canvas Foil Overlay (Dark Circle)
       const canvas = document.createElement('canvas');
-      canvas.width = 70;
-      canvas.height = 70;
+      canvas.width = 100;
+      canvas.height = 100;
       const ctx = canvas.getContext('2d')!;
 
       // Draw dark foil circle
@@ -172,7 +172,7 @@ export class ScratchcardManager {
         }, 2500);
       };
 
-      const scratchPoint = (x: number, y: number) => {
+      const scratchPoint = (clientX: number, clientY: number) => {
         if (this.scratchChances <= 0 && !this.revealedGrid[i]) {
           const now = Date.now();
           if (now - lastNoChanceTime > 2500) {
@@ -182,9 +182,15 @@ export class ScratchcardManager {
           return;
         }
 
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / (rect.width || 1);
+        const scaleY = canvas.height / (rect.height || 1);
+        const cx = (clientX - rect.left) * scaleX;
+        const cy = (clientY - rect.top) * scaleY;
+
         ctx.globalCompositeOperation = 'destination-out';
         ctx.beginPath();
-        ctx.arc(x, y, 16, 0, Math.PI * 2);
+        ctx.arc(cx, cy, 35, 0, Math.PI * 2);
         ctx.fill();
         soundEngine.playScratchSFX();
 
@@ -200,59 +206,43 @@ export class ScratchcardManager {
         }
       };
 
-      canvas.addEventListener('mousedown', (e) => {
+      let isScratching = false;
+
+      canvas.addEventListener('pointerdown', (e) => {
         isScratching = true;
-        const rect = canvas.getBoundingClientRect();
-        scratchPoint(e.clientX - rect.left, e.clientY - rect.top);
+        scratchPoint(e.clientX, e.clientY);
       });
 
-      canvas.addEventListener('mousemove', (e) => {
+      canvas.addEventListener('pointermove', (e) => {
         if (isScratching) {
-          const rect = canvas.getBoundingClientRect();
-          scratchPoint(e.clientX - rect.left, e.clientY - rect.top);
+          scratchPoint(e.clientX, e.clientY);
         }
       });
 
-      window.addEventListener('mouseup', () => { isScratching = false; });
-
-      canvas.addEventListener('touchstart', (e) => {
-        isScratching = true;
-        const rect = canvas.getBoundingClientRect();
-        const touch = e.touches[0];
-        scratchPoint(touch.clientX - rect.left, touch.clientY - rect.top);
-      });
-
-      canvas.addEventListener('touchmove', (e) => {
-        if (isScratching) {
-          const rect = canvas.getBoundingClientRect();
-          const touch = e.touches[0];
-          scratchPoint(touch.clientX - rect.left, touch.clientY - rect.top);
-        }
-      });
-
-      canvas.addEventListener('touchend', () => { isScratching = false; });
+      window.addEventListener('pointerup', () => { isScratching = false; });
+      window.addEventListener('pointercancel', () => { isScratching = false; });
     }
   }
 
   private drawFoil(ctx: CanvasRenderingContext2D, isAlreadyRevealed: boolean) {
     if (isAlreadyRevealed) {
-      ctx.clearRect(0, 0, 70, 70);
+      ctx.clearRect(0, 0, 100, 100);
       return;
     }
 
     ctx.fillStyle = '#1e293b';
     ctx.beginPath();
-    ctx.arc(35, 35, 32, 0, Math.PI * 2);
+    ctx.arc(50, 50, 46, 0, Math.PI * 2);
     ctx.fill();
 
     ctx.strokeStyle = '#38bdf8';
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 3;
     ctx.stroke();
 
     ctx.fillStyle = '#94a3b8';
-    ctx.font = 'bold 12px sans-serif';
+    ctx.font = 'bold 16px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('刮開', 35, 39);
+    ctx.fillText('刮開', 50, 56);
   }
 }
 
