@@ -74,29 +74,29 @@ export class ScratchcardManager {
       <div class="scratch-card-container">
         <!-- Header Banner matching Screenshot 2 -->
         <div class="scratch-header">
-          <div class="scratch-title-box">
-            <span class="gold-badge">金好刮</span>
-            <span class="gold-english">GOLDGOOD</span>
+          <div class="scratch-header-top">
+            <div class="scratch-title-box">
+              <span class="gold-badge">金好刮</span>
+              <span class="gold-english">GOLDGOOD</span>
+            </div>
+            <div class="scratch-chances-box">
+              <span>可刮次數: <strong id="scratch-chances-val">0</strong> 次</span>
+              <button class="close-scratch-btn" id="close-scratch-btn">✕</button>
+            </div>
           </div>
           <div class="scratch-rules-box">
-            <div class="rules-title">加贈活動說明</div>
-            <ul>
-              <li>• 夾取商品掉進洞口後，即可獲得 1 次刮刮卡資格。</li>
-              <li>• 活動為額外贈送，主辦擁有更改或提前結束活動權利。</li>
-              <li>• 盤面包含 50 個刮孔，包含 A 獎、B 獎、C 獎 3 大獎項！</li>
-            </ul>
-          </div>
-          <div class="scratch-chances-box">
-            <span>可刮次數: <strong id="scratch-chances-val">0</strong> 次</span>
-            <button class="close-scratch-btn" id="close-scratch-btn">✕</button>
+            <div class="rules-title">加贈活動說明：</div>
+            <div class="rules-desc">• 夾取商品掉進洞口後獲得 1 次刮刮卡資格。盤面包含 50 個刮孔，隱藏 A 獎、B 獎、C 獎 3 大大獎！</div>
           </div>
         </div>
 
         <!-- 5x10 Scratch Grid -->
         <div class="scratch-grid" id="scratch-grid"></div>
 
+        <!-- Footer Action Buttons: Large Primary Close Button -->
         <div class="scratch-footer">
-          <button class="reset-scratch-btn" id="reset-scratch-btn">🔄 重置 50 刮刮卡盤面</button>
+          <button class="close-scratch-footer-btn" id="close-scratch-footer-btn">✖ 關閉刮刮樂視窗</button>
+          <button class="reset-scratch-btn" id="reset-scratch-btn">🔄 重置 50 刮盤面</button>
         </div>
       </div>
     `;
@@ -105,13 +105,15 @@ export class ScratchcardManager {
     this.modalEl = modal;
     this.countEl = modal.querySelector('#scratch-chances-val');
 
-    modal.querySelector('#close-scratch-btn')?.addEventListener('click', () => {
-      this.closeModal();
-    });
+    const doClose = () => this.closeModal();
+    modal.querySelector('#close-scratch-btn')?.addEventListener('click', doClose);
+    modal.querySelector('#close-scratch-footer-btn')?.addEventListener('click', doClose);
 
     modal.querySelector('#reset-scratch-btn')?.addEventListener('click', () => {
-      this.initPrizes();
-      this.renderGrid();
+      if (confirm('確定要清空並重置 50 刮刮卡盤面嗎？')) {
+        this.initPrizes();
+        this.renderGrid();
+      }
     });
   }
 

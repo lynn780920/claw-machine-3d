@@ -692,24 +692,31 @@ body {
 
 .scratch-header {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  background: rgba(0, 0, 0, 0.35);
+  flex-direction: column;
+  gap: 10px;
+  background: rgba(0, 0, 0, 0.4);
   padding: 12px 16px;
   border-radius: 12px;
   border: 1px solid rgba(251, 191, 36, 0.4);
-  margin-bottom: 16px;
+  margin-bottom: 14px;
+}
+
+.scratch-header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
 }
 
 .scratch-title-box {
   display: flex;
-  flex-direction: column;
+  align-items: baseline;
+  gap: 8px;
 }
 
 .gold-badge {
   font-family: 'Orbitron', sans-serif;
-  font-size: 1.6rem;
+  font-size: 1.5rem;
   font-weight: 900;
   color: #fef08a;
   text-shadow: 0 0 10px rgba(254, 240, 138, 0.6);
@@ -723,37 +730,42 @@ body {
 }
 
 .scratch-rules-box {
-  flex: 1;
-  font-size: 0.78rem;
+  font-size: 0.8rem;
   color: #fef08a;
+  background: rgba(251, 191, 36, 0.1);
+  padding: 8px 12px;
+  border-radius: 8px;
+  border-left: 3px solid #fbbf24;
+  line-height: 1.4;
 }
-.scratch-rules-box ul {
-  margin: 0;
-  padding-left: 10px;
-  list-style: none;
+
+.rules-title {
+  font-weight: bold;
+  color: #fbbf24;
+  margin-bottom: 2px;
 }
 
 .scratch-chances-box {
   display: flex;
   align-items: center;
-  gap: 12px;
-  font-size: 0.95rem;
+  gap: 10px;
+  font-size: 0.9rem;
   color: #ffffff;
 }
 
 .scratch-chances-box strong {
   font-family: 'Orbitron', sans-serif;
   color: #5bb3f8;
-  font-size: 1.4rem;
+  font-size: 1.3rem;
 }
 
 .close-scratch-btn {
   background: rgba(255, 255, 255, 0.2);
   border: none;
   color: #fff;
-  font-size: 1.3rem;
-  width: 32px;
-  height: 32px;
+  font-size: 1.2rem;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
   cursor: pointer;
 }
@@ -762,9 +774,9 @@ body {
 .scratch-grid {
   display: grid;
   grid-template-columns: repeat(10, 1fr);
-  gap: 8px;
+  gap: 6px;
   background: rgba(254, 243, 199, 0.95);
-  padding: 16px;
+  padding: 12px;
   border-radius: 12px;
   border: 2px dashed #f59e0b;
 }
@@ -807,24 +819,53 @@ body {
 
 .scratch-footer {
   display: flex;
+  gap: 10px;
   justify-content: center;
+  align-items: center;
   margin-top: 14px;
 }
 
-.reset-scratch-btn {
-  background: linear-gradient(135deg, #0284c7, #0369a1);
+.close-scratch-footer-btn {
+  flex: 2;
+  background: linear-gradient(135deg, #10b981, #059669);
   color: #fff;
-  border: 1px solid #38bdf8;
-  padding: 10px 24px;
-  border-radius: 20px;
-  font-weight: bold;
+  border: 2px solid #6ee7b7;
+  padding: 12px 20px;
+  border-radius: 25px;
+  font-size: 1.0rem;
+  font-weight: 900;
   cursor: pointer;
-  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3);
+  box-shadow: 0 6px 18px rgba(16, 185, 129, 0.4);
+  transition: transform 0.15s ease;
 }
 
-@media (max-width: 768px) {
+.close-scratch-footer-btn:active {
+  transform: scale(0.96);
+}
+
+.reset-scratch-btn {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.15);
+  color: #fef08a;
+  border: 1px solid rgba(254, 240, 138, 0.4);
+  padding: 10px 14px;
+  border-radius: 20px;
+  font-size: 0.82rem;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+@media (max-width: 600px) {
+  .scratch-card-container {
+    padding: 12px;
+  }
   .scratch-grid {
     grid-template-columns: repeat(5, 1fr);
-    gap: 6px;
+    gap: 5px;
+    padding: 8px;
+  }
+  .close-scratch-footer-btn {
+    font-size: 0.9rem;
+    padding: 10px 14px;
   }
 }
