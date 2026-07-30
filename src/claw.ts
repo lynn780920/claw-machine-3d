@@ -509,7 +509,9 @@ export class Claw {
             const dx = pos.x - finalX;
             const dy = pos.y - clawTipY;
             const dz = pos.z - finalZ;
-            if (Math.sqrt(dx * dx + dy * dy + dz * dz) < 1.25) {
+            const distXZ = Math.sqrt(dx * dx + dz * dz);
+            // Deep descent check: Trigger when claw fingers physically reach doll (distXZ < 0.75m & absDY < 0.55m)
+            if (distXZ < 0.75 && Math.abs(dy) < 0.55) {
               touchedPrize = true;
               break;
             }
@@ -661,12 +663,13 @@ export class Claw {
 
     if (nearestBody) {
       const targetBody = nearestBody as RAPIER.RigidBody;
-      const prizePos = targetBody.translation();
 
-      // Relative offset
-      const relX = prizePos.x - basePos.x;
-      const relY = prizePos.y - basePos.y;
-      const relZ = prizePos.z - basePos.z;
+      // Position prize snuggly inside the 3 metal claw prongs cup (y = basePos.y - 0.75)
+      targetBody.setTranslation({
+        x: basePos.x,
+        y: basePos.y - 0.75,
+        z: basePos.z
+      }, true);
 
       targetBody.setLinvel({ x: 0, y: 0, z: 0 }, true);
       targetBody.setAngvel({ x: 0, y: 0, z: 0 }, true);
@@ -674,14 +677,14 @@ export class Claw {
       for (let i = 0; i < targetBody.numColliders(); i++) {
         const col = targetBody.collider(i);
         col.setSensor(false);
-        col.setFriction(0.3);
-        col.setRestitution(0.1);
+        col.setFriction(0.5);
+        col.setRestitution(0.05);
       }
 
-      // Spherical Hinge Joint: Prize sways & hangs naturally under gravity from claw tips!
+      // Spherical Hinge Joint: Anchors prize directly inside claw tip cup (y = -0.75m below base plate)
       const sphericalJointData = RAPIER.JointData.spherical(
-        { x: relX, y: relY, z: relZ },
-        { x: 0, y: 0, z: 0 }
+        { x: 0, y: -0.72, z: 0 },
+        { x: 0, y: 0.15, z: 0 }
       );
 
       const joint = physics.world.createImpulseJoint(
