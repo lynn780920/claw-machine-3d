@@ -39,10 +39,9 @@ const keys: Record<string, boolean> = {
 };
 
 // UI Elements
-const clawStatusEl = document.getElementById('claw-status')!;
-const coinsEl = document.getElementById('stat-coins')!;
-const playsEl = document.getElementById('stat-plays')!;
-const winsEl = document.getElementById('stat-wins')!;
+const coinsEl = document.getElementById('stat-coins');
+const playsEl = document.getElementById('stat-plays');
+const winsEl = document.getElementById('stat-wins');
 const rateEl = document.getElementById('stat-rate')!;
 const dropBtn = document.getElementById('drop-btn') as HTMLButtonElement;
 const insertCoinBtn = document.getElementById('insert-coin-btn') as HTMLButtonElement;
@@ -191,12 +190,18 @@ function checkWinCondition() {
   });
 }
 
+let winToastTimer: number | null = null;
+
 function showWinAlert() {
-  clawStatusEl.textContent = '🎉 恭喜出貨！ 🎉';
-  clawStatusEl.classList.add('highlight');
-  setTimeout(() => {
-    clawStatusEl.classList.remove('highlight');
-  }, 3000);
+  const toast = document.getElementById('win-toast');
+  if (toast) {
+    toast.classList.remove('hidden');
+    if (winToastTimer !== null) clearTimeout(winToastTimer);
+    winToastTimer = window.setTimeout(() => {
+      toast.classList.add('hidden');
+      winToastTimer = null;
+    }, 5000);
+  }
 }
 
 // Process keyboard controls for carriage flat XZ movement and tilt 3D joystick
@@ -324,36 +329,6 @@ function updateActionButtonState() {
 }
 
 function updateClawStateUI() {
-  if (clawStatusEl.textContent?.includes('恭喜')) return;
-
-  let stateStr = '狀態: ';
-  switch (claw.state) {
-    case 'IDLE':
-      stateStr += '準備就緒，請操控下爪';
-      break;
-    case 'DESCENDING':
-      stateStr += '爪子下降中 (可按空白鍵 二收)...';
-      break;
-    case 'GRABBING':
-      stateStr += '⚡ 電磁閥收攏 (一拍強爪)';
-      break;
-    case 'ASCENDING':
-      stateStr += '爪子上升中 (可按空白鍵 二拍強退)...';
-      break;
-    case 'TOP_HIT':
-      stateStr += '💥 觸頂撞擊！';
-      break;
-    case 'RETURNING':
-      stateStr += '天車歸位中...';
-      break;
-    case 'RELEASING':
-      stateStr += '鬆爪出貨';
-      break;
-    case 'RESETTING':
-      stateStr += '復位中...';
-      break;
-  }
-  clawStatusEl.textContent = stateStr;
   updateActionButtonState();
 }
 

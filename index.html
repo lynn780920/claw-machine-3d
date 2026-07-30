@@ -13,9 +13,12 @@
         <canvas id="three-canvas"></canvas>
       </div>
 
-      <!-- Minimal Floating Status Badge (Top-Center) -->
-      <div class="top-status-bar">
-        <div class="status-badge" id="claw-status">狀態: 準備就緒，請操控下爪</div>
+      <!-- Win Toast Popup Notification (Appears for 5s ONLY on winning prize) -->
+      <div class="win-toast hidden" id="win-toast">
+        <div class="win-toast-content">
+          <span class="win-toast-icon">🎉</span>
+          <span class="win-toast-text">恭喜中獎！成功夾出娃娃！🏆</span>
+        </div>
       </div>
 
       <!-- Floating Toggle Settings Button (Top-Right) -->
@@ -74,38 +77,38 @@
           <label style="margin: 0; color: #00f0ff; font-weight: bold;">防甩片功能 (Anti-Swing)</label>
           <select id="setting-antiswing" style="padding: 4px 10px; border-color: #00f0ff;">
             <option value="disabled" selected>關閉 (允許甩爪 擬真擺幅)</option>
-            <option value="enabled">開啟 (極小擺幅)</option>
+            <option value="enabled">開啟 (極致消擺 穩定防甩)</option>
           </select>
         </div>
 
         <div class="setting-group">
           <label>底爪強電壓 (底夾最高力矩) <span class="value" id="val-strong">100%</span></label>
-          <input type="range" id="setting-strong" min="10" max="100" step="5" value="100">
+          <input type="range" id="setting-strong" min="10" max="100" value="100">
         </div>
 
         <div class="setting-group">
           <label>電壓轉弱觸發高度 (上升門檻) <span class="value" id="val-height">45%</span></label>
-          <input type="range" id="setting-height" min="10" max="90" step="5" value="45">
+          <input type="range" id="setting-height" min="10" max="90" value="45">
         </div>
 
         <div class="setting-group">
           <label>轉弱維持電壓 (弱爪維持力) <span class="value" id="val-weak">40%</span></label>
-          <input type="range" id="setting-weak" min="5" max="60" step="5" value="40">
+          <input type="range" id="setting-weak" min="0" max="80" value="40">
         </div>
 
         <div class="setting-group">
           <label>觸頂震落機率 (撞天車震落) <span class="value" id="val-tophit">25%</span></label>
-          <input type="range" id="setting-tophit" min="0" max="100" step="5" value="25">
+          <input type="range" id="setting-tophit" min="0" max="100" value="25">
         </div>
 
         <div class="setting-group">
           <label>天車平移速度 <span class="value" id="val-speed">4.0</span></label>
-          <input type="range" id="setting-speed" min="1.5" max="8.0" step="0.5" value="4.0">
+          <input type="range" id="setting-speed" min="1.0" max="8.0" step="0.5" value="4.0">
         </div>
 
         <div class="setting-group">
-          <label>下爪長度 (最大下線深度) <span class="value" id="val-length">10.0</span></label>
-          <input type="range" id="setting-length" min="5.0" max="12.0" step="0.5" value="10.0">
+          <label>下爪下探極限線長 <span class="value" id="val-length">10.0</span></label>
+          <input type="range" id="setting-length" min="5.0" max="15.0" step="0.5" value="10.0">
         </div>
 
         <div class="setting-group">
@@ -128,17 +131,16 @@
           </select>
         </div>
 
-        <div style="display: flex; gap: 10px; margin-top: 5px;">
-          <button class="btn btn-cyan" style="flex: 1;" id="reset-toys-btn">重置鋪貨</button>
-          <button class="btn" style="flex: 1;" id="reset-stats-btn">清除統計</button>
+        <div class="settings-btn-row">
+          <button class="settings-action-btn primary" id="reset-toys-btn">🔄 重置鋪貨</button>
+          <button class="settings-action-btn danger" id="reset-stats-btn">🗑️ 清除統計</button>
         </div>
 
-        <button class="btn btn-cyan" style="width: 100%; margin-top: 8px; background: linear-gradient(135deg, #059669, #10b981); border: 1px solid #34d399; color: #ffffff;" id="reset-presets-btn">⚡ 恢復黃金最佳推薦設定</button>
+        <button class="settings-action-btn preset" id="reset-presets-btn">⚡ 恢復黃金最佳推薦設定</button>
 
-        <button class="btn" style="width: 100%; margin-top: 8px; background: linear-gradient(135deg, #7c3aed, #4c1d95); border: 1px solid #a78bfa;" id="open-manual-btn">📖 檢視主板微調說明書</button>
+        <button class="settings-action-btn manual" id="open-manual-btn">📖 檢視主板微調說明書</button>
       </div>
     </div>
-  </div>
 
   <!-- Manual Modal Overlay -->
   <div id="manual-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); backdrop-filter: blur(6px); z-index: 9999; justify-content: center; align-items: center; padding: 20px;">

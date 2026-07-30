@@ -509,7 +509,7 @@ export class Claw {
             const dx = pos.x - finalX;
             const dy = pos.y - clawTipY;
             const dz = pos.z - finalZ;
-            if (Math.sqrt(dx * dx + dy * dy + dz * dz) < 0.85) {
+            if (Math.sqrt(dx * dx + dy * dy + dz * dz) < 1.25) {
               touchedPrize = true;
               break;
             }
@@ -584,6 +584,15 @@ export class Claw {
         }
         break;
     }
+
+    // Emergency Safety Reset Guard: Prevent getting stuck on "請等待" forever
+    if (this.state !== 'IDLE' && this.stateTimer > 15.0) {
+      this.releasePrize(physics);
+      this.targetRopeLength = this.config.minRopeLength;
+      this.targetArmAngle = this.config.clawOpenAngle;
+      this.state = 'IDLE';
+      this.stateTimer = 0;
+    }
   }
 
   /* ================================================================
@@ -592,8 +601,8 @@ export class Claw {
 
   private attemptGrab(physics: PhysicsSystem, prizesManager?: PrizesManager) {
     const basePos = this.baseMesh.position;
-    // Claw center cup volume Y (-0.65 below base plate)
-    const clawTipPos = { x: basePos.x, y: basePos.y - 0.65, z: basePos.z };
+    // Claw center cup volume Y (-0.75 below base plate)
+    const clawTipPos = { x: basePos.x, y: basePos.y - 0.75, z: basePos.z };
 
     let nearestBody: RAPIER.RigidBody | null = null;
     let nearestDist = Infinity;
@@ -608,9 +617,9 @@ export class Claw {
         const distXZ = Math.sqrt(dx * dx + dz * dz);
         const absDY = Math.abs(dy);
 
-        // Realistic 3-Prong Cup Volume Detection:
-        // Detects dolls positioned within the 3 metal claw prongs (distXZ <= 0.68m, absDY <= 0.85m)
-        if (distXZ <= 0.68 && absDY <= 0.85) {
+        // Generous 3-Prong Cup Volume Envelope:
+        // Detects dolls positioned within the 3 metal claw prongs (distXZ <= 1.15m, absDY <= 1.25m)
+        if (distXZ <= 1.15 && absDY <= 1.25) {
           const totalDist = Math.sqrt(distXZ * distXZ + dy * dy);
           if (totalDist < nearestDist) {
             nearestDist = totalDist;

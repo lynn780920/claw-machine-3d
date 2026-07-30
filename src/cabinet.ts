@@ -165,30 +165,19 @@ export class Cabinet {
     addColumn(-5, 5);
     addColumn(5, 5);
 
-    // ── 5. Yellow Side Panels with Cartoon Art Decals ──
-    const sideCanvas = document.createElement('canvas');
-    sideCanvas.width = 512;
-    sideCanvas.height = 512;
-    const sctx = sideCanvas.getContext('2d')!;
-    sctx.fillStyle = '#ffcc00';
-    sctx.fillRect(0, 0, 512, 512);
+    // ── 5. Crystal Clear Transparent Side Glass Windows (透明左右櫥窗) ──
+    const sideGlassMat = new THREE.MeshStandardMaterial({
+      color: 0xe0f7fa,
+      opacity: 0.15,
+      transparent: true,
+      roughness: 0.0,
+      metalness: 0.1,
+      side: THREE.DoubleSide
+    });
 
-    // Cartoon Circles and Character Decal Shapes
-    sctx.fillStyle = '#ff0055';
-    sctx.beginPath(); sctx.arc(120, 150, 70, 0, Math.PI * 2); sctx.fill();
-    sctx.fillStyle = '#00ccff';
-    sctx.beginPath(); sctx.arc(380, 320, 90, 0, Math.PI * 2); sctx.fill();
-    sctx.fillStyle = '#ffeedd';
-    sctx.font = '900 48px sans-serif';
-    sctx.textAlign = 'center';
-    sctx.fillText('TOY STORY', 256, 260);
-
-    const sideTex = new THREE.CanvasTexture(sideCanvas);
-    const sideDecalMat = new THREE.MeshStandardMaterial({ map: sideTex, roughness: 0.3 });
-
-    const sideWallGeo = new THREE.BoxGeometry(0.3, this.height - 1.5, 10);
+    const sideWallGeo = new THREE.BoxGeometry(0.1, this.height - 1.5, 9.6);
     const addSideWall = (x: number) => {
-      const wall = new THREE.Mesh(sideWallGeo, sideDecalMat);
+      const wall = new THREE.Mesh(sideWallGeo, sideGlassMat);
       wall.position.set(x, (this.height - 1.5) / 2, 0);
       this.mesh.add(wall);
 
