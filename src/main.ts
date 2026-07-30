@@ -5,6 +5,8 @@ import { PhysicsSystem } from './physics';
 import { Cabinet } from './cabinet';
 import { Claw } from './claw';
 import { PrizesManager } from './prizes';
+import { soundEngine } from './audio';
+import { scratchcardManager } from './scratchcard';
 
 // Game Statistics
 let coins = 0;
@@ -193,6 +195,9 @@ function checkWinCondition() {
 let winToastTimer: number | null = null;
 
 function showWinAlert() {
+  soundEngine.playWinSFX();
+  scratchcardManager.addChance(1);
+
   const toast = document.getElementById('win-toast');
   if (toast) {
     toast.classList.remove('hidden');
@@ -200,7 +205,10 @@ function showWinAlert() {
     winToastTimer = window.setTimeout(() => {
       toast.classList.add('hidden');
       winToastTimer = null;
-    }, 5000);
+
+      // Auto open Scratchcard Modal after win toast
+      scratchcardManager.openModal();
+    }, 4500);
   }
 }
 
@@ -434,6 +442,33 @@ function setupUIEventListeners() {
     window.addEventListener('touchcancel', handleTouchEnd);
   }
 
+  // Start BGM on first user click gesture
+  window.addEventListener('click', () => {
+    soundEngine.startBGM();
+  }, { once: true });
+
+  // BGM Mute/Unmute Toggle
+  const bgmBtn = document.getElementById('bgm-toggle-btn');
+  if (bgmBtn) {
+    bgmBtn.addEventListener('click', () => {
+      const isMuted = soundEngine.toggleMute();
+      bgmBtn.textContent = isMuted ? '🎵 背景音樂 (靜音)' : '🎵 背景音樂 (開啟)';
+    });
+  }
+
+  // Open Scratchcard Modal
+  const openScratchBtn = document.getElementById('open-scratch-btn');
+  if (openScratchBtn) {
+    openScratchBtn.addEventListener('click', () => {
+      scratchcardManager.openModal();
+    });
+  }
+
+  // Preset Random Barrier Layout (🎯 經典槍位隨機擺台)
+  document.getElementById('preset-barrier-btn')?.addEventListener('click', () => {
+    prizesManager.spawnRandomPresetBarrier();
+  });
+
   // Reset toys
   document.getElementById('reset-toys-btn')!.addEventListener('click', () => {
     const dollCount = parseInt((document.getElementById('setting-dolls') as HTMLInputElement).value);
@@ -610,58 +645,90 @@ function setupKeyboardListeners() {
 }
 
 function createArcadeEnvironment(scene: THREE.Scene) {
-  scene.background = new THREE.Color(0x0f172a); // Slate Arcade Ambient Background
-  scene.fog = new THREE.FogExp2(0x0f172a, 0.012);
+  // Cute Pastel Macaron Arcade Ambient Background
+  scene.background = new THREE.Color(0xfff0f5);
+  scene.fog = new THREE.FogExp2(0xfff0f5, 0.008);
 
-  // 1. Polished Arcade Store Floor
-  const floorGeo = new THREE.PlaneGeometry(50, 50);
+  // 1. Cute Pastel Warm Floor (Checkered Pastel Tile)
+  const floorCanvas = document.createElement('canvas');
+  floorCanvas.width = 512;
+  floorCanvas.height = 512;
+  const fctx = floorCanvas.getContext('2d')!;
+  fctx.fillStyle = '#fff7ed';
+  fctx.fillRect(0, 0, 512, 512);
+  fctx.fillStyle = '#fed7aa';
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      if ((r + c) % 2 === 1) {
+        fctx.fillRect(c * 64, r * 64, 64, 64);
+      }
+    }
+  }
+  const floorTex = new THREE.CanvasTexture(floorCanvas);
+  floorTex.wrapS = THREE.RepeatWrapping;
+  floorTex.wrapT = THREE.RepeatWrapping;
+  floorTex.repeat.set(6, 6);
+
   const floorMat = new THREE.MeshStandardMaterial({
-    color: 0x1e293b,
-    roughness: 0.18,
-    metalness: 0.3
+    map: floorTex,
+    roughness: 0.35,
+    metalness: 0.05
   });
-  const floorMesh = new THREE.Mesh(floorGeo, floorMat);
+  const floorMesh = new THREE.Mesh(new THREE.PlaneGeometry(60, 60), floorMat);
   floorMesh.rotation.x = -Math.PI / 2;
   floorMesh.position.y = -0.01;
   floorMesh.receiveShadow = true;
   scene.add(floorMesh);
 
-  // Floor Border Neon Strips (Cyan & Magenta)
-  const stripMat1 = new THREE.MeshBasicMaterial({ color: 0x00f0ff });
-  const stripMat2 = new THREE.MeshBasicMaterial({ color: 0xff007f });
+  // 2. Cute Wallpaper Back Wall (Pastel Pink with Star & Polka Dot Decals)
+  const wallCanvas = document.createElement('canvas');
+  wallCanvas.width = 1024;
+  wallCanvas.height = 512;
+  const wctx = wallCanvas.getContext('2d')!;
+  wctx.fillStyle = '#fce7f3';
+  wctx.fillRect(0, 0, 1024, 512);
 
-  const strip1 = new THREE.Mesh(new THREE.BoxGeometry(50, 0.02, 0.15), stripMat1);
-  strip1.position.set(0, 0.01, -10);
-  scene.add(strip1);
+  // Pastel Stripes & Dots
+  wctx.fillStyle = '#fbcfe8';
+  for (let x = 0; x < 1024; x += 64) {
+    wctx.fillRect(x, 0, 32, 512);
+  }
+  wctx.fillStyle = '#f472b6';
+  for (let i = 0; i < 40; i++) {
+    const rx = (i * 137) % 1024;
+    const ry = (i * 243) % 512;
+    wctx.beginPath();
+    wctx.arc(rx, ry, 12, 0, Math.PI * 2);
+    wctx.fill();
+  }
 
-  const strip2 = new THREE.Mesh(new THREE.BoxGeometry(50, 0.02, 0.15), stripMat2);
-  strip2.position.set(0, 0.01, 10);
-  scene.add(strip2);
+  const wallTex = new THREE.CanvasTexture(wallCanvas);
+  wallTex.wrapS = THREE.RepeatWrapping;
+  wallTex.wrapT = THREE.RepeatWrapping;
+  wallTex.repeat.set(2, 1);
 
-  // 2. Arcade Back Wall & Glowing Store Banner
-  const wallGeo = new THREE.PlaneGeometry(50, 25);
   const wallMat = new THREE.MeshStandardMaterial({
-    color: 0x0b132b,
-    roughness: 0.7,
-    metalness: 0.1
+    map: wallTex,
+    roughness: 0.6,
+    metalness: 0.05
   });
-  const wallMesh = new THREE.Mesh(wallGeo, wallMat);
-  wallMesh.position.set(0, 10, -12);
+  const wallMesh = new THREE.Mesh(new THREE.PlaneGeometry(60, 30), wallMat);
+  wallMesh.position.set(0, 12, -12);
   scene.add(wallMesh);
 
-  // Glowing Arcade Store Banner
+  // 3. Cute Glowing Store Header Banner
   const bannerGroup = new THREE.Group();
-  bannerGroup.position.set(0, 11.5, -11.8);
+  bannerGroup.position.set(0, 12.5, -11.8);
 
-  const bannerBack = new THREE.Mesh(new THREE.BoxGeometry(11, 3.2, 0.2), new THREE.MeshStandardMaterial({
-    color: 0x1e1b4b,
+  const bannerBack = new THREE.Mesh(new THREE.BoxGeometry(13, 3.4, 0.2), new THREE.MeshStandardMaterial({
+    color: 0x831843,
     roughness: 0.3,
-    metalness: 0.8
+    metalness: 0.4
   }));
   bannerGroup.add(bannerBack);
 
-  const bannerFrame = new THREE.Mesh(new THREE.BoxGeometry(11.4, 3.6, 0.1), new THREE.MeshBasicMaterial({
-    color: 0x00f0ff
+  const bannerFrame = new THREE.Mesh(new THREE.BoxGeometry(13.4, 3.8, 0.1), new THREE.MeshBasicMaterial({
+    color: 0xf472b6
   }));
   bannerFrame.position.z = -0.1;
   bannerGroup.add(bannerFrame);
@@ -671,25 +738,25 @@ function createArcadeEnvironment(scene: THREE.Scene) {
   canvas.width = 1024;
   canvas.height = 320;
   const ctx = canvas.getContext('2d')!;
-  ctx.fillStyle = '#0f172a';
+  ctx.fillStyle = '#831843';
   ctx.fillRect(0, 0, 1024, 320);
 
-  ctx.shadowColor = '#00f0ff';
+  ctx.shadowColor = '#f472b6';
   ctx.shadowBlur = 20;
-  ctx.fillStyle = '#00f0ff';
-  ctx.font = '900 58px sans-serif';
+  ctx.fillStyle = '#fce7f3';
+  ctx.font = '900 56px sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText('🎮 街機娃娃機專賣店 🏆', 512, 130);
+  ctx.fillText('🎀 夢幻星空 3D 娃娃機專賣店 🎀', 512, 130);
 
-  ctx.shadowColor = '#ff007f';
+  ctx.shadowColor = '#fbbf24';
   ctx.shadowBlur = 15;
-  ctx.fillStyle = '#ff007f';
-  ctx.font = '700 38px sans-serif';
-  ctx.fillText('✨ 挑戰極限甩爪 · 爪無虛發 ✨', 512, 220);
+  ctx.fillStyle = '#fef08a';
+  ctx.font = '700 36px sans-serif';
+  ctx.fillText('✨ 經典專業甩爪 · 歡樂 50 刮好禮雙重送 ✨', 512, 220);
 
   const logoTex = new THREE.CanvasTexture(canvas);
   const logoMat = new THREE.MeshBasicMaterial({ map: logoTex, transparent: true });
-  const logoPlane = new THREE.Mesh(new THREE.PlaneGeometry(10.5, 3.0), logoMat);
+  const logoPlane = new THREE.Mesh(new THREE.PlaneGeometry(12.5, 3.1), logoMat);
   logoPlane.position.z = 0.12;
   bannerGroup.add(logoPlane);
 

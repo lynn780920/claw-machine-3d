@@ -18,33 +18,78 @@ export class PrizesManager {
     this.clearPrizes();
 
     for (let i = 0; i < count; i++) {
-      // Keep toys inside boundaries: X: -3 to 3, Z: -3 to 1 (avoiding the chute at X:-4.5 to -1.5, Z:1.5 to 4.5)
       let x = (Math.random() - 0.5) * 6; // -3 to 3
       let z = (Math.random() - 0.5) * 6; // -3 to 3
       
-      // If it falls near the chute, nudge it away
       if (x < -1.0 && z > 1.0) {
         x += 3.0;
       }
       
-      // Stack them on top of each other
-      const y = 1.0 + (i % 4) * 1.5;
+      const y = 1.0 + (i % 4) * 1.4;
+      this.spawnPrizeByType(x, y, z, typeFilter);
+    }
+  }
 
-      let prizeType = typeFilter;
-      if (typeFilter === 'mixed') {
-        // Mixed: 60% Plush Bears, 40% Figurine Boxes (NO SPHERES BY DEFAULT!)
-        prizeType = Math.random() < 0.6 ? 'bear' : 'block';
-      }
+  // Spawn single prize at target position (for manual stocking mode)
+  spawnSinglePrize(x: number, y: number, z: number, prizeType: string) {
+    this.spawnPrizeByType(x, y, z, prizeType);
+  }
 
-      if (prizeType === 'bear') {
+  // Spawn randomized classic barrier layout (槍位隨機擺台)
+  spawnRandomPresetBarrier() {
+    this.clearPrizes();
+
+    // 1. Chute Barrier Bar/Box right next to the chute lip (槍位障礙)
+    const barrierTypes = ['long_bar', 'long_flat_box', 'block', 'pouch'];
+    const bType1 = barrierTypes[Math.floor(Math.random() * barrierTypes.length)];
+    this.spawnSinglePrize(-1.2, 1.2, 3.0, bType1);
+
+    const bType2 = barrierTypes[Math.floor(Math.random() * barrierTypes.length)];
+    this.spawnSinglePrize(-3.0, 1.2, 1.2, bType2);
+
+    // 2. Prize Stack behind the chute barrier
+    const prizeList = ['bear', 'cat', 'pouch', 'block', 'long_flat_box', 'long_bar'];
+    for (let i = 0; i < 16; i++) {
+      const rx = (Math.random() - 0.3) * 4.5; // -1.2 to 3.2
+      const rz = (Math.random() - 0.5) * 5.0;
+      const ry = 1.0 + (i % 3) * 1.2;
+      const type = prizeList[Math.floor(Math.random() * prizeList.length)];
+      this.spawnSinglePrize(rx, ry, rz, type);
+    }
+  }
+
+  private spawnPrizeByType(x: number, y: number, z: number, typeFilter: string) {
+    let prizeType = typeFilter;
+    if (typeFilter === 'mixed') {
+      const types = ['bear', 'cat', 'pouch', 'block', 'long_flat_box', 'long_bar'];
+      prizeType = types[Math.floor(Math.random() * types.length)];
+    }
+
+    switch (prizeType) {
+      case 'bear':
         this.spawnPlushBear(x, y, z);
-      } else if (prizeType === 'block') {
+        break;
+      case 'cat':
+        this.spawnCatPlush(x, y, z);
+        break;
+      case 'pouch':
+        this.spawnPouch(x, y, z);
+        break;
+      case 'long_bar':
+        this.spawnLongCushion(x, y, z);
+        break;
+      case 'long_flat_box':
+        this.spawnLongFlatBox(x, y, z);
+        break;
+      case 'block':
         this.spawnBlock(x, y, z);
-      } else if (prizeType === 'sphere') {
+        break;
+      case 'sphere':
         this.spawnSphereToy(x, y, z);
-      } else {
+        break;
+      default:
         this.spawnPlushBear(x, y, z);
-      }
+        break;
     }
   }
 
@@ -287,6 +332,156 @@ export class PrizesManager {
         .setRestitution(0.6); // springy ball
       this.physics.world.createCollider(colDesc, body);
 
+      this.physics.registerBody(body, mesh);
+      this.bodies.push(body);
+    }
+  }
+
+  // 👛 Spawn Leather Pouch/Purse
+  private spawnPouch(x: number, y: number, z: number) {
+    const pouchGroup = new THREE.Group();
+    pouchGroup.position.set(x, y, z);
+
+    const colors = [0xf43f5e, 0xa855f7, 0x0ea5e9, 0xec4899, 0x14b8a6];
+    const color = colors[Math.floor(Math.random() * colors.length)];
+    const mat = new THREE.MeshStandardMaterial({ color, roughness: 0.4, metalness: 0.2 });
+    const goldMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.9, roughness: 0.1 });
+
+    // Main pouch body
+    const bodyGeo = new THREE.BoxGeometry(0.9, 0.6, 0.4);
+    const bodyMesh = new THREE.Mesh(bodyGeo, mat);
+    bodyMesh.castShadow = true;
+    pouchGroup.add(bodyMesh);
+
+    // Zipper handle ring at top
+    const ringGeo = new THREE.TorusGeometry(0.12, 0.03, 8, 16);
+    const ringMesh = new THREE.Mesh(ringGeo, goldMat);
+    ringMesh.position.set(0, 0.35, 0);
+    pouchGroup.add(ringMesh);
+
+    this.scene.add(pouchGroup);
+    this.prizes.push(pouchGroup);
+
+    if (this.physics.world) {
+      const bodyDesc = RAPIER.RigidBodyDesc.dynamic().setTranslation(x, y, z).setCcdEnabled(true);
+      const body = this.physics.world.createRigidBody(bodyDesc);
+      const colDesc = RAPIER.ColliderDesc.cuboid(0.45, 0.3, 0.2).setMass(0.25).setFriction(0.7);
+      this.physics.world.createCollider(colDesc, body);
+      this.physics.registerBody(body, pouchGroup);
+      this.bodies.push(body);
+    }
+  }
+
+  // 🐱 Spawn Cute Cat Plush
+  private spawnCatPlush(x: number, y: number, z: number) {
+    const catGroup = new THREE.Group();
+    catGroup.position.set(x, y, z);
+
+    const colors = [0xffedd5, 0xfed7aa, 0xe2e8f0, 0x334155, 0xfbcfe8];
+    const color = colors[Math.floor(Math.random() * colors.length)];
+    const mat = new THREE.MeshStandardMaterial({ color, roughness: 0.6 });
+    const pinkMat = new THREE.MeshStandardMaterial({ color: 0xf472b6, roughness: 0.5 });
+    const blackMat = new THREE.MeshStandardMaterial({ color: 0x1e293b });
+
+    // Cat Body
+    const bodyMesh = new THREE.Mesh(new THREE.SphereGeometry(0.45, 12, 12), mat);
+    bodyMesh.castShadow = true;
+    catGroup.add(bodyMesh);
+
+    // Head
+    const headMesh = new THREE.Mesh(new THREE.SphereGeometry(0.38, 12, 12), mat);
+    headMesh.position.set(0, 0.55, 0);
+    headMesh.castShadow = true;
+    catGroup.add(headMesh);
+
+    // Cat Ears (Pointy Cone)
+    const earGeo = new THREE.ConeGeometry(0.14, 0.28, 4);
+    const leftEar = new THREE.Mesh(earGeo, pinkMat);
+    leftEar.position.set(-0.22, 0.88, 0);
+    leftEar.rotation.z = 0.2;
+    const rightEar = new THREE.Mesh(earGeo, pinkMat);
+    rightEar.position.set(0.22, 0.88, 0);
+    rightEar.rotation.z = -0.2;
+    catGroup.add(leftEar);
+    catGroup.add(rightEar);
+
+    // Eyes
+    const eyeGeo = new THREE.SphereGeometry(0.04, 8, 8);
+    const e1 = new THREE.Mesh(eyeGeo, blackMat);
+    e1.position.set(-0.14, 0.62, 0.32);
+    const e2 = new THREE.Mesh(eyeGeo, blackMat);
+    e2.position.set(0.14, 0.62, 0.32);
+    catGroup.add(e1);
+    catGroup.add(e2);
+
+    // Tail
+    const tailMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.04, 0.5, 8), mat);
+    tailMesh.position.set(0, 0.1, -0.45);
+    tailMesh.rotation.x = Math.PI / 4;
+    catGroup.add(tailMesh);
+
+    this.scene.add(catGroup);
+    this.prizes.push(catGroup);
+
+    if (this.physics.world) {
+      const bodyDesc = RAPIER.RigidBodyDesc.dynamic().setTranslation(x, y, z).setCcdEnabled(true);
+      const body = this.physics.world.createRigidBody(bodyDesc);
+      const c1 = RAPIER.ColliderDesc.ball(0.42).setFriction(0.7);
+      const c2 = RAPIER.ColliderDesc.ball(0.35).setTranslation(0, 0.55, 0).setFriction(0.7);
+      this.physics.world.createCollider(c1, body);
+      this.physics.world.createCollider(c2, body);
+      this.physics.registerBody(body, catGroup);
+      this.bodies.push(body);
+    }
+  }
+
+  // 🥖 Spawn Long Cushion/Bar (槍位長條物/長枕)
+  private spawnLongCushion(x: number, y: number, z: number) {
+    const r = 0.28;
+    const len = 1.8;
+    const colors = [0xf59e0b, 0x10b981, 0x8b5cf6, 0xef4444, 0x06b6d4];
+    const color = colors[Math.floor(Math.random() * colors.length)];
+
+    const geo = new THREE.CylinderGeometry(r, r, len, 16);
+    const mat = new THREE.MeshStandardMaterial({ color, roughness: 0.5 });
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.rotation.z = Math.PI / 2; // Horizontal bar
+    mesh.position.set(x, y, z);
+    mesh.castShadow = true;
+    this.scene.add(mesh);
+    this.prizes.push(mesh);
+
+    if (this.physics.world) {
+      const bodyDesc = RAPIER.RigidBodyDesc.dynamic().setTranslation(x, y, z).setCcdEnabled(true);
+      const body = this.physics.world.createRigidBody(bodyDesc);
+      const colDesc = RAPIER.ColliderDesc.cylinder(len / 2, r).setMass(0.4).setFriction(0.6);
+      this.physics.world.createCollider(colDesc, body);
+      this.physics.registerBody(body, mesh);
+      this.bodies.push(body);
+    }
+  }
+
+  // 📦 Spawn Long Flat Box (槍位長扁盒)
+  private spawnLongFlatBox(x: number, y: number, z: number) {
+    const w = 1.8;
+    const h = 0.38;
+    const d = 0.9;
+    const colors = [0x6366f1, 0x84cc16, 0xd946ef, 0x0284c7, 0xf97316];
+    const color = colors[Math.floor(Math.random() * colors.length)];
+
+    const geo = new THREE.BoxGeometry(w, h, d);
+    const mat = new THREE.MeshStandardMaterial({ color, roughness: 0.4, metalness: 0.2 });
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.position.set(x, y, z);
+    mesh.castShadow = true;
+    this.scene.add(mesh);
+    this.prizes.push(mesh);
+
+    if (this.physics.world) {
+      const bodyDesc = RAPIER.RigidBodyDesc.dynamic().setTranslation(x, y, z).setCcdEnabled(true);
+      const body = this.physics.world.createRigidBody(bodyDesc);
+      const colDesc = RAPIER.ColliderDesc.cuboid(w / 2, h / 2, d / 2).setMass(0.4).setFriction(0.5);
+      this.physics.world.createCollider(colDesc, body);
       this.physics.registerBody(body, mesh);
       this.bodies.push(body);
     }

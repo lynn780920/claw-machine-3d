@@ -5,8 +5,8 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>3D 娃娃機模擬器 - TOY STORY 自由暢玩版</title>
-    <script type="module" crossorigin src="/claw-machine-3d/assets/index-BaG4CnSV.js"></script>
-    <link rel="stylesheet" crossorigin href="/claw-machine-3d/assets/index-B4VS4NTg.css">
+    <script type="module" crossorigin src="/claw-machine-3d/assets/index-Dgp6LBqk.js"></script>
+    <link rel="stylesheet" crossorigin href="/claw-machine-3d/assets/index-GELSZa1P.css">
   </head>
   <body>
     <div id="app">
@@ -21,6 +21,16 @@
           <span class="win-toast-icon">🎉</span>
           <span class="win-toast-text">恭喜中獎！成功夾出娃娃！🏆</span>
         </div>
+      </div>
+
+      <!-- Floating Top Bar Buttons (BGM & Scratchcard) -->
+      <div style="position: fixed; top: 15px; left: 15px; z-index: 100; display: flex; gap: 10px;">
+        <button id="bgm-toggle-btn" class="toggle-settings-btn" style="position: static; background: linear-gradient(135deg, #0284c7, #0369a1); border-color: #38bdf8;">
+          🎵 背景音樂 (開啟)
+        </button>
+        <button id="open-scratch-btn" class="toggle-settings-btn" style="position: static; background: linear-gradient(135deg, #b91c1c, #881337); border-color: #fbbf24;">
+          🎟️ 金好刮 50 刮 (<span id="scratch-chance-val-badge">0</span>)
+        </button>
       </div>
 
       <!-- Floating Toggle Settings Button (Top-Right) -->
@@ -126,9 +136,13 @@
         <div class="setting-group" style="flex-direction: row; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.3); padding: 8px 10px; border-radius: 6px; border: 1px solid rgba(234, 179, 8, 0.3); margin-top: 5px;">
           <label style="margin: 0; color: #eab308; font-weight: bold;">鋪貨形狀種類</label>
           <select id="setting-prizetype" style="padding: 4px 10px; border-color: #eab308; background: #0f172a; color: #fff; border-radius: 4px;">
-            <option value="mixed" selected>🧸 混合 (熊熊 + 公仔盒)</option>
-            <option value="bear">🧸 純熊熊玩偶</option>
-            <option value="block">📦 純港版標準公仔盒</option>
+            <option value="mixed" selected>🧸 繽紛混合 (熊熊/錢包/扁盒/長枕)</option>
+            <option value="bear">🧸 熊熊玩偶</option>
+            <option value="cat">🐱 可愛貓咪玩偶</option>
+            <option value="pouch">👛 質感小錢包</option>
+            <option value="long_bar">🥖 槍位長條枕</option>
+            <option value="long_flat_box">📦 槍位長扁盒</option>
+            <option value="block">📦 正方公仔盒</option>
             <option value="sphere">🔮 圓形扭蛋球</option>
           </select>
         </div>
@@ -137,6 +151,8 @@
           <button class="settings-action-btn primary" id="reset-toys-btn">🔄 重置鋪貨</button>
           <button class="settings-action-btn danger" id="reset-stats-btn">🗑️ 清除統計</button>
         </div>
+
+        <button class="settings-action-btn primary" style="width: 100%; margin-top: 8px; background: linear-gradient(135deg, #d97706, #b45309); border-color: #fcd34d;" id="preset-barrier-btn">🎯 經典槍位隨機擺台</button>
 
         <button class="settings-action-btn preset" id="reset-presets-btn">⚡ 恢復黃金最佳推薦設定</button>
 
