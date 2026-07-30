@@ -53,6 +53,8 @@ export class ScratchcardManager {
   public closeModal() {
     if (this.modalEl) {
       this.modalEl.style.display = 'none';
+      const toastEl = this.modalEl.querySelector('#scratch-modal-toast');
+      if (toastEl) toastEl.classList.add('hidden');
     }
   }
 

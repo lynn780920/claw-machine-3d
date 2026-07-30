@@ -201,15 +201,16 @@ function showWinAlert() {
 
   const toast = document.getElementById('win-toast');
   if (toast) {
+    const textEl = toast.querySelector('.win-toast-text');
+    if (textEl) {
+      textEl.textContent = '恭喜中獎！成功夾出娃娃！獲得 1 次刮刮樂！🏆';
+    }
     toast.classList.remove('hidden');
     if (winToastTimer !== null) clearTimeout(winToastTimer);
     winToastTimer = window.setTimeout(() => {
       toast.classList.add('hidden');
       winToastTimer = null;
-
-      // Auto open Scratchcard Modal after win toast
-      scratchcardManager.openModal();
-    }, 4500);
+    }, 5000);
   }
 }
 
