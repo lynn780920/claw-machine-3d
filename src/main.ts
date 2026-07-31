@@ -243,53 +243,54 @@ function handleKeyboardMove(dt: number) {
   }
 }
 
-// Sync values from DIP Admin UI panel to physical variables
+// Sync values from DIP Admin UI panel to physical variables (100% Crash-Proof)
 function applyDIPSettings() {
-  const strongPercent = parseFloat((document.getElementById('setting-strong') as HTMLInputElement).value);
-  const weakPercent = parseFloat((document.getElementById('setting-weak') as HTMLInputElement).value);
-  const heightPercent = parseFloat((document.getElementById('setting-height') as HTMLInputElement).value);
-  const tophitPercent = parseFloat((document.getElementById('setting-tophit') as HTMLInputElement).value);
-  
-  const antiswing = (document.getElementById('setting-antiswing') as HTMLSelectElement).value;
-  const speed = parseFloat((document.getElementById('setting-speed') as HTMLInputElement).value);
-  const length = parseFloat((document.getElementById('setting-length') as HTMLInputElement).value);
-  const baffleHeight = parseFloat((document.getElementById('setting-baffle') as HTMLInputElement).value);
+  const getVal = (id: string, fallback: number) => {
+    const el = document.getElementById(id) as HTMLInputElement | null;
+    return el ? parseFloat(el.value) : fallback;
+  };
+  const getStr = (id: string, fallback: string) => {
+    const el = document.getElementById(id) as HTMLSelectElement | null;
+    return el ? el.value : fallback;
+  };
 
-  // Map percentages to physical motor stiffness coefficients
-  // Strong stiffness: 100% = 250.0
-  claw.config.strongStiffness = (strongPercent / 100) * 250.0;
-  
-  // Weak stiffness: 100% = 25.0, 30% = 7.5
-  claw.config.weakStiffness = (weakPercent / 100) * 25.0;
+  const strongPercent = getVal('setting-strong', 100);
+  const weakPercent = getVal('setting-weak', 40);
+  const heightPercent = getVal('setting-height', 60);
+  const tophitPercent = getVal('setting-tophit', 25);
+  const antiswing = getStr('setting-antiswing', 'disabled');
+  const speed = getVal('setting-speed', 4.0);
+  const length = getVal('setting-length', 13.5);
+  const baffleHeight = getVal('setting-baffle', 0.5);
 
-  // Medium stiffness is halfway in between
-  claw.config.mediumStiffness = (claw.config.strongStiffness + claw.config.weakStiffness) / 2;
+  if (claw && claw.config) {
+    claw.config.strongStiffness = (strongPercent / 100) * 250.0;
+    claw.config.weakStiffness = (weakPercent / 100) * 25.0;
+    claw.config.mediumStiffness = (claw.config.strongStiffness + claw.config.weakStiffness) / 2;
+    claw.config.weakHeightThreshold = heightPercent / 100;
+    claw.config.topHitProbability = tophitPercent / 100;
+    claw.config.moveSpeed = speed;
+    claw.config.maxRopeLength = length;
+    claw.config.antiSwingEnabled = (antiswing === 'enabled');
+    claw.updateAntiSwingDamping();
+  }
 
-  // Height trigger ratio
-  claw.config.weakHeightThreshold = heightPercent / 100;
+  if (cabinet) {
+    cabinet.setBaffleHeight(baffleHeight, physics);
+  }
 
-  // Top hit drop probability (0.0 to 1.0)
-  claw.config.topHitProbability = tophitPercent / 100;
+  const setTxt = (id: string, txt: string) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = txt;
+  };
 
-  // Carriage speed and cable length
-  claw.config.moveSpeed = speed;
-  claw.config.maxRopeLength = length;
-
-  // Update Chute Baffle Height in real time
-  cabinet.setBaffleHeight(baffleHeight, physics);
-
-  // Anti swing damping toggle
-  claw.config.antiSwingEnabled = (antiswing === 'enabled');
-  claw.updateAntiSwingDamping();
-
-  // Update DIP readouts
-  document.getElementById('val-strong')!.textContent = strongPercent + '%';
-  document.getElementById('val-weak')!.textContent = weakPercent + '%';
-  document.getElementById('val-height')!.textContent = heightPercent + '%';
-  document.getElementById('val-tophit')!.textContent = tophitPercent + '%';
-  document.getElementById('val-speed')!.textContent = speed.toFixed(1);
-  document.getElementById('val-length')!.textContent = length.toFixed(1);
-  document.getElementById('val-baffle')!.textContent = baffleHeight.toFixed(1);
+  setTxt('val-strong', strongPercent + '%');
+  setTxt('val-weak', weakPercent + '%');
+  setTxt('val-height', heightPercent + '%');
+  setTxt('val-tophit', tophitPercent + '%');
+  setTxt('val-speed', speed.toFixed(1));
+  setTxt('val-length', length.toFixed(1));
+  setTxt('val-baffle', baffleHeight.toFixed(1));
 }
 
 function updateStatsUI() {
@@ -572,80 +573,135 @@ function setupUIEventListeners() {
   document.getElementById('setting-antiswing')!.addEventListener('change', applyDIPSettings);
 
   // ── Machine Switching Logic (經典機台 vs K-霸 巨無霸家電玩具機台) ──
+  // Helper to force 100% synchronization of DIP UI controls and physics parameters
+  function syncDIPPanelUI(params: {
+    strong: string;
+    height: string;
+    weak: string;
+    tophit: string;
+    speed: string;
+    length: string;
+    baffle: string;
+    dolls: string;
+    antiswing: string;
+    prizetype: string;
+  }) {
+    const strongEl = document.getElementById('setting-strong') as HTMLInputElement | null;
+    const heightEl = document.getElementById('setting-height') as HTMLInputElement | null;
+    const weakEl = document.getElementById('setting-weak') as HTMLInputElement | null;
+    const tophitEl = document.getElementById('setting-tophit') as HTMLInputElement | null;
+    const speedEl = document.getElementById('setting-speed') as HTMLInputElement | null;
+    const lengthEl = document.getElementById('setting-length') as HTMLInputElement | null;
+    const baffleEl = document.getElementById('setting-baffle') as HTMLInputElement | null;
+    const dollsEl = document.getElementById('setting-dolls') as HTMLInputElement | null;
+    const antiEl = document.getElementById('setting-antiswing') as HTMLSelectElement | null;
+    const prizeEl = document.getElementById('setting-prizetype') as HTMLSelectElement | null;
+
+    const setInput = (el: HTMLInputElement | null, val: string) => {
+      if (el) {
+        el.value = val;
+        el.defaultValue = val;
+        el.setAttribute('value', val);
+      }
+    };
+
+    setInput(strongEl, params.strong);
+    setInput(heightEl, params.height);
+    setInput(weakEl, params.weak);
+    setInput(tophitEl, params.tophit);
+    setInput(speedEl, params.speed);
+    setInput(lengthEl, params.length);
+    setInput(baffleEl, params.baffle);
+    setInput(dollsEl, params.dolls);
+
+    if (antiEl) antiEl.value = params.antiswing;
+    if (prizeEl) prizeEl.value = params.prizetype;
+
+    // Update text readouts
+    const setTxt = (id: string, txt: string) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = txt;
+    };
+
+    setTxt('val-strong', params.strong + '%');
+    setTxt('val-height', params.height + '%');
+    setTxt('val-weak', params.weak + '%');
+    setTxt('val-tophit', params.tophit + '%');
+    setTxt('val-speed', parseFloat(params.speed).toFixed(1));
+    setTxt('val-length', parseFloat(params.length).toFixed(1));
+    setTxt('val-baffle', parseFloat(params.baffle).toFixed(1));
+    setTxt('val-dolls', params.dolls);
+
+    // Dispatch DOM events so range slider thumbs re-render visually in all browsers
+    [strongEl, heightEl, weakEl, tophitEl, speedEl, lengthEl, baffleEl, dollsEl].forEach(el => {
+      if (el) {
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        el.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    });
+
+    applyDIPSettings();
+  }
+
   let currentMachineMode: 'standard' | 'kbasket' = 'standard';
 
   function switchMachineMode(mode: 'standard' | 'kbasket') {
     currentMachineMode = mode;
-    const modeSelect = document.getElementById('setting-machinemode') as HTMLSelectElement;
+    const modeSelect = document.getElementById('setting-machinemode') as HTMLSelectElement | null;
     if (modeSelect) modeSelect.value = mode;
-
-    const prizeSelect = document.getElementById('setting-prizetype') as HTMLSelectElement;
 
     // Clear all existing prizes completely first!
     prizesManager.clearPrizes();
 
     if (mode === 'kbasket') {
-      // ⚡ K-霸 巨型家電玩具機台 (Exact matching parameters from user screenshot: length 2.5, dolls 20, speed 3.5, strong 79%, etc.)
+      // ⚡ K-霸 巨型家電玩具機台 (100% exact matching parameters from user screenshot)
       claw.setClawScale(1.3);
 
-      (document.getElementById('setting-strong') as HTMLInputElement).value = '79';
-      document.getElementById('val-strong')!.textContent = '79%';
+      syncDIPPanelUI({
+        strong: '79',
+        height: '60',
+        weak: '43',
+        tophit: '29',
+        speed: '3.5',
+        length: '2.5',
+        baffle: '1.1',
+        dolls: '20',
+        antiswing: 'disabled',
+        prizetype: 'giant_appliances'
+      });
 
-      (document.getElementById('setting-height') as HTMLInputElement).value = '60';
-      document.getElementById('val-height')!.textContent = '60%';
-
-      (document.getElementById('setting-weak') as HTMLInputElement).value = '43';
-      document.getElementById('val-weak')!.textContent = '43%';
-
-      (document.getElementById('setting-tophit') as HTMLInputElement).value = '29';
-      document.getElementById('val-tophit')!.textContent = '29%';
-
-      (document.getElementById('setting-speed') as HTMLInputElement).value = '3.5';
-      document.getElementById('val-speed')!.textContent = '3.5';
-
-      (document.getElementById('setting-length') as HTMLInputElement).value = '2.5';
-      document.getElementById('val-length')!.textContent = '2.5';
-
-      (document.getElementById('setting-baffle') as HTMLInputElement).value = '1.1';
-      document.getElementById('val-baffle')!.textContent = '1.1';
-      cabinet.setBaffleHeight(1.1);
-
-      (document.getElementById('setting-dolls') as HTMLInputElement).value = '20';
-      document.getElementById('val-dolls')!.textContent = '20';
-
-      (document.getElementById('setting-antiswing') as HTMLSelectElement).value = 'disabled';
-
-      applyDIPSettings();
-
-      if (prizeSelect) prizeSelect.value = 'giant_appliances';
       prizesManager.spawnPrizes(20, 'giant_appliances');
 
       controls.target.set(0, 3.2, 0);
       camera.position.set(0, 5.6, 9.2);
       controls.update();
-
-      showWinToast('⚡ 已切換至【K-霸 巨型家電玩具機台】！已自動同步圖片預設參數 (線長 2.5, 數量 20, 強電 79%)！');
     } else {
       // 👑 經典黃色 TOY STORY 娃娃機
       claw.setClawScale(1.0);
-      cabinet.setBaffleHeight(0.5);
-      (document.getElementById('setting-baffle') as HTMLInputElement).value = '0.5';
-      (document.getElementById('setting-length') as HTMLInputElement).value = '13.5';
-      document.getElementById('val-length')!.textContent = '13.5';
-      (document.getElementById('setting-dolls') as HTMLInputElement).value = '80';
-      document.getElementById('val-dolls')!.textContent = '80';
-      applyDIPSettings();
 
-      if (prizeSelect) prizeSelect.value = 'mixed';
+      syncDIPPanelUI({
+        strong: '100',
+        height: '60',
+        weak: '40',
+        tophit: '25',
+        speed: '4.0',
+        length: '13.5',
+        baffle: '0.5',
+        dolls: '80',
+        antiswing: 'disabled',
+        prizetype: 'mixed'
+      });
+
       prizesManager.spawnPrizes(80, 'mixed');
 
       controls.target.set(0, 3.2, 0);
       camera.position.set(0, 5.6, 9.2);
       controls.update();
-
-      showWinToast('👑 已切換至【經典黃色 TOY STORY 娃娃機】！線長恢復 13.5，預設 80 件娃娃！');
     }
   }
+
+  // Expose globally for instant button bindings
+  (window as any).switchMachineMode = switchMachineMode;
 
   document.getElementById('switch-machine-btn')?.addEventListener('click', () => {
     const nextMode = currentMachineMode === 'standard' ? 'kbasket' : 'standard';
@@ -657,15 +713,18 @@ function setupUIEventListeners() {
     switchMachineMode(targetMode);
   });
 
-  const dollsInput = document.getElementById('setting-dolls') as HTMLInputElement;
-  dollsInput.addEventListener('input', () => {
-    document.getElementById('val-dolls')!.textContent = dollsInput.value;
-  });
+  const dollsInput = document.getElementById('setting-dolls') as HTMLInputElement | null;
+  if (dollsInput) {
+    dollsInput.addEventListener('input', () => {
+      const valEl = document.getElementById('val-dolls');
+      if (valEl) valEl.textContent = dollsInput.value;
+    });
+  }
 
   // Collapsible Settings Panel Drawer Toggle
-  const settingsPanel = document.getElementById('settings-panel') as HTMLElement;
-  const toggleBtn = document.getElementById('toggle-settings-btn') as HTMLElement;
-  const closePanelBtn = document.getElementById('close-settings-btn') as HTMLElement;
+  const settingsPanel = document.getElementById('settings-panel') as HTMLElement | null;
+  const toggleBtn = document.getElementById('toggle-settings-btn') as HTMLElement | null;
+  const closePanelBtn = document.getElementById('close-settings-btn') as HTMLElement | null;
 
   if (toggleBtn && settingsPanel) {
     toggleBtn.addEventListener('click', () => {
@@ -681,20 +740,22 @@ function setupUIEventListeners() {
     });
   }
 
-  // Manual modal event listeners
-  const manualModal = document.getElementById('manual-modal') as HTMLElement;
-  document.getElementById('open-manual-btn')!.addEventListener('click', () => {
-    manualModal.style.display = 'flex';
-  });
-  document.getElementById('close-manual-btn')!.addEventListener('click', () => {
-    manualModal.style.display = 'none';
-  });
-  manualModal.addEventListener('click', (e) => {
-    if (e.target === manualModal) manualModal.style.display = 'none';
-  });
+  // Safe manual modal event listeners
+  const manualModal = document.getElementById('manual-modal');
+  if (manualModal) {
+    document.getElementById('open-manual-btn')?.addEventListener('click', () => {
+      manualModal.style.display = 'flex';
+    });
+    document.getElementById('close-manual-btn')?.addEventListener('click', () => {
+      manualModal.style.display = 'none';
+    });
+    manualModal.addEventListener('click', (e) => {
+      if (e.target === manualModal) manualModal.style.display = 'none';
+    });
+  }
 
-  // Apply initially
-  applyDIPSettings();
+  // Apply initial machine mode preset (Classic standard)
+  switchMachineMode('standard');
   updateStatsUI();
 }
 
