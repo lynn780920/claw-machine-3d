@@ -571,6 +571,60 @@ function setupUIEventListeners() {
   });
   document.getElementById('setting-antiswing')!.addEventListener('change', applyDIPSettings);
 
+  // ── Machine Switching Logic (經典機台 vs K-霸 巨無霸家電玩具機台) ──
+  let currentMachineMode: 'standard' | 'kbasket' = 'standard';
+
+  function switchMachineMode(mode: 'standard' | 'kbasket') {
+    currentMachineMode = mode;
+    const modeSelect = document.getElementById('setting-machinemode') as HTMLSelectElement;
+    if (modeSelect) modeSelect.value = mode;
+
+    const prizeSelect = document.getElementById('setting-prizetype') as HTMLSelectElement;
+
+    if (mode === 'kbasket') {
+      // ⚡ K-霸 巨型家電玩具機台 (1.75x Enlarged Claw + Giant PS5/Switch/Dyson Box items)
+      claw.setClawScale(1.75);
+      cabinet.setBaffleHeight(0.3);
+      (document.getElementById('setting-baffle') as HTMLInputElement).value = '0.3';
+      (document.getElementById('setting-length') as HTMLInputElement).value = '14.5';
+      applyDIPSettings();
+
+      if (prizeSelect) prizeSelect.value = 'giant_appliances';
+      prizesManager.spawnPrizes(24, 'giant_appliances');
+
+      controls.target.set(0, 3.5, 0);
+      camera.position.set(0, 5.8, 9.8);
+      controls.update();
+
+      showWinToast('⚡ 已切換至【K-霸 巨型家電玩具機台】！特大爪子已裝備，快來抓 PS5 與 Switch 大盒家電！');
+    } else {
+      // 👑 經典黃色 TOY STORY 娃娃機
+      claw.setClawScale(1.0);
+      cabinet.setBaffleHeight(0.5);
+      (document.getElementById('setting-baffle') as HTMLInputElement).value = '0.5';
+      applyDIPSettings();
+
+      if (prizeSelect) prizeSelect.value = 'mixed';
+      prizesManager.spawnPrizes(40, 'mixed');
+
+      controls.target.set(0, 3.2, 0);
+      camera.position.set(0, 5.6, 9.2);
+      controls.update();
+
+      showWinToast('👑 已切換至【經典黃色 TOY STORY 娃娃機】！');
+    }
+  }
+
+  document.getElementById('switch-machine-btn')?.addEventListener('click', () => {
+    const nextMode = currentMachineMode === 'standard' ? 'kbasket' : 'standard';
+    switchMachineMode(nextMode);
+  });
+
+  document.getElementById('setting-machinemode')?.addEventListener('change', (e) => {
+    const targetMode = (e.target as HTMLSelectElement).value as 'standard' | 'kbasket';
+    switchMachineMode(targetMode);
+  });
+
   const dollsInput = document.getElementById('setting-dolls') as HTMLInputElement;
   dollsInput.addEventListener('input', () => {
     document.getElementById('val-dolls')!.textContent = dollsInput.value;

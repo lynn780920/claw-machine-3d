@@ -49,6 +49,9 @@ export class PrizesManager {
     if (typeFilter === 'mixed') {
       const types = ['chiikawa', 'dragonball', 'onepiece', 'mug_box', 'sanrio_bottle', 'cookie_box', 'my_cat', 'chiikawa', 'my_cat'];
       prizeType = types[Math.floor(Math.random() * types.length)];
+    } else if (typeFilter === 'giant_appliances') {
+      const types = ['ps5', 'switch', 'dyson', 'marshall', 'lego', 'giant_bear'];
+      prizeType = types[Math.floor(Math.random() * types.length)];
     }
     switch (prizeType) {
       case 'chiikawa':    this.spawnChiikawa(x, y, z); break;
@@ -58,6 +61,12 @@ export class PrizesManager {
       case 'sanrio_bottle': this.spawnSanrioBottle(x, y, z); break;
       case 'cookie_box':  this.spawnCookieBox(x, y, z); break;
       case 'my_cat':      this.spawnCalicoCat(x, y, z); break;
+      case 'ps5':         this.spawnPS5Box(x, y, z); break;
+      case 'switch':      this.spawnSwitchBox(x, y, z); break;
+      case 'dyson':       this.spawnDysonVacuumBox(x, y, z); break;
+      case 'marshall':    this.spawnMarshallSpeaker(x, y, z); break;
+      case 'lego':        this.spawnGiantLegoBox(x, y, z); break;
+      case 'giant_bear':  this.spawnGiantTeddyBear(x, y, z); break;
       // legacy
       case 'bear': case 'cat': this.spawnChiikawa(x, y, z); break;
       case 'block': this.spawnDragonBallBox(x, y, z); break;
@@ -1035,4 +1044,287 @@ export class PrizesManager {
       this.bodies.push(phyBody);
     }
   }
+
+  // ══════════════════════════════════════════════════════════════
+  //  🎮  PS5 CONSOLE GIANT BOX (K-霸 巨無霸家電大盒)
+  //  Size: W: 1.6, H: 2.0, D: 0.9
+  // ══════════════════════════════════════════════════════════════
+  private spawnPS5Box(x: number, y: number, z: number) {
+    const W = 1.5, H = 1.9, D = 0.8;
+    const group = new THREE.Group();
+    group.position.set(x, y, z);
+    group.rotation.y = Math.random() * Math.PI * 2;
+
+    const frontTex = this.makeCanvasTex(512, 512, ctx => {
+      ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, 512, 512);
+      // Blue top header bar
+      ctx.fillStyle = '#003791'; ctx.fillRect(0, 0, 512, 100);
+      ctx.fillStyle = '#ffffff'; ctx.font = '900 48px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText('PlayStation 5', 256, 68);
+
+      // Console Graphic
+      ctx.fillStyle = '#003791'; ctx.fillRect(150, 140, 212, 280);
+      ctx.fillStyle = '#ffffff'; ctx.fillRect(170, 140, 172, 280);
+      ctx.fillStyle = '#0a0a0a'; ctx.fillRect(200, 160, 112, 240);
+
+      // Controller / PS5 logo
+      ctx.fillStyle = '#003791'; ctx.font = 'bold 36px sans-serif';
+      ctx.fillText('8K · 4K 120 · HDR', 256, 475);
+    });
+
+    const sideTex = this.makeCanvasTex(256, 512, ctx => {
+      ctx.fillStyle = '#003791'; ctx.fillRect(0, 0, 256, 512);
+      ctx.fillStyle = '#ffffff'; ctx.font = 'bold 32px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText('PS5', 128, 256);
+    });
+
+    const boxMat = new THREE.MeshStandardMaterial({ map: frontTex, roughness: 0.25, metalness: 0.1 });
+    const sideMat = new THREE.MeshStandardMaterial({ map: sideTex, roughness: 0.25, metalness: 0.1 });
+    const whiteMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.3 });
+
+    const mats = [sideMat, sideMat, whiteMat, whiteMat, boxMat, boxMat];
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(W, H, D), mats);
+    mesh.castShadow = true;
+    group.add(mesh);
+
+    this.scene.add(group);
+    this.prizes.push(group);
+
+    if (this.physics.world) {
+      const body = this.makeDynBody(x, y, z);
+      this.physics.world.createCollider(
+        RAPIER.ColliderDesc.cuboid(W / 2, H / 2, D / 2).setMass(0.6).setFriction(0.45).setRestitution(0.08), body);
+      this.physics.registerBody(body, group);
+      this.bodies.push(body);
+    }
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  //  🎮  NINTENDO SWITCH OLED BOX (K-霸 巨無霸遊戲機盒)
+  // ══════════════════════════════════════════════════════════════
+  private spawnSwitchBox(x: number, y: number, z: number) {
+    const W = 1.4, H = 1.2, D = 0.65;
+    const group = new THREE.Group();
+    group.position.set(x, y, z);
+    group.rotation.y = Math.random() * Math.PI * 2;
+
+    const frontTex = this.makeCanvasTex(512, 512, ctx => {
+      ctx.fillStyle = '#e60012'; ctx.fillRect(0, 0, 512, 512);
+      ctx.fillStyle = '#ffffff'; ctx.font = '900 44px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText('NINTENDO SWITCH', 256, 75);
+      ctx.font = '700 32px sans-serif'; ctx.fillText('OLED MODEL', 256, 120);
+
+      // Console Screen Graphic
+      ctx.fillStyle = '#1a1a1a'; ctx.fillRect(90, 160, 332, 210);
+      ctx.fillStyle = '#38bdf8'; ctx.fillRect(50, 160, 40, 210); // Left Joy-Con
+      ctx.fillStyle = '#f43f5e'; ctx.fillRect(422, 160, 40, 210); // Right Joy-Con
+    });
+
+    const boxMat = new THREE.MeshStandardMaterial({ map: frontTex, roughness: 0.25 });
+    const redMat = new THREE.MeshStandardMaterial({ color: 0xe60012, roughness: 0.3 });
+    const mats = [redMat, redMat, redMat, redMat, boxMat, boxMat];
+
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(W, H, D), mats);
+    mesh.castShadow = true;
+    group.add(mesh);
+
+    this.scene.add(group);
+    this.prizes.push(group);
+
+    if (this.physics.world) {
+      const body = this.makeDynBody(x, y, z);
+      this.physics.world.createCollider(
+        RAPIER.ColliderDesc.cuboid(W / 2, H / 2, D / 2).setMass(0.5).setFriction(0.45), body);
+      this.physics.registerBody(body, group);
+      this.bodies.push(body);
+    }
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  //  🌀  DYSON VACUUM CLEANER GIANT BOX (K-霸 家電大盒)
+  // ══════════════════════════════════════════════════════════════
+  private spawnDysonVacuumBox(x: number, y: number, z: number) {
+    const W = 0.85, H = 2.4, D = 0.75;
+    const group = new THREE.Group();
+    group.position.set(x, y, z);
+    group.rotation.y = Math.random() * Math.PI * 2;
+
+    const frontTex = this.makeCanvasTex(256, 512, ctx => {
+      ctx.fillStyle = '#1c1917'; ctx.fillRect(0, 0, 256, 512);
+      ctx.fillStyle = '#a855f7'; ctx.fillRect(0, 0, 256, 70);
+      ctx.fillStyle = '#ffffff'; ctx.font = 'bold 36px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText('dyson v15', 128, 48);
+
+      // Purple/Nickel vacuum tube art
+      ctx.fillStyle = '#a855f7'; ctx.fillRect(115, 90, 26, 320);
+      ctx.fillStyle = '#f59e0b'; ctx.fillRect(90, 410, 76, 60);
+    });
+
+    const boxMat = new THREE.MeshStandardMaterial({ map: frontTex, roughness: 0.2, metalness: 0.2 });
+    const darkMat = new THREE.MeshStandardMaterial({ color: 0x1c1917, roughness: 0.3 });
+    const mats = [darkMat, darkMat, darkMat, darkMat, boxMat, boxMat];
+
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(W, H, D), mats);
+    mesh.castShadow = true;
+    group.add(mesh);
+
+    this.scene.add(group);
+    this.prizes.push(group);
+
+    if (this.physics.world) {
+      const body = this.makeDynBody(x, y, z);
+      this.physics.world.createCollider(
+        RAPIER.ColliderDesc.cuboid(W / 2, H / 2, D / 2).setMass(0.55).setFriction(0.42), body);
+      this.physics.registerBody(body, group);
+      this.bodies.push(body);
+    }
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  //  📻  MARSHALL SPEAKER GIANT BOX
+  // ══════════════════════════════════════════════════════════════
+  private spawnMarshallSpeaker(x: number, y: number, z: number) {
+    const W = 1.5, H = 1.1, D = 0.95;
+    const group = new THREE.Group();
+    group.position.set(x, y, z);
+    group.rotation.y = Math.random() * Math.PI * 2;
+
+    const grilleTex = this.makeCanvasTex(512, 256, ctx => {
+      ctx.fillStyle = '#171717'; ctx.fillRect(0, 0, 512, 256);
+      ctx.strokeStyle = '#d4af37'; ctx.lineWidth = 14; ctx.strokeRect(10, 10, 492, 236);
+
+      // Brass logo
+      ctx.fillStyle = '#fef08a'; ctx.font = 'italic bold 58px serif'; ctx.textAlign = 'center';
+      ctx.fillText('Marshall', 256, 145);
+    });
+
+    const grilleMat = new THREE.MeshStandardMaterial({ map: grilleTex, roughness: 0.3, metalness: 0.4 });
+    const leatherMat = new THREE.MeshStandardMaterial({ color: 0x1c1917, roughness: 0.7 });
+    const mats = [leatherMat, leatherMat, leatherMat, leatherMat, grilleMat, leatherMat];
+
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(W, H, D), mats);
+    mesh.castShadow = true;
+    group.add(mesh);
+
+    this.scene.add(group);
+    this.prizes.push(group);
+
+    if (this.physics.world) {
+      const body = this.makeDynBody(x, y, z);
+      this.physics.world.createCollider(
+        RAPIER.ColliderDesc.cuboid(W / 2, H / 2, D / 2).setMass(0.55).setFriction(0.45), body);
+      this.physics.registerBody(body, group);
+      this.bodies.push(body);
+    }
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  //  🏎️  LEGO TECHNIC RACING CAR GIANT BOX
+  // ══════════════════════════════════════════════════════════════
+  private spawnGiantLegoBox(x: number, y: number, z: number) {
+    const W = 1.9, H = 1.3, D = 0.85;
+    const group = new THREE.Group();
+    group.position.set(x, y, z);
+    group.rotation.y = Math.random() * Math.PI * 2;
+
+    const frontTex = this.makeCanvasTex(512, 512, ctx => {
+      ctx.fillStyle = '#0f172a'; ctx.fillRect(0, 0, 512, 512);
+
+      // Red LEGO Logo square top left
+      ctx.fillStyle = '#e60012'; ctx.fillRect(20, 20, 90, 90);
+      ctx.fillStyle = '#ffffff'; ctx.font = '900 28px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText('LEGO', 65, 75);
+
+      ctx.fillStyle = '#eab308'; ctx.font = 'bold 36px sans-serif';
+      ctx.fillText('TECHNIC 1:8', 300, 70);
+
+      // Supercar graphic body
+      ctx.fillStyle = '#f43f5e'; ctx.beginPath();
+      ctx.ellipse(256, 320, 180, 70, 0, 0, Math.PI * 2); ctx.fill();
+    });
+
+    const boxMat = new THREE.MeshStandardMaterial({ map: frontTex, roughness: 0.25 });
+    const darkMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.3 });
+    const mats = [darkMat, darkMat, darkMat, darkMat, boxMat, boxMat];
+
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(W, H, D), mats);
+    mesh.castShadow = true;
+    group.add(mesh);
+
+    this.scene.add(group);
+    this.prizes.push(group);
+
+    if (this.physics.world) {
+      const body = this.makeDynBody(x, y, z);
+      this.physics.world.createCollider(
+        RAPIER.ColliderDesc.cuboid(W / 2, H / 2, D / 2).setMass(0.55).setFriction(0.45), body);
+      this.physics.registerBody(body, group);
+      this.bodies.push(body);
+    }
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  //  🧸  1.5M GIANT TEDDY BEAR PLUSH (K-霸 巨無霸娃娃)
+  // ══════════════════════════════════════════════════════════════
+  private spawnGiantTeddyBear(x: number, y: number, z: number) {
+    const group = new THREE.Group();
+    group.position.set(x, y, z);
+    group.rotation.y = Math.random() * Math.PI * 2;
+
+    const bearMat  = new THREE.MeshStandardMaterial({ color: 0x9a6035, roughness: 0.90 }); // Warm honey brown fur
+    const snoutMat = new THREE.MeshStandardMaterial({ color: 0xfde047, roughness: 0.85 });
+    const darkMat  = new THREE.MeshStandardMaterial({ color: 0x1c1917, roughness: 0.5 });
+    const ribbonMat= new THREE.MeshStandardMaterial({ color: 0xdc2626, roughness: 0.4 });
+
+    // Large Body
+    const body = new THREE.Mesh(new THREE.SphereGeometry(0.60, 18, 18), bearMat);
+    body.scale.set(1.05, 1.15, 0.95);
+    group.add(body);
+
+    // Large Head
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.52, 18, 18), bearMat);
+    head.position.set(0, 0.82, 0);
+    group.add(head);
+
+    // Snout & Nose
+    const snout = new THREE.Mesh(new THREE.SphereGeometry(0.22, 12, 12), snoutMat);
+    snout.position.set(0, 0.72, 0.42);
+    group.add(snout);
+    const nose = new THREE.Mesh(new THREE.SphereGeometry(0.08, 10, 10), darkMat);
+    nose.position.set(0, 0.82, 0.58);
+    group.add(nose);
+
+    // Button Eyes
+    const e1 = new THREE.Mesh(new THREE.SphereGeometry(0.07, 8, 8), darkMat);
+    e1.position.set(-0.20, 0.92, 0.45);
+    const e2 = new THREE.Mesh(new THREE.SphereGeometry(0.07, 8, 8), darkMat);
+    e2.position.set(0.20, 0.92, 0.45);
+    group.add(e1, e2);
+
+    // Round Ears
+    const ear1 = new THREE.Mesh(new THREE.SphereGeometry(0.20, 10, 10), bearMat);
+    ear1.position.set(-0.45, 1.22, 0.05);
+    const ear2 = new THREE.Mesh(new THREE.SphereGeometry(0.20, 10, 10), bearMat);
+    ear2.position.set(0.45, 1.22, 0.05);
+    group.add(ear1, ear2);
+
+    // Red Bowtie Ribbon
+    const bow = new THREE.Mesh(new THREE.BoxGeometry(0.40, 0.18, 0.12), ribbonMat);
+    bow.position.set(0, 0.35, 0.52);
+    group.add(bow);
+
+    this.scene.add(group);
+    this.prizes.push(group);
+
+    if (this.physics.world) {
+      const phyBody = this.makeDynBody(x, y, z);
+      this.physics.world.createCollider(
+        RAPIER.ColliderDesc.ball(0.58).setMass(0.3).setFriction(0.45), phyBody);
+      this.physics.world.createCollider(
+        RAPIER.ColliderDesc.ball(0.50).setTranslation(0, 0.82, 0).setFriction(0.45), phyBody);
+      this.physics.registerBody(phyBody, group);
+      this.bodies.push(phyBody);
+    }
+  }
 }
+

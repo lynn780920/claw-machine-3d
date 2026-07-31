@@ -23,6 +23,9 @@
 
       <!-- Unified Floating Top Nav Bar (Responsive Header, Never Overlaps) -->
       <div class="top-nav-bar">
+        <button id="switch-machine-btn" class="nav-pill-btn machine-switch" style="background: linear-gradient(135deg, #9333ea, #6b21a8); border: 1px solid #c084fc; color: #fff; font-weight: bold; box-shadow: 0 4px 12px rgba(147, 51, 234, 0.4);">
+          🎰 <span class="nav-btn-label">切換機台 (K-霸/經典)</span>
+        </button>
         <button id="bgm-toggle-btn" class="nav-pill-btn bgm">
           🎵 <span class="nav-btn-label">背景音樂</span>
         </button>
@@ -137,17 +140,29 @@
           <input type="range" id="setting-dolls" min="5" max="100" step="1" value="100">
         </div>
 
+        <div class="setting-group" style="flex-direction: row; justify-content: space-between; align-items: center; background: rgba(147, 51, 234, 0.25); padding: 10px; border-radius: 6px; border: 1px solid #a855f7; margin-bottom: 8px;">
+          <label style="margin: 0; color: #d8b4fe; font-weight: bold;">🎰 當前機台模式 (Machine Selection)</label>
+          <select id="setting-machinemode" style="padding: 5px 12px; border-color: #a855f7; background: #2e1065; color: #fff; border-radius: 4px; font-weight: bold;">
+            <option value="standard" selected>經典黃色 TOY STORY 娃娃機</option>
+            <option value="kbasket">⚡ K-霸 巨型家電玩具機台 (大爪子)</option>
+          </select>
+        </div>
+
         <div class="setting-group" style="flex-direction: row; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.3); padding: 8px 10px; border-radius: 6px; border: 1px solid rgba(234, 179, 8, 0.3); margin-top: 5px;">
           <label style="margin: 0; color: #eab308; font-weight: bold;">鋪貨形狀種類</label>
           <select id="setting-prizetype" style="padding: 4px 10px; border-color: #eab308; background: #0f172a; color: #fff; border-radius: 4px;">
             <option value="mixed" selected>🎀 繽紛混合 (吉依卡哇/龍珠/海賊王/馬克杯/水壺/餅乾)</option>
+            <option value="giant_appliances">⚡ K-霸 巨型家電玩具大盒 (PS5/Switch/Dyson/Marshall/Lego)</option>
             <option value="my_cat">🐱 貓咪娃娃 (三花貓)</option>
             <option value="chiikawa">🐾 吉依卡哇娃娃</option>
             <option value="dragonball">🐉 七龍珠公仔盒</option>
             <option value="onepiece">☠️ 海賊王路飛公仔盒</option>
-            <option value="mug_box">☕ 馬克杯盒裝</option>
-            <option value="sanrio_bottle">🌸 三麗鷗保溫水壺</option>
-            <option value="cookie_box">🍪 餅乾鐵盒</option>
+            <option value="ps5">🎮 PS5 主機大盒</option>
+            <option value="switch">🎮 Switch OLED 遊戲機盒</option>
+            <option value="dyson">🌀 Dyson 吸塵器大盒</option>
+            <option value="marshall">📻 Marshall 音響大盒</option>
+            <option value="lego">🏎️ LEGO 賽車積木大盒</option>
+            <option value="giant_bear">🧸 1.5M 巨型泰迪熊娃娃</option>
           </select>
         </div>
 

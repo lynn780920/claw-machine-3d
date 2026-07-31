@@ -93,6 +93,12 @@ export class Claw {
     this.build(scene, physics);
   }
 
+  public setClawScale(scaleRatio: number) {
+    if (this.baseMesh) {
+      this.baseMesh.scale.set(scaleRatio, scaleRatio, scaleRatio);
+    }
+  }
+
   /* ================================================================
      BUILD PATENT-ACCURATE ARCADE CLAW 3D MODEL
      ================================================================ */
