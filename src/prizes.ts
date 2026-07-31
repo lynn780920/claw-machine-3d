@@ -13,22 +13,21 @@ export class PrizesManager {
     this.physics = physics;
   }
 
-  // Spawn a pile of dolls inside the cabinet with shape filter option (支援 100 個堆山山崩鋪貨)
+  // Spawn a pile of prizes inside the cabinet with shape filter option
   spawnPrizes(count = 40, typeFilter: string = 'mixed') {
     this.clearPrizes();
 
     for (let i = 0; i < count; i++) {
-      let x = (Math.random() - 0.5) * 7.2; // -3.6 to 3.6
-      let z = (Math.random() - 0.5) * 7.2; // -3.6 to 3.6
-      
+      let x = (Math.random() - 0.5) * 7.2;
+      let z = (Math.random() - 0.5) * 7.2;
+
       // Avoid initial drop directly inside exit chute hole
       if (x < -1.2 && z > 1.2) {
         x += 3.2;
       }
-      
-      // Multi-tiered layered mountain stack (後高前低自然山坡)
+
+      // Multi-tiered layered mountain stack
       const tier = Math.floor(i / 12);
-      // Items in the back (+Z or +X) stack higher into a natural mountain pile
       const heightOffset = Math.max(0, (z < 0 ? -z * 0.25 : 0));
       const y = 0.8 + tier * 0.75 + heightOffset + (Math.random() * 0.2);
       this.spawnPrizeByType(x, y, z, typeFilter);
@@ -40,22 +39,20 @@ export class PrizesManager {
     this.spawnPrizeByType(x, y, z, prizeType);
   }
 
-  // Spawn randomized classic barrier layout (槍位隨機擺台)
+  // Spawn randomized classic barrier layout
   spawnRandomPresetBarrier() {
     this.clearPrizes();
 
-    // 1. Chute Barrier Bar/Box right next to the chute lip (槍位障礙)
-    const barrierTypes = ['long_bar', 'long_flat_box', 'block', 'pouch'];
+    const barrierTypes = ['mug_box', 'cookie_box', 'sanrio_bottle', 'onepiece'];
     const bType1 = barrierTypes[Math.floor(Math.random() * barrierTypes.length)];
     this.spawnSinglePrize(-1.2, 1.2, 3.0, bType1);
 
     const bType2 = barrierTypes[Math.floor(Math.random() * barrierTypes.length)];
     this.spawnSinglePrize(-3.0, 1.2, 1.2, bType2);
 
-    // 2. Prize Stack behind the chute barrier
-    const prizeList = ['bear', 'cat', 'pouch', 'block', 'long_flat_box', 'long_bar'];
+    const prizeList = ['chiikawa', 'dragonball', 'onepiece', 'mug_box', 'sanrio_bottle', 'cookie_box'];
     for (let i = 0; i < 16; i++) {
-      const rx = (Math.random() - 0.3) * 4.5; // -1.2 to 3.2
+      const rx = (Math.random() - 0.3) * 4.5;
       const rz = (Math.random() - 0.5) * 5.0;
       const ry = 1.0 + (i % 3) * 1.2;
       const type = prizeList[Math.floor(Math.random() * prizeList.length)];
@@ -66,34 +63,50 @@ export class PrizesManager {
   private spawnPrizeByType(x: number, y: number, z: number, typeFilter: string) {
     let prizeType = typeFilter;
     if (typeFilter === 'mixed') {
-      const types = ['bear', 'cat', 'pouch', 'block', 'long_flat_box', 'long_bar'];
+      const types = ['chiikawa', 'dragonball', 'onepiece', 'mug_box', 'sanrio_bottle', 'cookie_box', 'chiikawa', 'dragonball'];
       prizeType = types[Math.floor(Math.random() * types.length)];
     }
 
     switch (prizeType) {
+      case 'chiikawa':
+        this.spawnChiikawa(x, y, z);
+        break;
+      case 'dragonball':
+        this.spawnDragonBallBox(x, y, z);
+        break;
+      case 'onepiece':
+        this.spawnOnePieceBox(x, y, z);
+        break;
+      case 'mug_box':
+        this.spawnMugBox(x, y, z);
+        break;
+      case 'sanrio_bottle':
+        this.spawnSanrioBottle(x, y, z);
+        break;
+      case 'cookie_box':
+        this.spawnCookieBox(x, y, z);
+        break;
+      // Legacy types for backward compatibility
       case 'bear':
-        this.spawnPlushBear(x, y, z);
+        this.spawnChiikawa(x, y, z);
         break;
       case 'cat':
-        this.spawnCatPlush(x, y, z);
-        break;
-      case 'pouch':
-        this.spawnPouch(x, y, z);
-        break;
-      case 'long_bar':
-        this.spawnLongCushion(x, y, z);
-        break;
-      case 'long_flat_box':
-        this.spawnLongFlatBox(x, y, z);
+        this.spawnChiikawa(x, y, z);
         break;
       case 'block':
-        this.spawnBlock(x, y, z);
+        this.spawnDragonBallBox(x, y, z);
         break;
-      case 'sphere':
-        this.spawnSphereToy(x, y, z);
+      case 'long_flat_box':
+        this.spawnMugBox(x, y, z);
+        break;
+      case 'long_bar':
+        this.spawnSanrioBottle(x, y, z);
+        break;
+      case 'pouch':
+        this.spawnCookieBox(x, y, z);
         break;
       default:
-        this.spawnPlushBear(x, y, z);
+        this.spawnChiikawa(x, y, z);
         break;
     }
   }
@@ -109,182 +122,120 @@ export class PrizesManager {
     this.bodies = [];
   }
 
-  // Spawn a Bear Plush Doll (using Rapier Compound Colliders to make limbs that can be hooked!)
-  private spawnPlushBear(x: number, y: number, z: number) {
-    const bearGroup = new THREE.Group();
-    bearGroup.position.set(x, y, z);
-    
-    // Vivid plush bear colors matching reference photo
-    const colors = [0xd90429, 0x00b4d8, 0xff007f, 0xffb703, 0x7b2cbf, 0x70e000, 0xff4d6d];
-    const color = colors[Math.floor(Math.random() * colors.length)];
-    const mat = new THREE.MeshStandardMaterial({
-      color: color,
-      roughness: 0.6,
-      metalness: 0.1
-    });
+  // ======================================================
+  //  🐾 CHIIKAWA (吉依卡哇) 娃娃
+  //  圓滾滾白色小人，粉紅臉頰，大黑眼睛，小短手
+  // ======================================================
+  private spawnChiikawa(x: number, y: number, z: number) {
+    const group = new THREE.Group();
+    group.position.set(x, y, z);
 
-    const blackMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.5 });
-    const snoutMat = new THREE.MeshStandardMaterial({ color: 0xffeedd, roughness: 0.8 });
+    // Random chiikawa character color variant
+    const variants = [
+      { body: 0xf5f5f5, cheek: 0xffb3c6, ear: 0xf5f5f5 }, // Classic white Chiikawa
+      { body: 0xfff3cd, cheek: 0xffa0b4, ear: 0xfff3cd }, // Hachiware (cream striped)
+      { body: 0xe8d5f0, cheek: 0xff8fab, ear: 0xe8d5f0 }, // Usagi (lavender)
+    ];
+    const v = variants[Math.floor(Math.random() * variants.length)];
 
-    // Torso (身體) - main body
-    const bodyGeo = new THREE.SphereGeometry(0.5, 12, 12);
-    const bodyMesh = new THREE.Mesh(bodyGeo, mat);
-    bodyMesh.scale.set(1, 1.2, 1);
+    const bodyMat = new THREE.MeshStandardMaterial({ color: v.body, roughness: 0.7 });
+    const cheekMat = new THREE.MeshStandardMaterial({ color: v.cheek, roughness: 0.8 });
+    const eyeMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.3 });
+    const noseMat = new THREE.MeshStandardMaterial({ color: 0xffb3c6, roughness: 0.8 });
+    const mouthMat = new THREE.MeshStandardMaterial({ color: 0x333333 });
+
+    // Big round body (身體)
+    const bodyMesh = new THREE.Mesh(new THREE.SphereGeometry(0.46, 16, 16), bodyMat);
+    bodyMesh.scale.set(1, 1.05, 1);
     bodyMesh.castShadow = true;
-    bearGroup.add(bodyMesh);
+    group.add(bodyMesh);
 
-    // Head (頭)
-    const headGeo = new THREE.SphereGeometry(0.4, 12, 12);
-    const headMesh = new THREE.Mesh(headGeo, mat);
-    headMesh.position.set(0, 0.65, 0);
+    // Round head (頭，幾乎跟身體黏在一起)
+    const headMesh = new THREE.Mesh(new THREE.SphereGeometry(0.40, 16, 16), bodyMat);
+    headMesh.position.set(0, 0.6, 0);
     headMesh.castShadow = true;
-    bearGroup.add(headMesh);
+    group.add(headMesh);
 
-    // Snout
-    const snoutGeo = new THREE.SphereGeometry(0.12, 8, 8);
-    const snoutMesh = new THREE.Mesh(snoutGeo, snoutMat);
-    snoutMesh.position.set(0, 0.62, 0.3);
-    bearGroup.add(snoutMesh);
+    // Big round eyes (大眼睛)
+    const eyeGeo = new THREE.SphereGeometry(0.075, 12, 12);
+    const eyeWhiteGeo = new THREE.SphereGeometry(0.095, 12, 12);
+    const eyeWhiteMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
+    const leftEyeWhite = new THREE.Mesh(eyeWhiteGeo, eyeWhiteMat);
+    leftEyeWhite.position.set(-0.14, 0.65, 0.33);
+    const rightEyeWhite = new THREE.Mesh(eyeWhiteGeo, eyeWhiteMat);
+    rightEyeWhite.position.set(0.14, 0.65, 0.33);
+    group.add(leftEyeWhite);
+    group.add(rightEyeWhite);
 
-    // Nose
-    const noseGeo = new THREE.SphereGeometry(0.04, 8, 8);
-    const noseMesh = new THREE.Mesh(noseGeo, blackMat);
-    noseMesh.position.set(0, 0.66, 0.4);
-    bearGroup.add(noseMesh);
+    const leftEye = new THREE.Mesh(eyeGeo, eyeMat);
+    leftEye.position.set(-0.14, 0.65, 0.37);
+    const rightEye = new THREE.Mesh(eyeGeo, eyeMat);
+    rightEye.position.set(0.14, 0.65, 0.37);
+    group.add(leftEye);
+    group.add(rightEye);
 
-    // Eyes
-    const eyeGeo = new THREE.SphereGeometry(0.04, 8, 8);
-    const leftEye = new THREE.Mesh(eyeGeo, blackMat);
-    leftEye.position.set(-0.15, 0.72, 0.32);
-    const rightEye = new THREE.Mesh(eyeGeo, blackMat);
-    rightEye.position.set(0.15, 0.72, 0.32);
-    bearGroup.add(leftEye);
-    bearGroup.add(rightEye);
+    // Tiny eye shine highlights
+    const shineGeo = new THREE.SphereGeometry(0.025, 6, 6);
+    const shineMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    const ls = new THREE.Mesh(shineGeo, shineMat);
+    ls.position.set(-0.12, 0.67, 0.40);
+    const rs = new THREE.Mesh(shineGeo, shineMat);
+    rs.position.set(0.16, 0.67, 0.40);
+    group.add(ls);
+    group.add(rs);
 
-    // Ears
-    const earGeo = new THREE.SphereGeometry(0.12, 8, 8);
-    const leftEar = new THREE.Mesh(earGeo, mat);
-    leftEar.position.set(-0.32, 0.95, 0);
-    const rightEar = new THREE.Mesh(earGeo, mat);
-    rightEar.position.set(0.32, 0.95, 0);
-    bearGroup.add(leftEar);
-    bearGroup.add(rightEar);
+    // Round cheeks (粉紅臉頰)
+    const cheekGeo = new THREE.SphereGeometry(0.09, 8, 8);
+    const leftCheek = new THREE.Mesh(cheekGeo, cheekMat);
+    leftCheek.position.set(-0.24, 0.58, 0.32);
+    leftCheek.scale.set(1.2, 0.7, 0.5);
+    const rightCheek = new THREE.Mesh(cheekGeo, cheekMat);
+    rightCheek.position.set(0.24, 0.58, 0.32);
+    rightCheek.scale.set(1.2, 0.7, 0.5);
+    group.add(leftCheek);
+    group.add(rightCheek);
 
-    // Limbs (手腳 - 這些突出部非常適合被爪子「勾腳/勾手」！)
-    const armGeo = new THREE.CapsuleGeometry(0.12, 0.4, 4, 8);
-    const legGeo = new THREE.CapsuleGeometry(0.15, 0.45, 4, 8);
+    // Tiny nose
+    const nose = new THREE.Mesh(new THREE.SphereGeometry(0.025, 6, 6), noseMat);
+    nose.position.set(0, 0.60, 0.39);
+    group.add(nose);
 
-    // Arms
-    const leftArm = new THREE.Mesh(armGeo, mat);
-    leftArm.position.set(-0.55, 0.2, 0);
-    leftArm.rotation.z = Math.PI / 3;
+    // Small round ears
+    const earGeo = new THREE.SphereGeometry(0.12, 10, 10);
+    const leftEar = new THREE.Mesh(earGeo, bodyMat);
+    leftEar.position.set(-0.3, 0.92, 0);
+    const rightEar = new THREE.Mesh(earGeo, bodyMat);
+    rightEar.position.set(0.3, 0.92, 0);
+    group.add(leftEar);
+    group.add(rightEar);
+
+    // Tiny cute arms (小短手)
+    const armGeo = new THREE.SphereGeometry(0.12, 8, 8);
+    const leftArm = new THREE.Mesh(armGeo, bodyMat);
+    leftArm.position.set(-0.48, 0.05, 0.1);
+    leftArm.scale.set(0.7, 1, 0.8);
     leftArm.castShadow = true;
-    bearGroup.add(leftArm);
+    group.add(leftArm);
 
-    const rightArm = new THREE.Mesh(armGeo, mat);
-    rightArm.position.set(0.55, 0.2, 0);
-    rightArm.rotation.z = -Math.PI / 3;
+    const rightArm = new THREE.Mesh(armGeo, bodyMat);
+    rightArm.position.set(0.48, 0.05, 0.1);
+    rightArm.scale.set(0.7, 1, 0.8);
     rightArm.castShadow = true;
-    bearGroup.add(rightArm);
+    group.add(rightArm);
 
-    // Legs
-    const leftLeg = new THREE.Mesh(legGeo, mat);
-    leftLeg.position.set(-0.35, -0.65, 0.15);
-    leftLeg.rotation.x = Math.PI / 6;
-    leftLeg.castShadow = true;
-    bearGroup.add(leftLeg);
+    // Tiny feet
+    const footGeo = new THREE.SphereGeometry(0.13, 8, 8);
+    const leftFoot = new THREE.Mesh(footGeo, bodyMat);
+    leftFoot.position.set(-0.2, -0.52, 0.12);
+    leftFoot.scale.set(1, 0.6, 1.2);
+    group.add(leftFoot);
+    const rightFoot = new THREE.Mesh(footGeo, bodyMat);
+    rightFoot.position.set(0.2, -0.52, 0.12);
+    rightFoot.scale.set(1, 0.6, 1.2);
+    group.add(rightFoot);
 
-    const rightLeg = new THREE.Mesh(legGeo, mat);
-    rightLeg.position.set(0.35, -0.65, 0.15);
-    rightLeg.rotation.x = Math.PI / 6;
-    rightLeg.castShadow = true;
-    bearGroup.add(rightLeg);
-
-    this.scene.add(bearGroup);
-    this.prizes.push(bearGroup);
-
-    // Physics Compound Body
-    if (this.physics.world) {
-      // Dynamic Body with CCD enabled to prevent tunneling & mountain sliding
-      const bodyDesc = RAPIER.RigidBodyDesc.dynamic()
-        .setTranslation(x, y, z)
-        .setCcdEnabled(true)
-        .setLinearDamping(0.35)
-        .setAngularDamping(1.8);
-      const body = this.physics.world.createRigidBody(bodyDesc);
-
-      // Main Torso collider
-      const bodyCollider = RAPIER.ColliderDesc.ball(0.4)
-        .setTranslation(0, 0, 0)
-        .setMass(0.2)
-        .setFriction(0.4)
-        .setRestitution(0.15);
-      this.physics.world.createCollider(bodyCollider, body);
-
-      // Head collider
-      const headCollider = RAPIER.ColliderDesc.ball(0.32)
-        .setTranslation(0, 0.65, 0)
-        .setFriction(0.4)
-        .setRestitution(0.15);
-      this.physics.world.createCollider(headCollider, body);
-
-      // Left Arm collider
-      const leftArmCollider = RAPIER.ColliderDesc.capsule(0.2, 0.12)
-        .setTranslation(-0.55, 0.2, 0)
-        .setRotation({ w: Math.cos(Math.PI/6), x: 0, y: 0, z: Math.sin(Math.PI/6) })
-        .setFriction(0.45)
-        .setRestitution(0.15);
-      this.physics.world.createCollider(leftArmCollider, body);
-
-      // Right Arm collider
-      const rightArmCollider = RAPIER.ColliderDesc.capsule(0.2, 0.12)
-        .setTranslation(0.55, 0.2, 0)
-        .setRotation({ w: Math.cos(-Math.PI/6), x: 0, y: 0, z: Math.sin(-Math.PI/6) })
-        .setFriction(0.45)
-        .setRestitution(0.15);
-      this.physics.world.createCollider(rightArmCollider, body);
-
-      // Left Leg collider
-      const leftLegCollider = RAPIER.ColliderDesc.capsule(0.22, 0.15)
-        .setTranslation(-0.35, -0.65, 0.15)
-        .setRotation({ w: Math.cos(Math.PI/12), x: Math.sin(Math.PI/12), y: 0, z: 0 })
-        .setFriction(0.45)
-        .setRestitution(0.15);
-      this.physics.world.createCollider(leftLegCollider, body);
-
-      // Right Leg collider
-      const rightLegCollider = RAPIER.ColliderDesc.capsule(0.22, 0.15)
-        .setTranslation(0.35, -0.65, 0.15)
-        .setRotation({ w: Math.cos(Math.PI/12), x: Math.sin(Math.PI/12), y: 0, z: 0 })
-        .setFriction(0.45)
-        .setRestitution(0.15);
-      this.physics.world.createCollider(rightLegCollider, body);
-
-      this.physics.registerBody(body, bearGroup);
-      this.bodies.push(body);
-    }
-  }
-
-  // Spawn simple toy block (can rub corners - 磨角)
-  private spawnBlock(x: number, y: number, z: number) {
-    const w = 0.8 + Math.random() * 0.4;
-    const h = 0.8 + Math.random() * 0.4;
-    const d = 0.8 + Math.random() * 0.4;
-
-    const colors = [0xff6b6b, 0x4ecdc4, 0xffe66d, 0x1a535c, 0xf7fff7];
-    const color = colors[Math.floor(Math.random() * colors.length)];
-
-    const geo = new THREE.BoxGeometry(w, h, d);
-    const mat = new THREE.MeshStandardMaterial({
-      color: color,
-      roughness: 0.6,
-      metalness: 0.3
-    });
-    const mesh = new THREE.Mesh(geo, mat);
-    mesh.position.set(x, y, z);
-    mesh.castShadow = true;
-    this.scene.add(mesh);
-    this.prizes.push(mesh);
+    this.scene.add(group);
+    this.prizes.push(group);
 
     if (this.physics.world) {
       const bodyDesc = RAPIER.RigidBodyDesc.dynamic()
@@ -293,203 +244,434 @@ export class PrizesManager {
         .setLinearDamping(0.35)
         .setAngularDamping(1.8);
       const body = this.physics.world.createRigidBody(bodyDesc);
-      
-      const colDesc = RAPIER.ColliderDesc.cuboid(w / 2, h / 2, d / 2)
-        .setMass(0.35)
-        .setFriction(0.38)
-        .setRestitution(0.08);
-      this.physics.world.createCollider(colDesc, body);
 
-      this.physics.registerBody(body, mesh);
+      const torsoCol = RAPIER.ColliderDesc.ball(0.44).setTranslation(0, 0, 0).setMass(0.2).setFriction(0.4).setRestitution(0.15);
+      this.physics.world.createCollider(torsoCol, body);
+      const headCol = RAPIER.ColliderDesc.ball(0.38).setTranslation(0, 0.6, 0).setFriction(0.4).setRestitution(0.15);
+      this.physics.world.createCollider(headCol, body);
+      const lArmCol = RAPIER.ColliderDesc.ball(0.12).setTranslation(-0.48, 0.05, 0.1).setFriction(0.45);
+      this.physics.world.createCollider(lArmCol, body);
+      const rArmCol = RAPIER.ColliderDesc.ball(0.12).setTranslation(0.48, 0.05, 0.1).setFriction(0.45);
+      this.physics.world.createCollider(rArmCol, body);
+
+      this.physics.registerBody(body, group);
       this.bodies.push(body);
     }
   }
 
-  // Spawn a round ball toy
-  private spawnSphereToy(x: number, y: number, z: number) {
-    const r = 0.5 + Math.random() * 0.2;
+  // ======================================================
+  //  🐉 DRAGON BALL 七龍珠 公仔盒
+  //  橙色包裝盒，盒面印有星星徽，內有水晶球
+  // ======================================================
+  private spawnDragonBallBox(x: number, y: number, z: number) {
+    const group = new THREE.Group();
+    group.position.set(x, y, z);
+    group.rotation.y = Math.random() * Math.PI * 2;
 
-    const colors = [0xff007f, 0x7f00ff, 0x00ffff, 0x39ff14, 0xffa500];
-    const color = colors[Math.floor(Math.random() * colors.length)];
+    // Box dimensions
+    const w = 0.85, h = 1.05, d = 0.75;
 
-    const geo = new THREE.SphereGeometry(r, 16, 16);
-    const mat = new THREE.MeshStandardMaterial({
-      color: color,
-      roughness: 0.2,
-      metalness: 0.4
-    });
-    const mesh = new THREE.Mesh(geo, mat);
-    mesh.position.set(x, y, z);
-    mesh.castShadow = true;
-    this.scene.add(mesh);
-    this.prizes.push(mesh);
+    // Main box body (橙色)
+    const boxMat = new THREE.MeshStandardMaterial({ color: 0xff6d00, roughness: 0.45, metalness: 0.1 });
+    const boxMesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), boxMat);
+    boxMesh.castShadow = true;
+    group.add(boxMesh);
+
+    // Front face panel (darker orange with yellow stripe)
+    const faceMat = new THREE.MeshStandardMaterial({ color: 0xff8c00, roughness: 0.4 });
+    const faceMesh = new THREE.Mesh(new THREE.BoxGeometry(w - 0.04, h - 0.04, 0.02), faceMat);
+    faceMesh.position.set(0, 0, d / 2 + 0.01);
+    group.add(faceMesh);
+
+    // Yellow stripe band
+    const stripeMat = new THREE.MeshStandardMaterial({ color: 0xffd600, metalness: 0.3, roughness: 0.3 });
+    const stripe = new THREE.Mesh(new THREE.BoxGeometry(w + 0.02, 0.18, d + 0.02), stripeMat);
+    stripe.position.set(0, 0.2, 0);
+    group.add(stripe);
+
+    // Orange crystal ball on top (龍珠)
+    const ballMat = new THREE.MeshStandardMaterial({ color: 0xffab40, metalness: 0.5, roughness: 0.1, transparent: true, opacity: 0.85 });
+    const ball = new THREE.Mesh(new THREE.SphereGeometry(0.18, 16, 16), ballMat);
+    ball.position.set(0, h / 2 + 0.18, 0);
+    group.add(ball);
+
+    // Stars on ball (4-star: 四星龍珠)
+    const starMat = new THREE.MeshBasicMaterial({ color: 0xd32f2f });
+    for (let i = 0; i < 4; i++) {
+      const s = new THREE.Mesh(new THREE.SphereGeometry(0.04, 6, 6), starMat);
+      const angle = (i / 4) * Math.PI * 2;
+      s.position.set(Math.cos(angle) * 0.1, h / 2 + 0.2, Math.sin(angle) * 0.1 + 0.18);
+      group.add(s);
+    }
+
+    // Gold top lid edge
+    const lidMat = new THREE.MeshStandardMaterial({ color: 0xffd600, metalness: 0.8, roughness: 0.2 });
+    const lid = new THREE.Mesh(new THREE.BoxGeometry(w + 0.05, 0.06, d + 0.05), lidMat);
+    lid.position.set(0, h / 2, 0);
+    group.add(lid);
+
+    this.scene.add(group);
+    this.prizes.push(group);
 
     if (this.physics.world) {
       const bodyDesc = RAPIER.RigidBodyDesc.dynamic()
         .setTranslation(x, y, z)
         .setCcdEnabled(true)
-        .setLinearDamping(0.25)
-        .setAngularDamping(1.4);
+        .setLinearDamping(0.35)
+        .setAngularDamping(1.8);
       const body = this.physics.world.createRigidBody(bodyDesc);
-      
-      const colDesc = RAPIER.ColliderDesc.ball(r)
-        .setMass(0.25)
-        .setFriction(0.3)
-        .setRestitution(0.35);
-      this.physics.world.createCollider(colDesc, body);
-
-      this.physics.registerBody(body, mesh);
+      const col = RAPIER.ColliderDesc.cuboid(w / 2, (h + 0.38) / 2, d / 2)
+        .setMass(0.35).setFriction(0.38).setRestitution(0.08);
+      this.physics.world.createCollider(col, body);
+      this.physics.registerBody(body, group);
       this.bodies.push(body);
     }
   }
 
-  // 👛 Spawn Leather Pouch/Purse
-  private spawnPouch(x: number, y: number, z: number) {
-    const pouchGroup = new THREE.Group();
-    pouchGroup.position.set(x, y, z);
+  // ======================================================
+  //  ☠️ ONE PIECE 海賊王 公仔盒 (路飛款)
+  //  紅色盒裝，草帽造型頂飾，黑色草帽邊
+  // ======================================================
+  private spawnOnePieceBox(x: number, y: number, z: number) {
+    const group = new THREE.Group();
+    group.position.set(x, y, z);
+    group.rotation.y = Math.random() * Math.PI * 2;
 
-    const colors = [0xf43f5e, 0xa855f7, 0x0ea5e9, 0xec4899, 0x14b8a6];
-    const color = colors[Math.floor(Math.random() * colors.length)];
-    const mat = new THREE.MeshStandardMaterial({ color, roughness: 0.4, metalness: 0.2 });
-    const goldMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.9, roughness: 0.1 });
+    const w = 0.8, h = 1.0, d = 0.7;
 
-    // Main pouch body
-    const bodyGeo = new THREE.BoxGeometry(0.9, 0.6, 0.4);
-    const bodyMesh = new THREE.Mesh(bodyGeo, mat);
+    // Main box (紅色)
+    const boxMat = new THREE.MeshStandardMaterial({ color: 0xd32f2f, roughness: 0.45, metalness: 0.1 });
+    const boxMesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), boxMat);
+    boxMesh.castShadow = true;
+    group.add(boxMesh);
+
+    // Blue stripe
+    const stripeMat = new THREE.MeshStandardMaterial({ color: 0x1565c0, roughness: 0.4 });
+    const stripe = new THREE.Mesh(new THREE.BoxGeometry(w + 0.02, 0.15, d + 0.02), stripeMat);
+    stripe.position.set(0, -0.25, 0);
+    group.add(stripe);
+
+    // Gold foil effect border
+    const borderMat = new THREE.MeshStandardMaterial({ color: 0xffd600, metalness: 0.9, roughness: 0.1 });
+    const topBorder = new THREE.Mesh(new THREE.BoxGeometry(w + 0.04, 0.05, d + 0.04), borderMat);
+    topBorder.position.set(0, h / 2, 0);
+    group.add(topBorder);
+    const botBorder = new THREE.Mesh(new THREE.BoxGeometry(w + 0.04, 0.05, d + 0.04), borderMat);
+    botBorder.position.set(0, -h / 2, 0);
+    group.add(botBorder);
+
+    // Straw Hat on top (草帽 - Luffy's signature)
+    const hatBrimMat = new THREE.MeshStandardMaterial({ color: 0xe6b800, roughness: 0.6 });
+    const hatBrim = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.28, 0.06, 16), hatBrimMat);
+    hatBrim.position.set(0, h / 2 + 0.08, 0);
+    group.add(hatBrim);
+
+    const hatTopMat = new THREE.MeshStandardMaterial({ color: 0xf5d060, roughness: 0.6 });
+    const hatTop = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.22, 0.2, 16), hatTopMat);
+    hatTop.position.set(0, h / 2 + 0.22, 0);
+    group.add(hatTop);
+
+    // Red hat band
+    const bandMat = new THREE.MeshStandardMaterial({ color: 0xc62828, roughness: 0.5 });
+    const band = new THREE.Mesh(new THREE.CylinderGeometry(0.225, 0.225, 0.06, 16), bandMat);
+    band.position.set(0, h / 2 + 0.14, 0);
+    group.add(band);
+
+    // Small skull & crossbones (骷髏旗) on front
+    const skullMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    const skull = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 8), skullMat);
+    skull.position.set(0, 0.1, d / 2 + 0.01);
+    skull.scale.set(1, 0.85, 0.5);
+    group.add(skull);
+
+    this.scene.add(group);
+    this.prizes.push(group);
+
+    if (this.physics.world) {
+      const bodyDesc = RAPIER.RigidBodyDesc.dynamic()
+        .setTranslation(x, y, z)
+        .setCcdEnabled(true)
+        .setLinearDamping(0.35)
+        .setAngularDamping(1.8);
+      const body = this.physics.world.createRigidBody(bodyDesc);
+      const col = RAPIER.ColliderDesc.cuboid(w / 2, (h + 0.35) / 2, d / 2)
+        .setMass(0.35).setFriction(0.38).setRestitution(0.08);
+      this.physics.world.createCollider(col, body);
+      this.physics.registerBody(body, group);
+      this.bodies.push(body);
+    }
+  }
+
+  // ======================================================
+  //  ☕ MUG BOX 馬克杯盒裝
+  //  扁方形包裝盒，一側有把手外露，繽紛配色
+  // ======================================================
+  private spawnMugBox(x: number, y: number, z: number) {
+    const group = new THREE.Group();
+    group.position.set(x, y, z);
+    group.rotation.y = Math.random() * Math.PI * 2;
+
+    const colors = [
+      { box: 0xce93d8, accent: 0xffd54f },  // Purple + Gold
+      { box: 0x80deea, accent: 0xff8a65 },  // Cyan + Coral
+      { box: 0xf48fb1, accent: 0xb2ff59 },  // Pink + Lime
+      { box: 0xffcc02, accent: 0xe53935 },  // Yellow + Red
+    ];
+    const c = colors[Math.floor(Math.random() * colors.length)];
+
+    const w = 1.0, h = 0.75, d = 0.75;
+
+    // Box body
+    const boxMat = new THREE.MeshStandardMaterial({ color: c.box, roughness: 0.4, metalness: 0.05 });
+    const boxMesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), boxMat);
+    boxMesh.castShadow = true;
+    group.add(boxMesh);
+
+    // Accent band around middle
+    const accentMat = new THREE.MeshStandardMaterial({ color: c.accent, roughness: 0.35, metalness: 0.1 });
+    const band = new THREE.Mesh(new THREE.BoxGeometry(w + 0.02, 0.16, d + 0.02), accentMat);
+    band.position.set(0, 0, 0);
+    group.add(band);
+
+    // White window/label on front face
+    const labelMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.5 });
+    const label = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.35, 0.02), labelMat);
+    label.position.set(0, 0, d / 2 + 0.01);
+    group.add(label);
+
+    // Mug handle peeking out the right side
+    const handleMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.5 });
+    const handleOuter = new THREE.Mesh(new THREE.TorusGeometry(0.14, 0.04, 8, 12), handleMat);
+    handleOuter.rotation.y = Math.PI / 2;
+    handleOuter.position.set(w / 2 + 0.12, 0.0, 0);
+    group.add(handleOuter);
+
+    // Top lid (金色)
+    const lidMat = new THREE.MeshStandardMaterial({ color: 0xffd600, metalness: 0.7, roughness: 0.2 });
+    const lid = new THREE.Mesh(new THREE.BoxGeometry(w + 0.06, 0.06, d + 0.06), lidMat);
+    lid.position.set(0, h / 2, 0);
+    group.add(lid);
+
+    this.scene.add(group);
+    this.prizes.push(group);
+
+    if (this.physics.world) {
+      const bodyDesc = RAPIER.RigidBodyDesc.dynamic()
+        .setTranslation(x, y, z)
+        .setCcdEnabled(true)
+        .setLinearDamping(0.35)
+        .setAngularDamping(1.8);
+      const body = this.physics.world.createRigidBody(bodyDesc);
+      // Include handle in collider
+      const col = RAPIER.ColliderDesc.cuboid((w + 0.3) / 2, h / 2, d / 2)
+        .setMass(0.4).setFriction(0.38).setRestitution(0.08);
+      this.physics.world.createCollider(col, body);
+      this.physics.registerBody(body, group);
+      this.bodies.push(body);
+    }
+  }
+
+  // ======================================================
+  //  🌸 SANRIO BOTTLE 三麗鷗水壺
+  //  圓柱保溫水壺，My Melody / Hello Kitty 配色
+  //  粉/藍/白 + 卡通臉版面
+  // ======================================================
+  private spawnSanrioBottle(x: number, y: number, z: number) {
+    const group = new THREE.Group();
+    group.position.set(x, y, z);
+    group.rotation.y = Math.random() * Math.PI * 2;
+
+    const variants = [
+      { body: 0xff80ab, top: 0xfce4ec, accent: 0xffffff },  // My Melody pink
+      { body: 0xe1f5fe, top: 0xffffff, accent: 0xff80ab },  // Hello Kitty blue
+      { body: 0xfff9c4, top: 0xffe082, accent: 0xff6f00 },  // Pompompurin yellow
+      { body: 0xf3e5f5, top: 0xce93d8, accent: 0xffffff },  // Kuromi purple
+    ];
+    const v = variants[Math.floor(Math.random() * variants.length)];
+
+    const r = 0.28, bottleH = 1.1;
+
+    // Main bottle body
+    const bodyMat = new THREE.MeshStandardMaterial({ color: v.body, roughness: 0.2, metalness: 0.35 });
+    const bodyMesh = new THREE.Mesh(new THREE.CylinderGeometry(r, r * 0.95, bottleH, 18), bodyMat);
     bodyMesh.castShadow = true;
-    pouchGroup.add(bodyMesh);
+    group.add(bodyMesh);
 
-    // Zipper handle ring at top
-    const ringGeo = new THREE.TorusGeometry(0.12, 0.03, 8, 16);
-    const ringMesh = new THREE.Mesh(ringGeo, goldMat);
-    ringMesh.position.set(0, 0.35, 0);
-    pouchGroup.add(ringMesh);
+    // Top cap
+    const topMat = new THREE.MeshStandardMaterial({ color: v.top, roughness: 0.25, metalness: 0.4 });
+    const topCap = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.72, r, 0.22, 14), topMat);
+    topCap.position.set(0, bottleH / 2 + 0.08, 0);
+    group.add(topCap);
 
-    this.scene.add(pouchGroup);
-    this.prizes.push(pouchGroup);
+    // Carry strap ring
+    const strapMat = new THREE.MeshStandardMaterial({ color: 0x888888, metalness: 0.7, roughness: 0.3 });
+    const strap = new THREE.Mesh(new THREE.TorusGeometry(0.1, 0.025, 6, 10), strapMat);
+    strap.position.set(0, bottleH / 2 + 0.28, 0);
+    group.add(strap);
+
+    // Cute face on front
+    const eyeMat = new THREE.MeshBasicMaterial({ color: 0x111111 });
+    const eyeGeo = new THREE.SphereGeometry(0.03, 6, 6);
+    const le = new THREE.Mesh(eyeGeo, eyeMat);
+    le.position.set(-0.1, 0.1, r + 0.005);
+    const re = new THREE.Mesh(eyeGeo, eyeMat);
+    re.position.set(0.1, 0.1, r + 0.005);
+    group.add(le);
+    group.add(re);
+
+    // Pink oval cheeks
+    const cheekMat = new THREE.MeshBasicMaterial({ color: 0xffb3c6 });
+    const cheekGeo = new THREE.SphereGeometry(0.055, 6, 6);
+    const lc = new THREE.Mesh(cheekGeo, cheekMat);
+    lc.position.set(-0.14, 0.03, r + 0.005);
+    lc.scale.set(1.2, 0.7, 0.3);
+    const rc = new THREE.Mesh(cheekGeo, cheekMat);
+    rc.position.set(0.14, 0.03, r + 0.005);
+    rc.scale.set(1.2, 0.7, 0.3);
+    group.add(lc);
+    group.add(rc);
+
+    // Bow/ribbon on top for My Melody style
+    const ribbonMat = new THREE.MeshStandardMaterial({ color: v.accent, roughness: 0.5 });
+    const lbow = new THREE.Mesh(new THREE.SphereGeometry(0.07, 6, 6), ribbonMat);
+    lbow.position.set(-0.1, bottleH / 2 + 0.23, 0);
+    lbow.scale.set(1.3, 0.7, 0.6);
+    const rbow = new THREE.Mesh(new THREE.SphereGeometry(0.07, 6, 6), ribbonMat);
+    rbow.position.set(0.1, bottleH / 2 + 0.23, 0);
+    rbow.scale.set(1.3, 0.7, 0.6);
+    const bowCenter = new THREE.Mesh(new THREE.SphereGeometry(0.04, 6, 6), ribbonMat);
+    bowCenter.position.set(0, bottleH / 2 + 0.23, 0);
+    group.add(lbow);
+    group.add(rbow);
+    group.add(bowCenter);
+
+    // Accent color stripe around middle
+    const stripeMat = new THREE.MeshStandardMaterial({ color: v.accent, roughness: 0.3, metalness: 0.2 });
+    const stripe = new THREE.Mesh(new THREE.CylinderGeometry(r + 0.005, r + 0.005, 0.14, 18), stripeMat);
+    stripe.position.set(0, -0.2, 0);
+    group.add(stripe);
+
+    this.scene.add(group);
+    this.prizes.push(group);
 
     if (this.physics.world) {
-      const bodyDesc = RAPIER.RigidBodyDesc.dynamic().setTranslation(x, y, z).setCcdEnabled(true).setLinearDamping(0.35).setAngularDamping(1.8);
+      const bodyDesc = RAPIER.RigidBodyDesc.dynamic()
+        .setTranslation(x, y, z)
+        .setCcdEnabled(true)
+        .setLinearDamping(0.35)
+        .setAngularDamping(1.8);
       const body = this.physics.world.createRigidBody(bodyDesc);
-      const colDesc = RAPIER.ColliderDesc.cuboid(0.45, 0.3, 0.2).setMass(0.25).setFriction(0.4);
-      this.physics.world.createCollider(colDesc, body);
-      this.physics.registerBody(body, pouchGroup);
+      const col = RAPIER.ColliderDesc.cylinder(bottleH / 2 + 0.15, r)
+        .setMass(0.3).setFriction(0.38).setRestitution(0.12);
+      this.physics.world.createCollider(col, body);
+      this.physics.registerBody(body, group);
       this.bodies.push(body);
     }
   }
 
-  // 🐱 Spawn Cute Cat Plush
-  private spawnCatPlush(x: number, y: number, z: number) {
-    const catGroup = new THREE.Group();
-    catGroup.position.set(x, y, z);
+  // ======================================================
+  //  🍪 COOKIE TIN BOX 餅乾鐵盒
+  //  扁圓形或扁方形鐵盒，金色蓋子，花紋浮雕感
+  // ======================================================
+  private spawnCookieBox(x: number, y: number, z: number) {
+    const group = new THREE.Group();
+    group.position.set(x, y, z);
+    group.rotation.y = Math.random() * Math.PI * 2;
 
-    const colors = [0xffedd5, 0xfed7aa, 0xe2e8f0, 0x334155, 0xfbcfe8];
-    const color = colors[Math.floor(Math.random() * colors.length)];
-    const mat = new THREE.MeshStandardMaterial({ color, roughness: 0.6 });
-    const pinkMat = new THREE.MeshStandardMaterial({ color: 0xf472b6, roughness: 0.5 });
-    const blackMat = new THREE.MeshStandardMaterial({ color: 0x1e293b });
+    const variants = [
+      { body: 0x3b82f6, lid: 0xffd700 },   // Royal blue + gold
+      { body: 0xdc2626, lid: 0xfbbf24 },   // Christmas red + gold
+      { body: 0x16a34a, lid: 0xfde68a },   // Forest green + pale gold
+      { body: 0x7c3aed, lid: 0xf0abfc },   // Purple + lavender
+    ];
+    const v = variants[Math.floor(Math.random() * variants.length)];
 
-    // Cat Body
-    const bodyMesh = new THREE.Mesh(new THREE.SphereGeometry(0.45, 12, 12), mat);
-    bodyMesh.castShadow = true;
-    catGroup.add(bodyMesh);
+    // Decide tin shape (round or square)
+    const isRound = Math.random() > 0.5;
 
-    // Head
-    const headMesh = new THREE.Mesh(new THREE.SphereGeometry(0.38, 12, 12), mat);
-    headMesh.position.set(0, 0.55, 0);
-    headMesh.castShadow = true;
-    catGroup.add(headMesh);
+    if (isRound) {
+      // Round cookie tin
+      const r = 0.42, h = 0.32;
 
-    // Cat Ears (Pointy Cone)
-    const earGeo = new THREE.ConeGeometry(0.14, 0.28, 4);
-    const leftEar = new THREE.Mesh(earGeo, pinkMat);
-    leftEar.position.set(-0.22, 0.88, 0);
-    leftEar.rotation.z = 0.2;
-    const rightEar = new THREE.Mesh(earGeo, pinkMat);
-    rightEar.position.set(0.22, 0.88, 0);
-    rightEar.rotation.z = -0.2;
-    catGroup.add(leftEar);
-    catGroup.add(rightEar);
+      const bodyMat = new THREE.MeshStandardMaterial({ color: v.body, roughness: 0.3, metalness: 0.6 });
+      const bodyMesh = new THREE.Mesh(new THREE.CylinderGeometry(r, r, h, 24), bodyMat);
+      bodyMesh.castShadow = true;
+      group.add(bodyMesh);
 
-    // Eyes
-    const eyeGeo = new THREE.SphereGeometry(0.04, 8, 8);
-    const e1 = new THREE.Mesh(eyeGeo, blackMat);
-    e1.position.set(-0.14, 0.62, 0.32);
-    const e2 = new THREE.Mesh(eyeGeo, blackMat);
-    e2.position.set(0.14, 0.62, 0.32);
-    catGroup.add(e1);
-    catGroup.add(e2);
+      // Lid
+      const lidMat = new THREE.MeshStandardMaterial({ color: v.lid, metalness: 0.75, roughness: 0.15 });
+      const lid = new THREE.Mesh(new THREE.CylinderGeometry(r + 0.025, r + 0.025, 0.06, 24), lidMat);
+      lid.position.set(0, h / 2 + 0.01, 0);
+      group.add(lid);
 
-    // Tail
-    const tailMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.04, 0.5, 8), mat);
-    tailMesh.position.set(0, 0.1, -0.45);
-    tailMesh.rotation.x = Math.PI / 4;
-    catGroup.add(tailMesh);
+      // Decorative groove rings
+      const grooveMat = new THREE.MeshStandardMaterial({ color: v.lid, metalness: 0.6, roughness: 0.2 });
+      for (let i = 0; i < 3; i++) {
+        const groove = new THREE.Mesh(new THREE.TorusGeometry(r - 0.06 - i * 0.1, 0.015, 6, 24), grooveMat);
+        groove.rotation.x = Math.PI / 2;
+        groove.position.set(0, h / 2 + 0.04, 0);
+        group.add(groove);
+      }
 
-    this.scene.add(catGroup);
-    this.prizes.push(catGroup);
+      // Small handle on lid
+      const handleMat = new THREE.MeshStandardMaterial({ color: 0xb45309, metalness: 0.8, roughness: 0.2 });
+      const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.05, 8), handleMat);
+      handle.position.set(0, h / 2 + 0.09, 0);
+      group.add(handle);
 
-    if (this.physics.world) {
-      const bodyDesc = RAPIER.RigidBodyDesc.dynamic().setTranslation(x, y, z).setCcdEnabled(true).setLinearDamping(0.35).setAngularDamping(1.8);
-      const body = this.physics.world.createRigidBody(bodyDesc);
-      const c1 = RAPIER.ColliderDesc.ball(0.42).setFriction(0.4);
-      const c2 = RAPIER.ColliderDesc.ball(0.35).setTranslation(0, 0.55, 0).setFriction(0.4);
-      this.physics.world.createCollider(c1, body);
-      this.physics.world.createCollider(c2, body);
-      this.physics.registerBody(body, catGroup);
-      this.bodies.push(body);
+      if (this.physics.world) {
+        const bodyDesc = RAPIER.RigidBodyDesc.dynamic()
+          .setTranslation(x, y, z)
+          .setCcdEnabled(true)
+          .setLinearDamping(0.35)
+          .setAngularDamping(1.8);
+        const body = this.physics.world.createRigidBody(bodyDesc);
+        const col = RAPIER.ColliderDesc.cylinder(h / 2 + 0.06, r + 0.03)
+          .setMass(0.5).setFriction(0.42).setRestitution(0.05);
+        this.physics.world.createCollider(col, body);
+        this.physics.registerBody(body, group);
+        this.bodies.push(body);
+      }
+    } else {
+      // Square cookie tin
+      const w = 0.82, h = 0.30, d = 0.82;
+
+      const bodyMat = new THREE.MeshStandardMaterial({ color: v.body, roughness: 0.3, metalness: 0.6 });
+      const bodyMesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), bodyMat);
+      bodyMesh.castShadow = true;
+      group.add(bodyMesh);
+
+      // Lid
+      const lidMat = new THREE.MeshStandardMaterial({ color: v.lid, metalness: 0.75, roughness: 0.15 });
+      const lid = new THREE.Mesh(new THREE.BoxGeometry(w + 0.05, 0.06, d + 0.05), lidMat);
+      lid.position.set(0, h / 2 + 0.01, 0);
+      group.add(lid);
+
+      // Embossed pattern (floral groove lines)
+      const grooveMat = new THREE.MeshStandardMaterial({ color: v.lid, metalness: 0.5, roughness: 0.25 });
+      const gx = new THREE.Mesh(new THREE.BoxGeometry(w - 0.1, 0.01, 0.04), grooveMat);
+      gx.position.set(0, h / 2 + 0.04, 0.1);
+      const gz = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.01, d - 0.1), grooveMat);
+      gz.position.set(0.1, h / 2 + 0.04, 0);
+      group.add(gx);
+      group.add(gz);
+
+      if (this.physics.world) {
+        const bodyDesc = RAPIER.RigidBodyDesc.dynamic()
+          .setTranslation(x, y, z)
+          .setCcdEnabled(true)
+          .setLinearDamping(0.35)
+          .setAngularDamping(1.8);
+        const body = this.physics.world.createRigidBody(bodyDesc);
+        const col = RAPIER.ColliderDesc.cuboid((w + 0.05) / 2, (h + 0.08) / 2, (d + 0.05) / 2)
+          .setMass(0.5).setFriction(0.42).setRestitution(0.05);
+        this.physics.world.createCollider(col, body);
+        this.physics.registerBody(body, group);
+        this.bodies.push(body);
+      }
     }
-  }
 
-  // 🥖 Spawn Long Cushion/Bar (槍位長條物/長枕)
-  private spawnLongCushion(x: number, y: number, z: number) {
-    const r = 0.28;
-    const len = 1.8;
-    const colors = [0xf59e0b, 0x10b981, 0x8b5cf6, 0xef4444, 0x06b6d4];
-    const color = colors[Math.floor(Math.random() * colors.length)];
-
-    const geo = new THREE.CylinderGeometry(r, r, len, 16);
-    const mat = new THREE.MeshStandardMaterial({ color, roughness: 0.5 });
-    const mesh = new THREE.Mesh(geo, mat);
-    mesh.rotation.z = Math.PI / 2; // Horizontal bar
-    mesh.position.set(x, y, z);
-    mesh.castShadow = true;
-    this.scene.add(mesh);
-    this.prizes.push(mesh);
-
-    if (this.physics.world) {
-      const bodyDesc = RAPIER.RigidBodyDesc.dynamic().setTranslation(x, y, z).setCcdEnabled(true).setLinearDamping(0.35).setAngularDamping(1.8);
-      const body = this.physics.world.createRigidBody(bodyDesc);
-      const colDesc = RAPIER.ColliderDesc.cylinder(len / 2, r).setMass(0.4).setFriction(0.38);
-      this.physics.world.createCollider(colDesc, body);
-      this.physics.registerBody(body, mesh);
-      this.bodies.push(body);
-    }
-  }
-
-  // 📦 Spawn Long Flat Box (槍位長扁盒)
-  private spawnLongFlatBox(x: number, y: number, z: number) {
-    const w = 1.8;
-    const h = 0.38;
-    const d = 0.9;
-    const colors = [0x6366f1, 0x84cc16, 0xd946ef, 0x0284c7, 0xf97316];
-    const color = colors[Math.floor(Math.random() * colors.length)];
-
-    const geo = new THREE.BoxGeometry(w, h, d);
-    const mat = new THREE.MeshStandardMaterial({ color, roughness: 0.4, metalness: 0.2 });
-    const mesh = new THREE.Mesh(geo, mat);
-    mesh.position.set(x, y, z);
-    mesh.castShadow = true;
-    this.scene.add(mesh);
-    this.prizes.push(mesh);
-
-    if (this.physics.world) {
-      const bodyDesc = RAPIER.RigidBodyDesc.dynamic().setTranslation(x, y, z).setCcdEnabled(true).setLinearDamping(0.35).setAngularDamping(1.8);
-      const body = this.physics.world.createRigidBody(bodyDesc);
-      const colDesc = RAPIER.ColliderDesc.cuboid(w / 2, h / 2, d / 2).setMass(0.4).setFriction(0.38);
-      this.physics.world.createCollider(colDesc, body);
-      this.physics.registerBody(body, mesh);
-      this.bodies.push(body);
-    }
+    this.scene.add(group);
+    this.prizes.push(group);
   }
 }

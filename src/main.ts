@@ -694,147 +694,219 @@ function setupKeyboardListeners() {
 }
 
 function createArcadeEnvironment(scene: THREE.Scene) {
-  // Cozy Professional Pastel Arcade Ambient
-  scene.background = new THREE.Color(0xfdf2f8);
-  scene.fog = new THREE.FogExp2(0xfdf2f8, 0.006);
+  // Deep midnight blue JP arcade atmosphere
+  scene.background = new THREE.Color(0x0f0a1e);
+  scene.fog = new THREE.FogExp2(0x0f0a1e, 0.004);
 
-  // 1. Sleek Modern Cream & Pastel Slate Marble Floor (時尚簡約大理石奶油大理石地磚)
+  // ===== 1. VIBRANT FLOOR: Pink & White Gloss Tiles with Gold Seams =====
   const floorCanvas = document.createElement('canvas');
   floorCanvas.width = 512;
   floorCanvas.height = 512;
   const fctx = floorCanvas.getContext('2d')!;
 
-  fctx.fillStyle = '#f8fafc';
+  // Soft warm white base
+  fctx.fillStyle = '#fff8f8';
   fctx.fillRect(0, 0, 512, 512);
 
-  // Soft Pastel Slate Marble Tiles
-  fctx.fillStyle = '#e2e8f0';
+  // Candy pink alternating tiles
+  fctx.fillStyle = '#ffd6e7';
   for (let r = 0; r < 4; r++) {
     for (let c = 0; c < 4; c++) {
       if ((r + c) % 2 === 1) {
-        fctx.fillRect(c * 128, r * 128, 128, 128);
+        fctx.fillRect(c * 128 + 2, r * 128 + 2, 124, 124);
       }
     }
   }
 
-  // Subtle Gold Seam Lines
-  fctx.strokeStyle = '#cbd5e1';
-  fctx.lineWidth = 4;
+  // Inner highlight gloss on each tile
+  fctx.fillStyle = 'rgba(255,255,255,0.45)';
+  for (let r = 0; r < 4; r++) {
+    for (let c = 0; c < 4; c++) {
+      fctx.fillRect(c * 128 + 8, r * 128 + 8, 50, 28);
+    }
+  }
+
+  // Gold grout lines
+  fctx.strokeStyle = '#f9a825';
+  fctx.lineWidth = 3;
   for (let i = 0; i <= 512; i += 128) {
-    fctx.beginPath();
-    fctx.moveTo(i, 0);
-    fctx.lineTo(i, 512);
-    fctx.stroke();
-    fctx.beginPath();
-    fctx.moveTo(0, i);
-    fctx.lineTo(512, i);
-    fctx.stroke();
+    fctx.beginPath(); fctx.moveTo(i, 0); fctx.lineTo(i, 512); fctx.stroke();
+    fctx.beginPath(); fctx.moveTo(0, i); fctx.lineTo(512, i); fctx.stroke();
   }
 
   const floorTex = new THREE.CanvasTexture(floorCanvas);
   floorTex.wrapS = THREE.RepeatWrapping;
   floorTex.wrapT = THREE.RepeatWrapping;
-  floorTex.repeat.set(8, 8);
+  floorTex.repeat.set(10, 10);
 
-  const floorMat = new THREE.MeshStandardMaterial({
-    map: floorTex,
-    roughness: 0.15,
-    metalness: 0.1
-  });
-  const floorMesh = new THREE.Mesh(new THREE.PlaneGeometry(60, 60), floorMat);
+  const floorMat = new THREE.MeshStandardMaterial({ map: floorTex, roughness: 0.08, metalness: 0.18 });
+  const floorMesh = new THREE.Mesh(new THREE.PlaneGeometry(80, 80), floorMat);
   floorMesh.rotation.x = -Math.PI / 2;
   floorMesh.position.y = -0.01;
   floorMesh.receiveShadow = true;
   scene.add(floorMesh);
 
-  // 2. Professional Cute Wallpaper Back Wall (馬卡龍夢幻背景牆)
+  // ===== 2. BACKGROUND WALL: JP Arcade Night Sky =====
   const wallCanvas = document.createElement('canvas');
-  wallCanvas.width = 1024;
-  wallCanvas.height = 512;
+  wallCanvas.width = 2048;
+  wallCanvas.height = 1024;
   const wctx = wallCanvas.getContext('2d')!;
 
-  // Gradient Pastel Pink & Cream
-  const grad = wctx.createLinearGradient(0, 0, 0, 512);
-  grad.addColorStop(0, '#fce7f3');
-  grad.addColorStop(1, '#fbcfe8');
-  wctx.fillStyle = grad;
-  wctx.fillRect(0, 0, 1024, 512);
+  // Deep night gradient: midnight indigo -> dark magenta
+  const wallGrad = wctx.createLinearGradient(0, 0, 0, 1024);
+  wallGrad.addColorStop(0, '#0d0221');
+  wallGrad.addColorStop(0.45, '#1a0533');
+  wallGrad.addColorStop(1, '#2d0a4e');
+  wctx.fillStyle = wallGrad;
+  wctx.fillRect(0, 0, 2048, 1024);
 
-  // Cute Soft Vertical Ribbons
-  wctx.fillStyle = 'rgba(244, 114, 182, 0.25)';
-  for (let x = 0; x < 1024; x += 64) {
-    wctx.fillRect(x, 0, 24, 512);
+  // Glowing neon grid lines
+  wctx.strokeStyle = 'rgba(190, 0, 255, 0.18)';
+  wctx.lineWidth = 1.5;
+  for (let gx = 0; gx <= 2048; gx += 128) {
+    wctx.beginPath(); wctx.moveTo(gx, 0); wctx.lineTo(gx, 1024); wctx.stroke();
+  }
+  for (let gy = 0; gy <= 1024; gy += 128) {
+    wctx.beginPath(); wctx.moveTo(0, gy); wctx.lineTo(2048, gy); wctx.stroke();
   }
 
-  // Floating Hearts & Stars
-  wctx.fillStyle = '#ec4899';
-  for (let i = 0; i < 35; i++) {
-    const rx = (i * 157 + 30) % 1024;
-    const ry = (i * 211 + 20) % 512;
-    wctx.beginPath();
-    wctx.arc(rx, ry, 8, 0, Math.PI * 2);
-    wctx.fill();
+  // Twinkling stars
+  for (let i = 0; i < 180; i++) {
+    const sx = (i * 317 + 47) % 2048;
+    const sy = (i * 233 + 19) % 1024;
+    const sr = 1.5 + (i % 4) * 1.2;
+    const alpha = 0.4 + (i % 5) * 0.12;
+    wctx.fillStyle = `rgba(255, 240, 255, ${alpha})`;
+    wctx.beginPath(); wctx.arc(sx, sy, sr, 0, Math.PI * 2); wctx.fill();
   }
+
+  // Neon glow circles (bokeh effect)
+  const bokehs = [
+    { x: 300, y: 200, r: 80, color: 'rgba(255, 0, 200, 0.07)' },
+    { x: 900, y: 600, r: 120, color: 'rgba(100, 0, 255, 0.07)' },
+    { x: 1600, y: 300, r: 100, color: 'rgba(0, 200, 255, 0.06)' },
+    { x: 1200, y: 800, r: 90, color: 'rgba(255, 100, 0, 0.05)' },
+    { x: 500, y: 700, r: 70, color: 'rgba(0, 255, 180, 0.06)' },
+  ];
+  bokehs.forEach(b => {
+    const bg = wctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, b.r);
+    bg.addColorStop(0, b.color);
+    bg.addColorStop(1, 'transparent');
+    wctx.fillStyle = bg;
+    wctx.beginPath(); wctx.arc(b.x, b.y, b.r, 0, Math.PI * 2); wctx.fill();
+  });
+
+  // Floating cute icons row
+  const icons = ['🎀', '⭐', '🎠', '💫', '🌸', '🎪', '🎡', '✨', '🎀', '🌟', '🎠', '💝', '🌸', '⭐', '🎡', '🎀'];
+  wctx.font = '56px serif';
+  icons.forEach((icon, i) => {
+    wctx.fillText(icon, 60 + i * 128, 950);
+  });
 
   const wallTex = new THREE.CanvasTexture(wallCanvas);
-  wallTex.wrapS = THREE.RepeatWrapping;
-  wallTex.wrapT = THREE.RepeatWrapping;
-  wallTex.repeat.set(2, 1);
+  wallTex.wrapS = THREE.ClampToEdgeWrapping;
+  wallTex.wrapT = THREE.ClampToEdgeWrapping;
 
-  const wallMat = new THREE.MeshStandardMaterial({
-    map: wallTex,
-    roughness: 0.5,
-    metalness: 0.05
-  });
-  const wallMesh = new THREE.Mesh(new THREE.PlaneGeometry(60, 30), wallMat);
-  wallMesh.position.set(0, 12, -12);
+  const wallMat = new THREE.MeshStandardMaterial({ map: wallTex, roughness: 0.6, metalness: 0.05 });
+  const wallMesh = new THREE.Mesh(new THREE.PlaneGeometry(80, 40), wallMat);
+  wallMesh.position.set(0, 18, -20);
   scene.add(wallMesh);
 
-  // 3. Glowing Neon Store Header Banner
-  const bannerGroup = new THREE.Group();
-  bannerGroup.position.set(0, 12.5, -11.8);
+  // Side walls
+  const sideWallMat = new THREE.MeshStandardMaterial({ color: 0x0d0221, roughness: 0.9 });
+  const leftWall = new THREE.Mesh(new THREE.PlaneGeometry(50, 40), sideWallMat);
+  leftWall.position.set(-35, 18, 5);
+  leftWall.rotation.y = Math.PI / 2;
+  scene.add(leftWall);
+  const rightWall = new THREE.Mesh(new THREE.PlaneGeometry(50, 40), sideWallMat);
+  rightWall.position.set(35, 18, 5);
+  rightWall.rotation.y = -Math.PI / 2;
+  scene.add(rightWall);
 
-  const bannerBack = new THREE.Mesh(new THREE.BoxGeometry(13, 3.4, 0.2), new THREE.MeshStandardMaterial({
-    color: 0x831843,
-    roughness: 0.3,
-    metalness: 0.4
-  }));
+  // ===== 3. NEON STORE BANNER =====
+  const bannerGroup = new THREE.Group();
+  bannerGroup.position.set(0, 13.5, -11.5);
+
+  // Dark back panel
+  const bannerBack = new THREE.Mesh(new THREE.BoxGeometry(18, 4.2, 0.2),
+    new THREE.MeshStandardMaterial({ color: 0x0d0221, roughness: 0.4, metalness: 0.3 }));
   bannerGroup.add(bannerBack);
 
-  const bannerFrame = new THREE.Mesh(new THREE.BoxGeometry(13.4, 3.8, 0.1), new THREE.MeshBasicMaterial({
-    color: 0xf472b6
-  }));
-  bannerFrame.position.z = -0.1;
+  // Hot pink outer glow frame
+  const bannerFrame = new THREE.Mesh(new THREE.BoxGeometry(18.5, 4.7, 0.08),
+    new THREE.MeshBasicMaterial({ color: 0xff00aa }));
+  bannerFrame.position.z = -0.08;
   bannerGroup.add(bannerFrame);
 
-  // Canvas Neon Logo Texture
-  const canvas = document.createElement('canvas');
-  canvas.width = 1024;
-  canvas.height = 320;
-  const ctx = canvas.getContext('2d')!;
-  ctx.fillStyle = '#831843';
-  ctx.fillRect(0, 0, 1024, 320);
+  // Inner cyan glow rim
+  const innerRim = new THREE.Mesh(new THREE.BoxGeometry(18.1, 4.3, 0.05),
+    new THREE.MeshBasicMaterial({ color: 0x00eeff }));
+  innerRim.position.z = -0.04;
+  bannerGroup.add(innerRim);
 
-  ctx.shadowColor = '#f472b6';
-  ctx.shadowBlur = 20;
-  ctx.fillStyle = '#fce7f3';
-  ctx.font = '900 56px sans-serif';
-  ctx.textAlign = 'center';
-  ctx.fillText('🎀 夢幻星空 3D 娃娃機專賣店 🎀', 512, 130);
+  // Banner canvas texture
+  const bannerCanvas = document.createElement('canvas');
+  bannerCanvas.width = 2048;
+  bannerCanvas.height = 480;
+  const bctx = bannerCanvas.getContext('2d')!;
 
-  ctx.shadowColor = '#fbbf24';
-  ctx.shadowBlur = 15;
-  ctx.fillStyle = '#fef08a';
-  ctx.font = '700 36px sans-serif';
-  ctx.fillText('✨ 經典專業甩爪 · 歡樂 50 刮好禮雙重送 ✨', 512, 220);
+  // Deep dark gradient bg
+  const bgrad = bctx.createLinearGradient(0, 0, 2048, 0);
+  bgrad.addColorStop(0, '#0d0221');
+  bgrad.addColorStop(0.5, '#1a0040');
+  bgrad.addColorStop(1, '#0d0221');
+  bctx.fillStyle = bgrad;
+  bctx.fillRect(0, 0, 2048, 480);
 
-  const logoTex = new THREE.CanvasTexture(canvas);
-  const logoMat = new THREE.MeshBasicMaterial({ map: logoTex, transparent: true });
-  const logoPlane = new THREE.Mesh(new THREE.PlaneGeometry(12.5, 3.1), logoMat);
-  logoPlane.position.z = 0.12;
-  bannerGroup.add(logoPlane);
+  // Neon title glow
+  bctx.shadowColor = '#ff00cc';
+  bctx.shadowBlur = 30;
+  bctx.fillStyle = '#ffffff';
+  bctx.font = '900 88px serif';
+  bctx.textAlign = 'center';
+  bctx.fillText('🎀 夢幻 3D 娃娃機旗艦店 🎀', 1024, 175);
+
+  bctx.shadowColor = '#00ccff';
+  bctx.shadowBlur = 20;
+  bctx.fillStyle = '#00eeff';
+  bctx.font = '700 52px sans-serif';
+  bctx.fillText('✨ 吉依卡哇 · 七龍珠 · 海賊王 · 三麗鷗 ✨', 1024, 285);
+
+  bctx.shadowColor = '#ffcc00';
+  bctx.shadowBlur = 12;
+  bctx.fillStyle = '#ffe066';
+  bctx.font = '600 38px sans-serif';
+  bctx.fillText('🌸 每局精彩 · 保底必得 · 新品每週更新 🌸', 1024, 385);
+
+  const bannerTex = new THREE.CanvasTexture(bannerCanvas);
+  const bannerMat = new THREE.MeshBasicMaterial({ map: bannerTex, transparent: true });
+  const bannerPlane = new THREE.Mesh(new THREE.PlaneGeometry(17.5, 3.9), bannerMat);
+  bannerPlane.position.z = 0.12;
+  bannerGroup.add(bannerPlane);
 
   scene.add(bannerGroup);
+
+  // ===== 4. NEON LIGHT STRIPS on ceiling =====
+  const neonColors = [0xff00aa, 0x00eeff, 0xff6600, 0xaaff00];
+  neonColors.forEach((col, i) => {
+    const stripMat = new THREE.MeshBasicMaterial({ color: col });
+    const strip = new THREE.Mesh(new THREE.BoxGeometry(30, 0.12, 0.12), stripMat);
+    strip.position.set(0, 9 + i * 0.3, -8 + i * 2);
+    scene.add(strip);
+  });
+
+  // ===== 5. AMBIENT POINT LIGHTS for neon mood =====
+  const neonLight1 = new THREE.PointLight(0xff00aa, 1.2, 25);
+  neonLight1.position.set(-12, 8, -8);
+  scene.add(neonLight1);
+
+  const neonLight2 = new THREE.PointLight(0x00eeff, 1.0, 25);
+  neonLight2.position.set(12, 8, -8);
+  scene.add(neonLight2);
+
+  const warmLight = new THREE.PointLight(0xffcc66, 0.6, 30);
+  warmLight.position.set(0, 10, 8);
+  scene.add(warmLight);
 }
 
 // Start Game
