@@ -585,24 +585,46 @@ function setupUIEventListeners() {
     prizesManager.clearPrizes();
 
     if (mode === 'kbasket') {
-      // ⚡ K-霸 巨型家電玩具機台 (1.3x Big Claw + Line Length 3.0 + 8 Appliance Boxes)
+      // ⚡ K-霸 巨型家電玩具機台 (Exact matching parameters from user screenshot: length 2.5, dolls 20, speed 3.5, strong 79%, etc.)
       claw.setClawScale(1.3);
-      cabinet.setBaffleHeight(0.3);
-      (document.getElementById('setting-baffle') as HTMLInputElement).value = '0.3';
-      (document.getElementById('setting-length') as HTMLInputElement).value = '3.0';
-      document.getElementById('val-length')!.textContent = '3.0';
-      (document.getElementById('setting-dolls') as HTMLInputElement).value = '8';
-      document.getElementById('val-dolls')!.textContent = '8';
+
+      (document.getElementById('setting-strong') as HTMLInputElement).value = '79';
+      document.getElementById('val-strong')!.textContent = '79%';
+
+      (document.getElementById('setting-height') as HTMLInputElement).value = '60';
+      document.getElementById('val-height')!.textContent = '60%';
+
+      (document.getElementById('setting-weak') as HTMLInputElement).value = '43';
+      document.getElementById('val-weak')!.textContent = '43%';
+
+      (document.getElementById('setting-tophit') as HTMLInputElement).value = '29';
+      document.getElementById('val-tophit')!.textContent = '29%';
+
+      (document.getElementById('setting-speed') as HTMLInputElement).value = '3.5';
+      document.getElementById('val-speed')!.textContent = '3.5';
+
+      (document.getElementById('setting-length') as HTMLInputElement).value = '2.5';
+      document.getElementById('val-length')!.textContent = '2.5';
+
+      (document.getElementById('setting-baffle') as HTMLInputElement).value = '1.1';
+      document.getElementById('val-baffle')!.textContent = '1.1';
+      cabinet.setBaffleHeight(1.1);
+
+      (document.getElementById('setting-dolls') as HTMLInputElement).value = '20';
+      document.getElementById('val-dolls')!.textContent = '20';
+
+      (document.getElementById('setting-antiswing') as HTMLSelectElement).value = 'disabled';
+
       applyDIPSettings();
 
       if (prizeSelect) prizeSelect.value = 'giant_appliances';
-      prizesManager.spawnPrizes(8, 'giant_appliances');
+      prizesManager.spawnPrizes(20, 'giant_appliances');
 
       controls.target.set(0, 3.2, 0);
       camera.position.set(0, 5.6, 9.2);
       controls.update();
 
-      showWinToast('⚡ 已切換至【K-霸 巨型家電玩具機台】！線長設為 3.0，預設 8 件專屬大盒家電！');
+      showWinToast('⚡ 已切換至【K-霸 巨型家電玩具機台】！已自動同步圖片預設參數 (線長 2.5, 數量 20, 強電 79%)！');
     } else {
       // 👑 經典黃色 TOY STORY 娃娃機
       claw.setClawScale(1.0);
