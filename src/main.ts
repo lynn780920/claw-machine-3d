@@ -694,44 +694,72 @@ function setupKeyboardListeners() {
 }
 
 function createArcadeEnvironment(scene: THREE.Scene) {
-  // Deep midnight blue JP arcade atmosphere
-  scene.background = new THREE.Color(0x0f0a1e);
-  scene.fog = new THREE.FogExp2(0x0f0a1e, 0.004);
+  // Gritty Dark Cyberpunk Ambient Atmosphere
+  scene.background = new THREE.Color(0x05020a);
+  scene.fog = new THREE.FogExp2(0x05020a, 0.005);
 
-  // ===== 1. VIBRANT FLOOR: Pink & White Gloss Tiles with Gold Seams =====
+  // ===== 1. CYBERPUNK STEEL GRID FLOOR: Dark Metallic Tread Plate with Neon Circuit Seams =====
   const floorCanvas = document.createElement('canvas');
   floorCanvas.width = 512;
   floorCanvas.height = 512;
   const fctx = floorCanvas.getContext('2d')!;
 
-  // Soft warm white base
-  fctx.fillStyle = '#fff8f8';
+  // Dark industrial steel plate background
+  fctx.fillStyle = '#0f111a';
   fctx.fillRect(0, 0, 512, 512);
 
-  // Candy pink alternating tiles
-  fctx.fillStyle = '#ffd6e7';
+  // Metal tread plate diamond pattern texture
+  fctx.strokeStyle = '#1e2238';
+  fctx.lineWidth = 2;
+  for (let x = -512; x < 1024; x += 32) {
+    fctx.beginPath(); fctx.moveTo(x, 0); fctx.lineTo(x + 512, 512); fctx.stroke();
+    fctx.beginPath(); fctx.moveTo(x, 512); fctx.lineTo(x + 512, 0); fctx.stroke();
+  }
+
+  // Steel panel grid squares
   for (let r = 0; r < 4; r++) {
     for (let c = 0; c < 4; c++) {
-      if ((r + c) % 2 === 1) {
-        fctx.fillRect(c * 128 + 2, r * 128 + 2, 124, 124);
-      }
+      // Panel border outline
+      fctx.strokeStyle = '#2d3748';
+      fctx.lineWidth = 4;
+      fctx.strokeRect(c * 128 + 4, r * 128 + 4, 120, 120);
+
+      // Metallic corner rivets
+      fctx.fillStyle = '#718096';
+      const rivets = [
+        [c * 128 + 12, r * 128 + 12],
+        [c * 128 + 116, r * 128 + 12],
+        [c * 128 + 12, r * 128 + 116],
+        [c * 128 + 116, r * 128 + 116]
+      ];
+      rivets.forEach(([rx, ry]) => {
+        fctx.beginPath(); fctx.arc(rx, ry, 3.5, 0, Math.PI * 2); fctx.fill();
+      });
     }
   }
 
-  // Inner highlight gloss on each tile
-  fctx.fillStyle = 'rgba(255,255,255,0.45)';
-  for (let r = 0; r < 4; r++) {
-    for (let c = 0; c < 4; c++) {
-      fctx.fillRect(c * 128 + 8, r * 128 + 8, 50, 28);
-    }
-  }
-
-  // Gold grout lines
-  fctx.strokeStyle = '#f9a825';
-  fctx.lineWidth = 3;
+  // Glowing Cyberpunk Circuit Seam Lines (Alternating Cyan & Magenta)
   for (let i = 0; i <= 512; i += 128) {
+    // Glowing Cyan Vertical Seams
+    fctx.shadowColor = '#00f0ff';
+    fctx.shadowBlur = 12;
+    fctx.strokeStyle = '#00f0ff';
+    fctx.lineWidth = 3;
     fctx.beginPath(); fctx.moveTo(i, 0); fctx.lineTo(i, 512); fctx.stroke();
+
+    // Glowing Hot Pink Horizontal Seams
+    fctx.shadowColor = '#ff0055';
+    fctx.shadowBlur = 12;
+    fctx.strokeStyle = '#ff0055';
     fctx.beginPath(); fctx.moveTo(0, i); fctx.lineTo(512, i); fctx.stroke();
+  }
+  fctx.shadowBlur = 0; // reset shadow
+
+  // Hazard Caution Stripes on floor border
+  fctx.fillStyle = '#eab308';
+  for (let i = 0; i < 512; i += 32) {
+    fctx.fillRect(i, 0, 16, 12);
+    fctx.fillRect(i, 500, 16, 12);
   }
 
   const floorTex = new THREE.CanvasTexture(floorCanvas);
@@ -739,54 +767,58 @@ function createArcadeEnvironment(scene: THREE.Scene) {
   floorTex.wrapT = THREE.RepeatWrapping;
   floorTex.repeat.set(10, 10);
 
-  const floorMat = new THREE.MeshStandardMaterial({ map: floorTex, roughness: 0.08, metalness: 0.18 });
+  const floorMat = new THREE.MeshStandardMaterial({
+    map: floorTex,
+    roughness: 0.18,
+    metalness: 0.82 // High metallic reflection for cyberpunk steel look
+  });
   const floorMesh = new THREE.Mesh(new THREE.PlaneGeometry(80, 80), floorMat);
   floorMesh.rotation.x = -Math.PI / 2;
   floorMesh.position.y = -0.01;
   floorMesh.receiveShadow = true;
   scene.add(floorMesh);
 
-  // ===== 2. BACKGROUND WALL: JP Arcade Night Sky =====
+  // ===== 2. CYBERPUNK GRAFFITI STREET WALL =====
   const wallCanvas = document.createElement('canvas');
   wallCanvas.width = 2048;
   wallCanvas.height = 1024;
   const wctx = wallCanvas.getContext('2d')!;
 
-  // Deep night gradient: midnight indigo -> dark magenta
+  // Gritty Dark Cyberpunk Alley Gradient (Midnight Black -> Deep Violet -> Cyber Indigo)
   const wallGrad = wctx.createLinearGradient(0, 0, 0, 1024);
-  wallGrad.addColorStop(0, '#0d0221');
-  wallGrad.addColorStop(0.45, '#1a0533');
-  wallGrad.addColorStop(1, '#2d0a4e');
+  wallGrad.addColorStop(0, '#06020c');
+  wallGrad.addColorStop(0.5, '#120722');
+  wallGrad.addColorStop(1, '#090314');
   wctx.fillStyle = wallGrad;
   wctx.fillRect(0, 0, 2048, 1024);
 
-  // Glowing neon grid lines
-  wctx.strokeStyle = 'rgba(190, 0, 255, 0.18)';
-  wctx.lineWidth = 1.5;
-  for (let gx = 0; gx <= 2048; gx += 128) {
+  // Gritty Metal Wall Plates
+  wctx.strokeStyle = 'rgba(0, 240, 255, 0.12)';
+  wctx.lineWidth = 2;
+  for (let gx = 0; gx <= 2048; gx += 256) {
     wctx.beginPath(); wctx.moveTo(gx, 0); wctx.lineTo(gx, 1024); wctx.stroke();
   }
-  for (let gy = 0; gy <= 1024; gy += 128) {
+  for (let gy = 0; gy <= 1024; gy += 256) {
     wctx.beginPath(); wctx.moveTo(0, gy); wctx.lineTo(2048, gy); wctx.stroke();
   }
 
-  // Twinkling stars
-  for (let i = 0; i < 180; i++) {
-    const sx = (i * 317 + 47) % 2048;
-    const sy = (i * 233 + 19) % 1024;
-    const sr = 1.5 + (i % 4) * 1.2;
-    const alpha = 0.4 + (i % 5) * 0.12;
-    wctx.fillStyle = `rgba(255, 240, 255, ${alpha})`;
-    wctx.beginPath(); wctx.arc(sx, sy, sr, 0, Math.PI * 2); wctx.fill();
-  }
+  // Glowing Neon Circuit Traces on Wall
+  wctx.shadowColor = '#00f0ff';
+  wctx.shadowBlur = 15;
+  wctx.strokeStyle = 'rgba(0, 240, 255, 0.4)';
+  wctx.lineWidth = 3;
+  wctx.beginPath();
+  wctx.moveTo(100, 200); wctx.lineTo(400, 200); wctx.lineTo(500, 300); wctx.lineTo(500, 700);
+  wctx.stroke();
+  wctx.beginPath();
+  wctx.moveTo(1948, 200); wctx.lineTo(1648, 200); wctx.lineTo(1548, 300); wctx.lineTo(1548, 700);
+  wctx.stroke();
 
-  // Neon glow circles (bokeh effect)
+  // Cyberpunk Neon Glow Circles
   const bokehs = [
-    { x: 300, y: 200, r: 80, color: 'rgba(255, 0, 200, 0.07)' },
-    { x: 900, y: 600, r: 120, color: 'rgba(100, 0, 255, 0.07)' },
-    { x: 1600, y: 300, r: 100, color: 'rgba(0, 200, 255, 0.06)' },
-    { x: 1200, y: 800, r: 90, color: 'rgba(255, 100, 0, 0.05)' },
-    { x: 500, y: 700, r: 70, color: 'rgba(0, 255, 180, 0.06)' },
+    { x: 350, y: 300, r: 160, color: 'rgba(255, 0, 85, 0.12)' },
+    { x: 1700, y: 350, r: 180, color: 'rgba(0, 240, 255, 0.12)' },
+    { x: 1024, y: 700, r: 220, color: 'rgba(170, 0, 255, 0.10)' },
   ];
   bokehs.forEach(b => {
     const bg = wctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, b.r);
@@ -796,24 +828,39 @@ function createArcadeEnvironment(scene: THREE.Scene) {
     wctx.beginPath(); wctx.arc(b.x, b.y, b.r, 0, Math.PI * 2); wctx.fill();
   });
 
-  // Floating cute icons row
-  const icons = ['🎀', '⭐', '🎠', '💫', '🌸', '🎪', '🎡', '✨', '🎀', '🌟', '🎠', '💝', '🌸', '⭐', '🎡', '🎀'];
-  wctx.font = '56px serif';
-  icons.forEach((icon, i) => {
-    wctx.fillText(icon, 60 + i * 128, 950);
-  });
+  // Punk Graffiti Tags & Spray Art (賽博龐克街頭塗鴉)
+  wctx.shadowColor = '#ff0055';
+  wctx.shadowBlur = 20;
+  wctx.fillStyle = '#ff0055';
+  wctx.font = '900 96px sans-serif';
+  wctx.fillText('⚡ CYBER PUNK ⚡', 180, 420);
+
+  wctx.shadowColor = '#00f0ff';
+  wctx.shadowBlur = 20;
+  wctx.fillStyle = '#00f0ff';
+  wctx.font = '900 110px sans-serif';
+  wctx.fillText('NEON RAGE 2077', 1100, 450);
+
+  wctx.shadowColor = '#ffe600';
+  wctx.shadowBlur = 15;
+  wctx.fillStyle = '#ffe600';
+  wctx.font = '800 64px sans-serif';
+  wctx.fillText('☠️ NO FUTURE ☠️', 400, 820);
+  wctx.fillText('🤘 HIGH TORQUE ⚡', 1250, 820);
+
+  wctx.shadowBlur = 0; // reset
 
   const wallTex = new THREE.CanvasTexture(wallCanvas);
   wallTex.wrapS = THREE.ClampToEdgeWrapping;
   wallTex.wrapT = THREE.ClampToEdgeWrapping;
 
-  const wallMat = new THREE.MeshStandardMaterial({ map: wallTex, roughness: 0.6, metalness: 0.05 });
+  const wallMat = new THREE.MeshStandardMaterial({ map: wallTex, roughness: 0.65, metalness: 0.35 });
   const wallMesh = new THREE.Mesh(new THREE.PlaneGeometry(80, 40), wallMat);
   wallMesh.position.set(0, 18, -20);
   scene.add(wallMesh);
 
-  // Side walls
-  const sideWallMat = new THREE.MeshStandardMaterial({ color: 0x0d0221, roughness: 0.9 });
+  // Side Walls (Gritty Dark Metallic Plates)
+  const sideWallMat = new THREE.MeshStandardMaterial({ color: 0x090314, roughness: 0.8, metalness: 0.4 });
   const leftWall = new THREE.Mesh(new THREE.PlaneGeometry(50, 40), sideWallMat);
   leftWall.position.set(-35, 18, 5);
   leftWall.rotation.y = Math.PI / 2;
@@ -823,24 +870,24 @@ function createArcadeEnvironment(scene: THREE.Scene) {
   rightWall.rotation.y = -Math.PI / 2;
   scene.add(rightWall);
 
-  // ===== 3. NEON STORE BANNER =====
+  // ===== 3. CYBERPUNK NEON STORE HEADER BANNER =====
   const bannerGroup = new THREE.Group();
   bannerGroup.position.set(0, 13.5, -11.5);
 
-  // Dark back panel
+  // Dark metallic back chassis
   const bannerBack = new THREE.Mesh(new THREE.BoxGeometry(18, 4.2, 0.2),
-    new THREE.MeshStandardMaterial({ color: 0x0d0221, roughness: 0.4, metalness: 0.3 }));
+    new THREE.MeshStandardMaterial({ color: 0x090314, roughness: 0.3, metalness: 0.8 }));
   bannerGroup.add(bannerBack);
 
-  // Hot pink outer glow frame
+  // Hot Magenta outer neon frame
   const bannerFrame = new THREE.Mesh(new THREE.BoxGeometry(18.5, 4.7, 0.08),
-    new THREE.MeshBasicMaterial({ color: 0xff00aa }));
+    new THREE.MeshBasicMaterial({ color: 0xff0055 }));
   bannerFrame.position.z = -0.08;
   bannerGroup.add(bannerFrame);
 
-  // Inner cyan glow rim
+  // Cyber Cyan inner neon glow rim
   const innerRim = new THREE.Mesh(new THREE.BoxGeometry(18.1, 4.3, 0.05),
-    new THREE.MeshBasicMaterial({ color: 0x00eeff }));
+    new THREE.MeshBasicMaterial({ color: 0x00f0ff }));
   innerRim.position.z = -0.04;
   bannerGroup.add(innerRim);
 
@@ -852,31 +899,31 @@ function createArcadeEnvironment(scene: THREE.Scene) {
 
   // Deep dark gradient bg
   const bgrad = bctx.createLinearGradient(0, 0, 2048, 0);
-  bgrad.addColorStop(0, '#0d0221');
-  bgrad.addColorStop(0.5, '#1a0040');
-  bgrad.addColorStop(1, '#0d0221');
+  bgrad.addColorStop(0, '#05020a');
+  bgrad.addColorStop(0.5, '#150628');
+  bgrad.addColorStop(1, '#05020a');
   bctx.fillStyle = bgrad;
   bctx.fillRect(0, 0, 2048, 480);
 
-  // Neon title glow
-  bctx.shadowColor = '#ff00cc';
-  bctx.shadowBlur = 30;
+  // Neon Cyberpunk Title Glow
+  bctx.shadowColor = '#ff0055';
+  bctx.shadowBlur = 35;
   bctx.fillStyle = '#ffffff';
-  bctx.font = '900 88px serif';
+  bctx.font = '900 88px sans-serif';
   bctx.textAlign = 'center';
-  bctx.fillText('🎀 夢幻 3D 娃娃機旗艦店 🎀', 1024, 175);
+  bctx.fillText('⚡ CYBER PUNK 3D 娃娃機專賣店 ⚡', 1024, 175);
 
-  bctx.shadowColor = '#00ccff';
-  bctx.shadowBlur = 20;
-  bctx.fillStyle = '#00eeff';
+  bctx.shadowColor = '#00f0ff';
+  bctx.shadowBlur = 25;
+  bctx.fillStyle = '#00f0ff';
   bctx.font = '700 52px sans-serif';
-  bctx.fillText('✨ 吉依卡哇 · 七龍珠 · 海賊王 · 三麗鷗 ✨', 1024, 285);
+  bctx.fillText('🔥 經典甩爪 · 擬真物理 · 龐克極速體驗 🔥', 1024, 285);
 
-  bctx.shadowColor = '#ffcc00';
-  bctx.shadowBlur = 12;
-  bctx.fillStyle = '#ffe066';
+  bctx.shadowColor = '#ffe600';
+  bctx.shadowBlur = 18;
+  bctx.fillStyle = '#ffe600';
   bctx.font = '600 38px sans-serif';
-  bctx.fillText('🌸 每局精彩 · 保底必得 · 新品每週更新 🌸', 1024, 385);
+  bctx.fillText('☠️ 100 個堆山山崩 · 50 刮好禮重磅狂歡 ☠️', 1024, 385);
 
   const bannerTex = new THREE.CanvasTexture(bannerCanvas);
   const bannerMat = new THREE.MeshBasicMaterial({ map: bannerTex, transparent: true });
@@ -886,27 +933,27 @@ function createArcadeEnvironment(scene: THREE.Scene) {
 
   scene.add(bannerGroup);
 
-  // ===== 4. NEON LIGHT STRIPS on ceiling =====
-  const neonColors = [0xff00aa, 0x00eeff, 0xff6600, 0xaaff00];
+  // ===== 4. CYBERPUNK NEON LIGHT STRIPS ON CEILING =====
+  const neonColors = [0xff0055, 0x00f0ff, 0xffe600, 0xaa00ff];
   neonColors.forEach((col, i) => {
     const stripMat = new THREE.MeshBasicMaterial({ color: col });
-    const strip = new THREE.Mesh(new THREE.BoxGeometry(30, 0.12, 0.12), stripMat);
-    strip.position.set(0, 9 + i * 0.3, -8 + i * 2);
+    const strip = new THREE.Mesh(new THREE.BoxGeometry(30, 0.15, 0.15), stripMat);
+    strip.position.set(0, 9.2 + i * 0.3, -8 + i * 2);
     scene.add(strip);
   });
 
-  // ===== 5. AMBIENT POINT LIGHTS for neon mood =====
-  const neonLight1 = new THREE.PointLight(0xff00aa, 1.2, 25);
-  neonLight1.position.set(-12, 8, -8);
+  // ===== 5. CYBERPUNK NEON POINT LIGHTS =====
+  const neonLight1 = new THREE.PointLight(0xff0055, 1.8, 30);
+  neonLight1.position.set(-12, 8, -6);
   scene.add(neonLight1);
 
-  const neonLight2 = new THREE.PointLight(0x00eeff, 1.0, 25);
-  neonLight2.position.set(12, 8, -8);
+  const neonLight2 = new THREE.PointLight(0x00f0ff, 1.6, 30);
+  neonLight2.position.set(12, 8, -6);
   scene.add(neonLight2);
 
-  const warmLight = new THREE.PointLight(0xffcc66, 0.6, 30);
-  warmLight.position.set(0, 10, 8);
-  scene.add(warmLight);
+  const neonLight3 = new THREE.PointLight(0xaa00ff, 1.2, 35);
+  neonLight3.position.set(0, 11, 4);
+  scene.add(neonLight3);
 }
 
 // Start Game
