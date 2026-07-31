@@ -139,12 +139,19 @@ body {
 
 @media (max-width: 500px) {
   .top-nav-bar {
+    top: 6px;
     gap: 4px;
-    padding: 3px 6px;
+    padding: 4px 6px;
+    max-width: 98vw;
+    width: 98vw;
+    box-sizing: border-box;
+    justify-content: space-around;
   }
   .nav-pill-btn {
-    font-size: 0.72rem;
-    padding: 5px 8px;
+    font-size: 0.68rem;
+    padding: 4px 7px;
+    letter-spacing: -0.3px;
+    gap: 2px;
   }
 }
 
