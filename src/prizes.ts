@@ -47,7 +47,7 @@ export class PrizesManager {
   private spawnPrizeByType(x: number, y: number, z: number, typeFilter: string) {
     let prizeType = typeFilter;
     if (typeFilter === 'mixed') {
-      const types = ['chiikawa', 'dragonball', 'onepiece', 'mug_box', 'sanrio_bottle', 'cookie_box', 'chiikawa', 'chiikawa'];
+      const types = ['chiikawa', 'dragonball', 'onepiece', 'mug_box', 'sanrio_bottle', 'cookie_box', 'my_cat', 'chiikawa', 'my_cat'];
       prizeType = types[Math.floor(Math.random() * types.length)];
     }
     switch (prizeType) {
@@ -57,6 +57,7 @@ export class PrizesManager {
       case 'mug_box':     this.spawnMugBox(x, y, z); break;
       case 'sanrio_bottle': this.spawnSanrioBottle(x, y, z); break;
       case 'cookie_box':  this.spawnCookieBox(x, y, z); break;
+      case 'my_cat':      this.spawnCalicoCat(x, y, z); break;
       // legacy
       case 'bear': case 'cat': this.spawnChiikawa(x, y, z); break;
       case 'block': this.spawnDragonBallBox(x, y, z); break;
@@ -766,4 +767,289 @@ export class PrizesManager {
       this.bodies.push(body);
     }
   }
+
+  // ══════════════════════════════════════════════════════════════
+  //  🐱  MY CAT — 三花貓 Calico Cat Plush Doll
+  //  Based on owner's real cat photo:
+  //  - LEFT face: solid black
+  //  - RIGHT face: orange/cream with black patches
+  //  - White chin & chest
+  //  - Big round green eyes with black pupils
+  //  - Black nose, white whiskers
+  //  - Pointy triangle ears (black left, orange+black right)
+  // ══════════════════════════════════════════════════════════════
+  private spawnCalicoCat(x: number, y: number, z: number) {
+    const group = new THREE.Group();
+    group.position.set(x, y, z);
+    group.rotation.y = Math.random() * Math.PI * 2;
+
+    // ── Face canvas texture (front of head) ──────────────────────
+    // Paint the distinctive calico split-face pattern
+    const faceTex = this.makeCanvasTex(512, 512, ctx => {
+      // Base cream/beige face
+      ctx.fillStyle = '#f0dcc0';
+      ctx.beginPath(); ctx.arc(256, 256, 245, 0, Math.PI * 2); ctx.fill();
+
+      // LEFT half: solid BLACK patch
+      ctx.fillStyle = '#1a1a1a';
+      ctx.beginPath();
+      ctx.arc(256, 256, 245, Math.PI * 0.5, Math.PI * 1.5);
+      ctx.lineTo(256, 11);
+      ctx.closePath();
+      ctx.fill();
+
+      // Right side orange patch around eye
+      ctx.fillStyle = '#c87030';
+      ctx.beginPath();
+      ctx.ellipse(320, 210, 85, 70, -0.3, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Black patch on right side (above right eye)
+      ctx.fillStyle = '#1a1a1a';
+      ctx.beginPath();
+      ctx.ellipse(330, 155, 62, 45, 0.4, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Black patch under right eye
+      ctx.fillStyle = '#1a1a1a';
+      ctx.beginPath();
+      ctx.ellipse(360, 290, 38, 28, -0.3, 0, Math.PI * 2);
+      ctx.fill();
+
+      // White chin / muzzle area (bottom center)
+      ctx.fillStyle = '#f5f0e8';
+      ctx.beginPath();
+      ctx.ellipse(256, 370, 110, 100, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // White lower chin
+      ctx.beginPath();
+      ctx.ellipse(256, 440, 90, 70, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // ── LEFT EYE (green, on black side) ──
+      // Eye white / sclera
+      ctx.fillStyle = '#e8ffe8';
+      ctx.beginPath(); ctx.ellipse(168, 235, 52, 46, 0.1, 0, Math.PI * 2); ctx.fill();
+      // Iris: bright green
+      const lIrisG = ctx.createRadialGradient(168, 235, 4, 168, 235, 38);
+      lIrisG.addColorStop(0, '#2dd4a0'); lIrisG.addColorStop(0.5, '#16a34a'); lIrisG.addColorStop(1, '#065f46');
+      ctx.fillStyle = lIrisG;
+      ctx.beginPath(); ctx.ellipse(168, 235, 38, 40, 0.1, 0, Math.PI * 2); ctx.fill();
+      // Pupil (vertical slit)
+      ctx.fillStyle = '#0a0a0a';
+      ctx.beginPath(); ctx.ellipse(168, 235, 10, 34, 0.1, 0, Math.PI * 2); ctx.fill();
+      // Eye shine
+      ctx.fillStyle = 'rgba(255,255,255,0.85)';
+      ctx.beginPath(); ctx.ellipse(155, 220, 12, 8, -0.5, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(178, 246, 5, 4, 0, 0, Math.PI * 2); ctx.fill();
+      // Eye outline
+      ctx.strokeStyle = '#1a1a1a'; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.ellipse(168, 235, 52, 46, 0.1, 0, Math.PI * 2); ctx.stroke();
+
+      // ── RIGHT EYE (green, on orange/black side) ──
+      ctx.fillStyle = '#e8ffe8';
+      ctx.beginPath(); ctx.ellipse(340, 230, 50, 46, -0.1, 0, Math.PI * 2); ctx.fill();
+      const rIrisG = ctx.createRadialGradient(340, 230, 4, 340, 230, 37);
+      rIrisG.addColorStop(0, '#2dd4a0'); rIrisG.addColorStop(0.5, '#16a34a'); rIrisG.addColorStop(1, '#065f46');
+      ctx.fillStyle = rIrisG;
+      ctx.beginPath(); ctx.ellipse(340, 230, 37, 40, -0.1, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#0a0a0a';
+      ctx.beginPath(); ctx.ellipse(340, 230, 9, 34, -0.1, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.85)';
+      ctx.beginPath(); ctx.ellipse(326, 215, 12, 8, -0.5, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(350, 240, 5, 4, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#1a1a1a'; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.ellipse(340, 230, 50, 46, -0.1, 0, Math.PI * 2); ctx.stroke();
+
+      // ── NOSE (dark brownish-black, slightly heart shaped) ──
+      ctx.fillStyle = '#2a1a1a';
+      ctx.beginPath();
+      ctx.moveTo(256, 318);
+      ctx.bezierCurveTo(240, 300, 220, 308, 230, 326);
+      ctx.bezierCurveTo(238, 338, 256, 340, 256, 340);
+      ctx.bezierCurveTo(256, 340, 274, 338, 282, 326);
+      ctx.bezierCurveTo(292, 308, 272, 300, 256, 318);
+      ctx.fill();
+
+      // ── MOUTH line ──
+      ctx.strokeStyle = '#4a2a2a'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(256, 340); ctx.lineTo(256, 360); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(256, 360); ctx.quadraticCurveTo(232, 375, 220, 370); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(256, 360); ctx.quadraticCurveTo(280, 375, 292, 370); ctx.stroke();
+
+      // ── WHISKERS (white) ──
+      ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.lineWidth = 2.5; ctx.lineCap = 'round';
+      // Left whiskers
+      ctx.beginPath(); ctx.moveTo(220, 340); ctx.lineTo(50, 320); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(218, 352); ctx.lineTo(45, 358); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(222, 365); ctx.lineTo(55, 385); ctx.stroke();
+      // Right whiskers
+      ctx.beginPath(); ctx.moveTo(292, 340); ctx.lineTo(462, 320); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(294, 352); ctx.lineTo(467, 358); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(290, 365); ctx.lineTo(457, 385); ctx.stroke();
+
+      // ── Forehead crease lines (subtle) ──
+      ctx.strokeStyle = 'rgba(0,0,0,0.18)'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(200, 130); ctx.quadraticCurveTo(230, 110, 256, 130); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(256, 130); ctx.quadraticCurveTo(282, 110, 310, 130); ctx.stroke();
+    });
+
+    // ── Body canvas (front of torso) ─────────────────────────────
+    const bodyTex = this.makeCanvasTex(512, 512, ctx => {
+      // White/cream belly base
+      ctx.fillStyle = '#f5f0e8';
+      ctx.beginPath(); ctx.ellipse(256, 280, 230, 240, 0, 0, Math.PI * 2); ctx.fill();
+
+      // Black collar / neck band
+      ctx.fillStyle = '#1a1a1a';
+      ctx.beginPath(); ctx.ellipse(256, 95, 150, 55, 0, 0, Math.PI * 2); ctx.fill();
+
+      // Left side body: black
+      ctx.fillStyle = '#1a1a1a';
+      ctx.beginPath();
+      ctx.ellipse(120, 280, 120, 200, -0.2, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Right side: orange
+      ctx.fillStyle = '#c87030';
+      ctx.beginPath();
+      ctx.ellipse(390, 260, 115, 185, 0.2, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Orange patches on right
+      ctx.fillStyle = '#c87030';
+      ctx.beginPath(); ctx.ellipse(350, 430, 80, 60, 0.3, 0, Math.PI * 2); ctx.fill();
+
+      // Center white belly stripe
+      ctx.fillStyle = '#f8f4ee';
+      ctx.beginPath(); ctx.ellipse(256, 320, 100, 165, 0, 0, Math.PI * 2); ctx.fill();
+
+      // Subtle fur texture lines
+      ctx.strokeStyle = 'rgba(0,0,0,0.07)'; ctx.lineWidth = 1.5;
+      for (let fy = 150; fy < 480; fy += 18) {
+        ctx.beginPath();
+        ctx.moveTo(100, fy);
+        ctx.quadraticCurveTo(256, fy - 8, 412, fy);
+        ctx.stroke();
+      }
+    });
+
+    // ── Back of head (simple black) ──────────────────────────────
+    const backHeadMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.9 });
+
+    // ── Materials ─────────────────────────────────────────────────
+    const faceMat = new THREE.MeshStandardMaterial({ map: faceTex, roughness: 0.82, metalness: 0 });
+    const bodyFrontMat = new THREE.MeshStandardMaterial({ map: bodyTex, roughness: 0.85, metalness: 0 });
+
+    // ── HEAD (round sphere, face texture on front) ────────────────
+    const headGeo = new THREE.SphereGeometry(0.40, 24, 24);
+    const headMats: THREE.Material[] = [];
+    // Use face texture on front-facing segments
+    const headMesh = new THREE.Mesh(headGeo, faceMat);
+    headMesh.position.set(0, 0.60, 0);
+    headMesh.castShadow = true;
+    group.add(headMesh);
+
+    // ── BODY ──────────────────────────────────────────────────────
+    const bodyMesh = new THREE.Mesh(new THREE.SphereGeometry(0.46, 20, 20), bodyFrontMat);
+    bodyMesh.scale.set(1, 1.05, 0.95);
+    bodyMesh.castShadow = true;
+    group.add(bodyMesh);
+
+    // ── EARS ─────────────────────────────────────────────────────
+    // Left ear: BLACK (matches cat's black left side)
+    const leftEarMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.85 });
+    const leftEarInnerMat = new THREE.MeshStandardMaterial({ color: 0x3a1a1a, roughness: 0.9 });
+    const rightEarMat = new THREE.MeshStandardMaterial({ color: 0xc87030, roughness: 0.85 });
+    const rightEarInnerMat = new THREE.MeshStandardMaterial({ color: 0xffcca0, roughness: 0.9 });
+    const earGeo = new THREE.ConeGeometry(0.155, 0.30, 3);
+    // Left ear
+    const le = new THREE.Mesh(earGeo, leftEarMat);
+    le.position.set(-0.28, 0.95, 0.02);
+    le.rotation.z = 0.18;
+    group.add(le);
+    const lei = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.18, 3), leftEarInnerMat);
+    lei.position.set(-0.26, 0.96, 0.06);
+    lei.rotation.z = 0.18;
+    group.add(lei);
+    // Right ear: orange with black tip
+    const re = new THREE.Mesh(earGeo, rightEarMat);
+    re.position.set(0.28, 0.95, 0.02);
+    re.rotation.z = -0.18;
+    group.add(re);
+    const rei = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.18, 3), rightEarInnerMat);
+    rei.position.set(0.26, 0.96, 0.06);
+    rei.rotation.z = -0.18;
+    group.add(rei);
+    // Black tip on right ear
+    const retip = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.1, 3),
+      new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.85 }));
+    retip.position.set(0.30, 1.08, 0.02);
+    retip.rotation.z = -0.18;
+    group.add(retip);
+
+    // ── TINY ARMS / PAWS ─────────────────────────────────────────
+    const leftPawMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.88 });
+    const rightPawMat = new THREE.MeshStandardMaterial({ color: 0xd08848, roughness: 0.88 });
+    const la = new THREE.Mesh(new THREE.SphereGeometry(0.13, 10, 10), leftPawMat);
+    la.position.set(-0.50, 0.0, 0.08); la.scale.set(0.75, 0.9, 0.75); la.castShadow = true;
+    const ra = new THREE.Mesh(new THREE.SphereGeometry(0.13, 10, 10), rightPawMat);
+    ra.position.set(0.50, 0.0, 0.08); ra.scale.set(0.75, 0.9, 0.75); ra.castShadow = true;
+    group.add(la, ra);
+
+    // ── FEET ─────────────────────────────────────────────────────
+    const leftFootMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.85 });
+    const rightFootMat = new THREE.MeshStandardMaterial({ color: 0xc87030, roughness: 0.85 });
+    const lf = new THREE.Mesh(new THREE.SphereGeometry(0.14, 10, 10), leftFootMat);
+    lf.position.set(-0.22, -0.52, 0.12); lf.scale.set(1.1, 0.6, 1.2);
+    const rf = new THREE.Mesh(new THREE.SphereGeometry(0.14, 10, 10), rightFootMat);
+    rf.position.set(0.22, -0.52, 0.12); rf.scale.set(1.1, 0.6, 1.2);
+    group.add(lf, rf);
+
+    // ── TAIL ─────────────────────────────────────────────────────
+    const tailMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.85 });
+    const tail1 = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.09, 0.55, 10), tailMat);
+    tail1.position.set(0.1, -0.2, -0.45); tail1.rotation.x = -0.9; tail1.rotation.z = 0.2;
+    group.add(tail1);
+    const tailTip = new THREE.Mesh(new THREE.SphereGeometry(0.09, 8, 8),
+      new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.85 }));
+    tailTip.position.set(0.2, 0.12, -0.72);
+    group.add(tailTip);
+
+    // ── NAME TAG ribbon (optional cute touch) ────────────────────
+    const tagMat = new THREE.MeshStandardMaterial({ color: 0xff80ab, roughness: 0.5 });
+    const tag = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.16, 0.04), tagMat);
+    tag.position.set(0, 0.20, 0.46);
+    group.add(tag);
+    const tagTex = this.makeCanvasTex(128, 64, ctx => {
+      ctx.fillStyle = '#ff80ab'; ctx.fillRect(0, 0, 128, 64);
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.strokeRect(4, 4, 120, 56);
+      ctx.fillStyle = '#fff'; ctx.font = 'bold 20px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText('🐱 我的貓', 64, 38);
+    });
+    const tagLabel = new THREE.Mesh(new THREE.PlaneGeometry(0.33, 0.14),
+      new THREE.MeshBasicMaterial({ map: tagTex, transparent: true }));
+    tagLabel.position.set(0, 0.20, 0.49);
+    group.add(tagLabel);
+
+    this.scene.add(group);
+    this.prizes.push(group);
+
+    // Physics
+    if (this.physics.world) {
+      const body = this.makeDynBody(x, y, z);
+      this.physics.world.createCollider(
+        RAPIER.ColliderDesc.ball(0.44).setMass(0.2).setFriction(0.42).setRestitution(0.12), body);
+      this.physics.world.createCollider(
+        RAPIER.ColliderDesc.ball(0.38).setTranslation(0, 0.60, 0).setFriction(0.42), body);
+      this.physics.world.createCollider(
+        RAPIER.ColliderDesc.ball(0.13).setTranslation(-0.50, 0.0, 0.08).setFriction(0.45), body);
+      this.physics.world.createCollider(
+        RAPIER.ColliderDesc.ball(0.13).setTranslation(0.50, 0.0, 0.08).setFriction(0.45), body);
+      this.physics.registerBody(body, group);
+      this.bodies.push(body);
+    }
+  }
 }
+
