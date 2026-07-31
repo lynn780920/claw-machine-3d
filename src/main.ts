@@ -582,26 +582,30 @@ function setupUIEventListeners() {
     const prizeSelect = document.getElementById('setting-prizetype') as HTMLSelectElement;
 
     if (mode === 'kbasket') {
-      // ⚡ K-霸 巨型家電玩具機台 (1.75x Enlarged Claw + Giant PS5/Switch/Dyson Box items)
-      claw.setClawScale(1.75);
+      // ⚡ K-霸 巨型家電玩具機台 (2.5x Giant Claw + 15 Massive PS5/Switch/Dyson Box items)
+      claw.setClawScale(2.5);
       cabinet.setBaffleHeight(0.3);
       (document.getElementById('setting-baffle') as HTMLInputElement).value = '0.3';
       (document.getElementById('setting-length') as HTMLInputElement).value = '14.5';
+      (document.getElementById('setting-dolls') as HTMLInputElement).value = '15';
+      document.getElementById('val-dolls')!.textContent = '15';
       applyDIPSettings();
 
       if (prizeSelect) prizeSelect.value = 'giant_appliances';
-      prizesManager.spawnPrizes(24, 'giant_appliances');
+      prizesManager.spawnPrizes(15, 'giant_appliances');
 
-      controls.target.set(0, 3.5, 0);
-      camera.position.set(0, 5.8, 9.8);
+      controls.target.set(0, 3.2, 0);
+      camera.position.set(0, 6.0, 10.5);
       controls.update();
 
-      showWinToast('⚡ 已切換至【K-霸 巨型家電玩具機台】！特大爪子已裝備，快來抓 PS5 與 Switch 大盒家電！');
+      showWinToast('⚡ 已切換至【K-霸 巨型家電玩具機台】！2.5倍特大巨爪已裝備 (預設15件大盒家電)！');
     } else {
       // 👑 經典黃色 TOY STORY 娃娃機
       claw.setClawScale(1.0);
       cabinet.setBaffleHeight(0.5);
       (document.getElementById('setting-baffle') as HTMLInputElement).value = '0.5';
+      (document.getElementById('setting-dolls') as HTMLInputElement).value = '40';
+      document.getElementById('val-dolls')!.textContent = '40';
       applyDIPSettings();
 
       if (prizeSelect) prizeSelect.value = 'mixed';

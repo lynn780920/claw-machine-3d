@@ -1047,34 +1047,31 @@ export class PrizesManager {
 
   // ══════════════════════════════════════════════════════════════
   //  🎮  PS5 CONSOLE GIANT BOX (K-霸 巨無霸家電大盒)
-  //  Size: W: 1.6, H: 2.0, D: 0.9
+  //  Size: W: 3.2, H: 4.0, D: 1.7 (TRULY GIANT BOX)
   // ══════════════════════════════════════════════════════════════
   private spawnPS5Box(x: number, y: number, z: number) {
-    const W = 1.5, H = 1.9, D = 0.8;
+    const W = 3.2, H = 4.0, D = 1.7;
     const group = new THREE.Group();
     group.position.set(x, y, z);
     group.rotation.y = Math.random() * Math.PI * 2;
 
     const frontTex = this.makeCanvasTex(512, 512, ctx => {
       ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, 512, 512);
-      // Blue top header bar
       ctx.fillStyle = '#003791'; ctx.fillRect(0, 0, 512, 100);
       ctx.fillStyle = '#ffffff'; ctx.font = '900 48px sans-serif'; ctx.textAlign = 'center';
       ctx.fillText('PlayStation 5', 256, 68);
 
-      // Console Graphic
       ctx.fillStyle = '#003791'; ctx.fillRect(150, 140, 212, 280);
       ctx.fillStyle = '#ffffff'; ctx.fillRect(170, 140, 172, 280);
       ctx.fillStyle = '#0a0a0a'; ctx.fillRect(200, 160, 112, 240);
 
-      // Controller / PS5 logo
       ctx.fillStyle = '#003791'; ctx.font = 'bold 36px sans-serif';
       ctx.fillText('8K · 4K 120 · HDR', 256, 475);
     });
 
     const sideTex = this.makeCanvasTex(256, 512, ctx => {
       ctx.fillStyle = '#003791'; ctx.fillRect(0, 0, 256, 512);
-      ctx.fillStyle = '#ffffff'; ctx.font = 'bold 32px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillStyle = '#ffffff'; ctx.font = 'bold 42px sans-serif'; ctx.textAlign = 'center';
       ctx.fillText('PS5', 128, 256);
     });
 
@@ -1093,7 +1090,7 @@ export class PrizesManager {
     if (this.physics.world) {
       const body = this.makeDynBody(x, y, z);
       this.physics.world.createCollider(
-        RAPIER.ColliderDesc.cuboid(W / 2, H / 2, D / 2).setMass(0.6).setFriction(0.45).setRestitution(0.08), body);
+        RAPIER.ColliderDesc.cuboid(W / 2, H / 2, D / 2).setMass(0.85).setFriction(0.50).setRestitution(0.05), body);
       this.physics.registerBody(body, group);
       this.bodies.push(body);
     }
@@ -1101,9 +1098,10 @@ export class PrizesManager {
 
   // ══════════════════════════════════════════════════════════════
   //  🎮  NINTENDO SWITCH OLED BOX (K-霸 巨無霸遊戲機盒)
+  //  Size: W: 3.0, H: 2.4, D: 1.4
   // ══════════════════════════════════════════════════════════════
   private spawnSwitchBox(x: number, y: number, z: number) {
-    const W = 1.4, H = 1.2, D = 0.65;
+    const W = 3.0, H = 2.4, D = 1.4;
     const group = new THREE.Group();
     group.position.set(x, y, z);
     group.rotation.y = Math.random() * Math.PI * 2;
@@ -1114,10 +1112,9 @@ export class PrizesManager {
       ctx.fillText('NINTENDO SWITCH', 256, 75);
       ctx.font = '700 32px sans-serif'; ctx.fillText('OLED MODEL', 256, 120);
 
-      // Console Screen Graphic
       ctx.fillStyle = '#1a1a1a'; ctx.fillRect(90, 160, 332, 210);
-      ctx.fillStyle = '#38bdf8'; ctx.fillRect(50, 160, 40, 210); // Left Joy-Con
-      ctx.fillStyle = '#f43f5e'; ctx.fillRect(422, 160, 40, 210); // Right Joy-Con
+      ctx.fillStyle = '#38bdf8'; ctx.fillRect(50, 160, 40, 210);
+      ctx.fillStyle = '#f43f5e'; ctx.fillRect(422, 160, 40, 210);
     });
 
     const boxMat = new THREE.MeshStandardMaterial({ map: frontTex, roughness: 0.25 });
@@ -1134,17 +1131,18 @@ export class PrizesManager {
     if (this.physics.world) {
       const body = this.makeDynBody(x, y, z);
       this.physics.world.createCollider(
-        RAPIER.ColliderDesc.cuboid(W / 2, H / 2, D / 2).setMass(0.5).setFriction(0.45), body);
+        RAPIER.ColliderDesc.cuboid(W / 2, H / 2, D / 2).setMass(0.75).setFriction(0.50), body);
       this.physics.registerBody(body, group);
       this.bodies.push(body);
     }
   }
 
   // ══════════════════════════════════════════════════════════════
-  //  🌀  DYSON VACUUM CLEANER GIANT BOX (K-霸 家電大盒)
+  //  🌀  DYSON VACUUM CLEANER GIANT BOX (K-霸 巨無霸家電大盒)
+  //  Size: W: 1.8, H: 5.0, D: 1.6
   // ══════════════════════════════════════════════════════════════
   private spawnDysonVacuumBox(x: number, y: number, z: number) {
-    const W = 0.85, H = 2.4, D = 0.75;
+    const W = 1.8, H = 5.0, D = 1.6;
     const group = new THREE.Group();
     group.position.set(x, y, z);
     group.rotation.y = Math.random() * Math.PI * 2;
@@ -1155,7 +1153,6 @@ export class PrizesManager {
       ctx.fillStyle = '#ffffff'; ctx.font = 'bold 36px sans-serif'; ctx.textAlign = 'center';
       ctx.fillText('dyson v15', 128, 48);
 
-      // Purple/Nickel vacuum tube art
       ctx.fillStyle = '#a855f7'; ctx.fillRect(115, 90, 26, 320);
       ctx.fillStyle = '#f59e0b'; ctx.fillRect(90, 410, 76, 60);
     });
@@ -1174,17 +1171,18 @@ export class PrizesManager {
     if (this.physics.world) {
       const body = this.makeDynBody(x, y, z);
       this.physics.world.createCollider(
-        RAPIER.ColliderDesc.cuboid(W / 2, H / 2, D / 2).setMass(0.55).setFriction(0.42), body);
+        RAPIER.ColliderDesc.cuboid(W / 2, H / 2, D / 2).setMass(0.85).setFriction(0.48), body);
       this.physics.registerBody(body, group);
       this.bodies.push(body);
     }
   }
 
   // ══════════════════════════════════════════════════════════════
-  //  📻  MARSHALL SPEAKER GIANT BOX
+  //  📻  MARSHALL SPEAKER GIANT BOX (K-霸 家電大盒)
+  //  Size: W: 3.2, H: 2.3, D: 2.0
   // ══════════════════════════════════════════════════════════════
   private spawnMarshallSpeaker(x: number, y: number, z: number) {
-    const W = 1.5, H = 1.1, D = 0.95;
+    const W = 3.2, H = 2.3, D = 2.0;
     const group = new THREE.Group();
     group.position.set(x, y, z);
     group.rotation.y = Math.random() * Math.PI * 2;
@@ -1193,7 +1191,6 @@ export class PrizesManager {
       ctx.fillStyle = '#171717'; ctx.fillRect(0, 0, 512, 256);
       ctx.strokeStyle = '#d4af37'; ctx.lineWidth = 14; ctx.strokeRect(10, 10, 492, 236);
 
-      // Brass logo
       ctx.fillStyle = '#fef08a'; ctx.font = 'italic bold 58px serif'; ctx.textAlign = 'center';
       ctx.fillText('Marshall', 256, 145);
     });
@@ -1212,17 +1209,18 @@ export class PrizesManager {
     if (this.physics.world) {
       const body = this.makeDynBody(x, y, z);
       this.physics.world.createCollider(
-        RAPIER.ColliderDesc.cuboid(W / 2, H / 2, D / 2).setMass(0.55).setFriction(0.45), body);
+        RAPIER.ColliderDesc.cuboid(W / 2, H / 2, D / 2).setMass(0.8).setFriction(0.50), body);
       this.physics.registerBody(body, group);
       this.bodies.push(body);
     }
   }
 
   // ══════════════════════════════════════════════════════════════
-  //  🏎️  LEGO TECHNIC RACING CAR GIANT BOX
+  //  🏎️  LEGO TECHNIC RACING CAR GIANT BOX (K-霸 巨無霸積木盒)
+  //  Size: W: 4.0, H: 2.8, D: 1.8
   // ══════════════════════════════════════════════════════════════
   private spawnGiantLegoBox(x: number, y: number, z: number) {
-    const W = 1.9, H = 1.3, D = 0.85;
+    const W = 4.0, H = 2.8, D = 1.8;
     const group = new THREE.Group();
     group.position.set(x, y, z);
     group.rotation.y = Math.random() * Math.PI * 2;
@@ -1230,7 +1228,6 @@ export class PrizesManager {
     const frontTex = this.makeCanvasTex(512, 512, ctx => {
       ctx.fillStyle = '#0f172a'; ctx.fillRect(0, 0, 512, 512);
 
-      // Red LEGO Logo square top left
       ctx.fillStyle = '#e60012'; ctx.fillRect(20, 20, 90, 90);
       ctx.fillStyle = '#ffffff'; ctx.font = '900 28px sans-serif'; ctx.textAlign = 'center';
       ctx.fillText('LEGO', 65, 75);
@@ -1238,7 +1235,6 @@ export class PrizesManager {
       ctx.fillStyle = '#eab308'; ctx.font = 'bold 36px sans-serif';
       ctx.fillText('TECHNIC 1:8', 300, 70);
 
-      // Supercar graphic body
       ctx.fillStyle = '#f43f5e'; ctx.beginPath();
       ctx.ellipse(256, 320, 180, 70, 0, 0, Math.PI * 2); ctx.fill();
     });
@@ -1257,36 +1253,35 @@ export class PrizesManager {
     if (this.physics.world) {
       const body = this.makeDynBody(x, y, z);
       this.physics.world.createCollider(
-        RAPIER.ColliderDesc.cuboid(W / 2, H / 2, D / 2).setMass(0.55).setFriction(0.45), body);
+        RAPIER.ColliderDesc.cuboid(W / 2, H / 2, D / 2).setMass(0.85).setFriction(0.50), body);
       this.physics.registerBody(body, group);
       this.bodies.push(body);
     }
   }
 
   // ══════════════════════════════════════════════════════════════
-  //  🧸  1.5M GIANT TEDDY BEAR PLUSH (K-霸 巨無霸娃娃)
+  //  🧸  1.5M GIANT TEDDY BEAR PLUSH (K-霸 巨無霸熊娃娃)
+  //  Scaled 2.2x
   // ══════════════════════════════════════════════════════════════
   private spawnGiantTeddyBear(x: number, y: number, z: number) {
     const group = new THREE.Group();
     group.position.set(x, y, z);
     group.rotation.y = Math.random() * Math.PI * 2;
+    group.scale.set(2.2, 2.2, 2.2); // 2.2x Giant scale!
 
-    const bearMat  = new THREE.MeshStandardMaterial({ color: 0x9a6035, roughness: 0.90 }); // Warm honey brown fur
+    const bearMat  = new THREE.MeshStandardMaterial({ color: 0x9a6035, roughness: 0.90 });
     const snoutMat = new THREE.MeshStandardMaterial({ color: 0xfde047, roughness: 0.85 });
     const darkMat  = new THREE.MeshStandardMaterial({ color: 0x1c1917, roughness: 0.5 });
     const ribbonMat= new THREE.MeshStandardMaterial({ color: 0xdc2626, roughness: 0.4 });
 
-    // Large Body
     const body = new THREE.Mesh(new THREE.SphereGeometry(0.60, 18, 18), bearMat);
     body.scale.set(1.05, 1.15, 0.95);
     group.add(body);
 
-    // Large Head
     const head = new THREE.Mesh(new THREE.SphereGeometry(0.52, 18, 18), bearMat);
     head.position.set(0, 0.82, 0);
     group.add(head);
 
-    // Snout & Nose
     const snout = new THREE.Mesh(new THREE.SphereGeometry(0.22, 12, 12), snoutMat);
     snout.position.set(0, 0.72, 0.42);
     group.add(snout);
@@ -1294,21 +1289,18 @@ export class PrizesManager {
     nose.position.set(0, 0.82, 0.58);
     group.add(nose);
 
-    // Button Eyes
     const e1 = new THREE.Mesh(new THREE.SphereGeometry(0.07, 8, 8), darkMat);
     e1.position.set(-0.20, 0.92, 0.45);
     const e2 = new THREE.Mesh(new THREE.SphereGeometry(0.07, 8, 8), darkMat);
     e2.position.set(0.20, 0.92, 0.45);
     group.add(e1, e2);
 
-    // Round Ears
     const ear1 = new THREE.Mesh(new THREE.SphereGeometry(0.20, 10, 10), bearMat);
     ear1.position.set(-0.45, 1.22, 0.05);
     const ear2 = new THREE.Mesh(new THREE.SphereGeometry(0.20, 10, 10), bearMat);
     ear2.position.set(0.45, 1.22, 0.05);
     group.add(ear1, ear2);
 
-    // Red Bowtie Ribbon
     const bow = new THREE.Mesh(new THREE.BoxGeometry(0.40, 0.18, 0.12), ribbonMat);
     bow.position.set(0, 0.35, 0.52);
     group.add(bow);
@@ -1319,9 +1311,9 @@ export class PrizesManager {
     if (this.physics.world) {
       const phyBody = this.makeDynBody(x, y, z);
       this.physics.world.createCollider(
-        RAPIER.ColliderDesc.ball(0.58).setMass(0.3).setFriction(0.45), phyBody);
+        RAPIER.ColliderDesc.ball(1.28).setMass(0.65).setFriction(0.50), phyBody);
       this.physics.world.createCollider(
-        RAPIER.ColliderDesc.ball(0.50).setTranslation(0, 0.82, 0).setFriction(0.45), phyBody);
+        RAPIER.ColliderDesc.ball(1.10).setTranslation(0, 1.80, 0).setFriction(0.50), phyBody);
       this.physics.registerBody(phyBody, group);
       this.bodies.push(phyBody);
     }
