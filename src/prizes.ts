@@ -769,9 +769,13 @@ export class PrizesManager {
   }
 
   // ══════════════════════════════════════════════════════════════
-  //  🐱  CALICO CAT — 三花貓可愛玩偶 (Cute Plush Style)
-  //  White/cream base body with orange + black patches on top,
-  //  cute button eyes, pink nose, small pointy ears — kawaii plush!
+  //  🐱  CALICO CAT — 手作羊毛氈三花貓 (Wool Felted Calico Cat with Blue-White Scarf)
+  //  Based on user reference photo:
+  //  - Soft cream/off-white felted body
+  //  - Orange & charcoal patches on ears/head/paws
+  //  - Cute black button eyes + pink nose + w mouth + white whiskers
+  //  - Blue & White Striped Knitted Scarf (藍白條紋圍巾)
+  //  - Proper Rapier physics registration to fix floating mid-air bug
   // ══════════════════════════════════════════════════════════════
   private spawnCalicoCat(x: number, y: number, z: number) {
     const group = new THREE.Group();
@@ -779,199 +783,256 @@ export class PrizesManager {
     group.rotation.y = Math.random() * Math.PI * 2;
 
     // ── Base materials ────────────────────────────────────────────
-    const creamMat   = new THREE.MeshStandardMaterial({ color: 0xfff2e0, roughness: 0.85 });
-    const whiteMat   = new THREE.MeshStandardMaterial({ color: 0xfafafa, roughness: 0.85 });
-    const orangeMat  = new THREE.MeshStandardMaterial({ color: 0xe07820, roughness: 0.82 });
-    const blackMat   = new THREE.MeshStandardMaterial({ color: 0x222020, roughness: 0.80 });
-    const pinkMat    = new THREE.MeshStandardMaterial({ color: 0xffb3c6, roughness: 0.85 });
-    const noseMat    = new THREE.MeshStandardMaterial({ color: 0xd05070, roughness: 0.8 });
-    const eyeWhiteMat= new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.3 });
-    const pupilMat   = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.3 });
+    const creamMat   = new THREE.MeshStandardMaterial({ color: 0xfff5e6, roughness: 0.90 }); // Soft wool felt cream
+    const whiteMat   = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.90 });
+    const orangeMat  = new THREE.MeshStandardMaterial({ color: 0xd97724, roughness: 0.88 }); // Warm terracotta orange
+    const blackMat   = new THREE.MeshStandardMaterial({ color: 0x2b2626, roughness: 0.85 }); // Soft charcoal black
+    const pinkMat    = new THREE.MeshStandardMaterial({ color: 0xffa0b4, roughness: 0.85 });
+    const noseMat    = new THREE.MeshStandardMaterial({ color: 0xee788c, roughness: 0.80 });
+    const eyeMat     = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.20, metalness: 0.3 }); // Glossy button eyes
     const glintMat   = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    const whiskerMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
 
     // ══ BODY ══════════════════════════════════════════════════════
-    // Main round white/cream body
-    const body = new THREE.Mesh(new THREE.SphereGeometry(0.46, 20, 20), creamMat);
-    body.scale.set(1, 1.05, 0.92);
+    // Main round sitting chubby body
+    const body = new THREE.Mesh(new THREE.SphereGeometry(0.45, 20, 20), creamMat);
+    body.scale.set(1.02, 1.05, 0.95);
     body.castShadow = true;
     group.add(body);
 
-    // Orange patch on right side of body
-    const bodyOrangeR = new THREE.Mesh(new THREE.SphereGeometry(0.30, 14, 14), orangeMat);
-    bodyOrangeR.position.set(0.28, 0.12, 0.08);
-    bodyOrangeR.scale.set(0.9, 0.75, 0.6);
+    // Orange felt patch on right flank
+    const bodyOrangeR = new THREE.Mesh(new THREE.SphereGeometry(0.26, 12, 12), orangeMat);
+    bodyOrangeR.position.set(0.26, 0.08, -0.05);
+    bodyOrangeR.scale.set(0.85, 0.75, 0.55);
     group.add(bodyOrangeR);
 
-    // Black patch on upper left of body
-    const bodyBlackL = new THREE.Mesh(new THREE.SphereGeometry(0.24, 12, 12), blackMat);
-    bodyBlackL.position.set(-0.26, 0.25, 0.06);
-    bodyBlackL.scale.set(0.8, 0.65, 0.55);
+    // Charcoal patch on left flank
+    const bodyBlackL = new THREE.Mesh(new THREE.SphereGeometry(0.22, 12, 12), blackMat);
+    bodyBlackL.position.set(-0.24, 0.18, -0.08);
+    bodyBlackL.scale.set(0.8, 0.65, 0.5);
     group.add(bodyBlackL);
 
-    // White belly stripe in centre
-    const belly = new THREE.Mesh(new THREE.SphereGeometry(0.26, 14, 14), whiteMat);
-    belly.position.set(0, -0.08, 0.30);
-    belly.scale.set(0.8, 1.0, 0.35);
+    // Soft white belly
+    const belly = new THREE.Mesh(new THREE.SphereGeometry(0.28, 14, 14), whiteMat);
+    belly.position.set(0, -0.06, 0.26);
+    belly.scale.set(0.85, 0.95, 0.35);
     group.add(belly);
 
     // ══ HEAD ══════════════════════════════════════════════════════
-    const headMesh = new THREE.Mesh(new THREE.SphereGeometry(0.40, 22, 22), creamMat);
-    headMesh.position.set(0, 0.60, 0);
+    const headMesh = new THREE.Mesh(new THREE.SphereGeometry(0.39, 22, 22), creamMat);
+    headMesh.position.set(0, 0.58, 0);
     headMesh.castShadow = true;
     group.add(headMesh);
 
-    // Orange patch — upper right forehead blob
-    const headOrange = new THREE.Mesh(new THREE.SphereGeometry(0.22, 12, 12), orangeMat);
-    headOrange.position.set(0.20, 0.82, 0.18);
-    headOrange.scale.set(0.85, 0.70, 0.55);
+    // Orange patch — right ear/forehead (matching reference picture)
+    const headOrange = new THREE.Mesh(new THREE.SphereGeometry(0.24, 14, 14), orangeMat);
+    headOrange.position.set(0.18, 0.76, 0.14);
+    headOrange.scale.set(0.85, 0.75, 0.6);
     group.add(headOrange);
 
-    // Black patch — upper left
-    const headBlack = new THREE.Mesh(new THREE.SphereGeometry(0.18, 12, 12), blackMat);
-    headBlack.position.set(-0.22, 0.80, 0.16);
-    headBlack.scale.set(0.75, 0.65, 0.5);
+    // Charcoal patch — left ear/forehead
+    const headBlack = new THREE.Mesh(new THREE.SphereGeometry(0.20, 12, 12), blackMat);
+    headBlack.position.set(-0.20, 0.75, 0.12);
+    headBlack.scale.set(0.8, 0.7, 0.55);
     group.add(headBlack);
 
-    // Small orange patch on right cheek
-    const cheekOrange = new THREE.Mesh(new THREE.SphereGeometry(0.12, 10, 10), orangeMat);
-    cheekOrange.position.set(0.26, 0.58, 0.30);
-    cheekOrange.scale.set(1, 0.65, 0.45);
-    group.add(cheekOrange);
-
-    // White muzzle area (chin / mouth area)
-    const muzzle = new THREE.Mesh(new THREE.SphereGeometry(0.18, 14, 14), whiteMat);
-    muzzle.position.set(0, 0.52, 0.34);
-    muzzle.scale.set(0.95, 0.75, 0.40);
+    // Soft white muzzle area (chin & mouth pad)
+    const muzzle = new THREE.Mesh(new THREE.SphereGeometry(0.19, 14, 14), whiteMat);
+    muzzle.position.set(0, 0.50, 0.30);
+    muzzle.scale.set(1.0, 0.72, 0.42);
     group.add(muzzle);
 
     // ══ EARS ══════════════════════════════════════════════════════
-    // Left ear: black (matches cat's dark left side)
-    const earGeo = new THREE.ConeGeometry(0.14, 0.26, 3, 1);
+    const earGeo = new THREE.ConeGeometry(0.13, 0.25, 4, 1);
+    // Left ear (Charcoal/black)
     const leftEar = new THREE.Mesh(earGeo, blackMat);
-    leftEar.position.set(-0.29, 0.94, 0.04);
-    leftEar.rotation.z = 0.20;
+    leftEar.position.set(-0.27, 0.92, 0.04);
+    leftEar.rotation.z = 0.18;
     group.add(leftEar);
-    // Left inner ear
-    const leftEarIn = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.14, 3, 1), pinkMat);
-    leftEarIn.position.set(-0.27, 0.95, 0.08);
-    leftEarIn.rotation.z = 0.20;
+    const leftEarIn = new THREE.Mesh(new THREE.ConeGeometry(0.065, 0.13, 4, 1), pinkMat);
+    leftEarIn.position.set(-0.25, 0.93, 0.07);
+    leftEarIn.rotation.z = 0.18;
     group.add(leftEarIn);
 
-    // Right ear: orange
+    // Right ear (Orange)
     const rightEar = new THREE.Mesh(earGeo, orangeMat);
-    rightEar.position.set(0.29, 0.94, 0.04);
-    rightEar.rotation.z = -0.20;
+    rightEar.position.set(0.27, 0.92, 0.04);
+    rightEar.rotation.z = -0.18;
     group.add(rightEar);
-    // Right inner ear: pink
-    const rightEarIn = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.14, 3, 1), pinkMat);
-    rightEarIn.position.set(0.27, 0.95, 0.08);
-    rightEarIn.rotation.z = -0.20;
+    const rightEarIn = new THREE.Mesh(new THREE.ConeGeometry(0.065, 0.13, 4, 1), pinkMat);
+    rightEarIn.position.set(0.25, 0.93, 0.07);
+    rightEarIn.rotation.z = -0.18;
     group.add(rightEarIn);
 
     // ══ EYES ══════════════════════════════════════════════════════
-    // Simple kawaii button eyes — small, not giant swirls
-    const eyeGeo   = new THREE.SphereGeometry(0.062, 14, 14);
-    const pupilGeo = new THREE.SphereGeometry(0.042, 12, 12);
-    const glintGeo = new THREE.SphereGeometry(0.016, 6, 6);
+    // Cute glossy black button eyes
+    const eyeGeo   = new THREE.SphereGeometry(0.048, 12, 12);
+    const glintGeo = new THREE.SphereGeometry(0.014, 6, 6);
 
     // Left eye
-    const lew = new THREE.Mesh(eyeGeo, eyeWhiteMat);
-    lew.position.set(-0.148, 0.645, 0.356);
-    group.add(lew);
-    const lep = new THREE.Mesh(pupilGeo, pupilMat);
-    lep.position.set(-0.148, 0.645, 0.374);
-    group.add(lep);
+    const le = new THREE.Mesh(eyeGeo, eyeMat);
+    le.position.set(-0.145, 0.62, 0.355);
+    group.add(le);
     const leg = new THREE.Mesh(glintGeo, glintMat);
-    leg.position.set(-0.136, 0.656, 0.388);
+    leg.position.set(-0.135, 0.63, 0.398);
     group.add(leg);
 
     // Right eye
-    const rew = new THREE.Mesh(eyeGeo, eyeWhiteMat);
-    rew.position.set(0.148, 0.645, 0.356);
-    group.add(rew);
-    const rep = new THREE.Mesh(pupilGeo, pupilMat);
-    rep.position.set(0.148, 0.645, 0.374);
-    group.add(rep);
+    const re = new THREE.Mesh(eyeGeo, eyeMat);
+    re.position.set(0.145, 0.62, 0.355);
+    group.add(re);
     const reg = new THREE.Mesh(glintGeo, glintMat);
-    reg.position.set(0.160, 0.656, 0.388);
+    reg.position.set(0.155, 0.63, 0.398);
     group.add(reg);
 
-    // ══ NOSE ══════════════════════════════════════════════════════
-    // Tiny pink oval nose
-    const nose = new THREE.Mesh(new THREE.SphereGeometry(0.030, 10, 10), noseMat);
-    nose.position.set(0, 0.598, 0.388);
-    nose.scale.set(1.3, 0.85, 0.55);
+    // ══ NOSE & EMBROIDERED MOUTH ═════════════════════════════════
+    // Soft pink heart nose
+    const nose = new THREE.Mesh(new THREE.SphereGeometry(0.026, 8, 8), noseMat);
+    nose.position.set(0, 0.575, 0.385);
+    nose.scale.set(1.2, 0.8, 0.6);
     group.add(nose);
 
-    // Pink oval cheeks (blush)
-    const blushGeo = new THREE.SphereGeometry(0.068, 8, 8);
-    const blushMat = new THREE.MeshStandardMaterial({ color: 0xffaabb, roughness: 0.9, transparent: true, opacity: 0.6 });
-    const lb = new THREE.Mesh(blushGeo, blushMat);
-    lb.position.set(-0.235, 0.598, 0.340); lb.scale.set(1.2, 0.7, 0.4);
-    const rb = new THREE.Mesh(blushGeo, blushMat);
-    rb.position.set(0.235, 0.598, 0.340); rb.scale.set(1.2, 0.7, 0.4);
-    group.add(lb, rb);
+    // Embroidered 'w' mouth line (using thin tube or small curved ring)
+    const mouthMat = new THREE.MeshBasicMaterial({ color: 0x5c3a21 }); // Dark brown embroidery thread
+    const mouthL = new THREE.Mesh(new THREE.TorusGeometry(0.035, 0.007, 6, 10, Math.PI), mouthMat);
+    mouthL.position.set(-0.032, 0.54, 0.380);
+    mouthL.rotation.x = Math.PI * 0.1;
+    group.add(mouthL);
+    const mouthR = new THREE.Mesh(new THREE.TorusGeometry(0.035, 0.007, 6, 10, Math.PI), mouthMat);
+    mouthR.position.set(0.032, 0.54, 0.380);
+    mouthR.rotation.x = Math.PI * 0.1;
+    group.add(mouthR);
 
-    // ══ PAWS / ARMS ═══════════════════════════════════════════════
-    // Left paw: black
-    const leftPaw = new THREE.Mesh(new THREE.SphereGeometry(0.13, 10, 10), blackMat);
-    leftPaw.position.set(-0.50, 0.02, 0.08);
-    leftPaw.scale.set(0.72, 0.88, 0.72);
+    // Fine white whiskers (3 on each side)
+    const wGeo = new THREE.CylinderGeometry(0.003, 0.003, 0.22, 4);
+    for (let i = -1; i <= 1; i++) {
+      const wl = new THREE.Mesh(wGeo, whiskerMat);
+      wl.position.set(-0.24, 0.56 + i * 0.02, 0.32);
+      wl.rotation.z = Math.PI / 2 + i * 0.12;
+      group.add(wl);
+
+      const wr = new THREE.Mesh(wGeo, whiskerMat);
+      wr.position.set(0.24, 0.56 + i * 0.02, 0.32);
+      wr.rotation.z = -Math.PI / 2 - i * 0.12;
+      group.add(wr);
+    }
+
+    // ══ 🧣 BLUE & WHITE STRIPED KNITTED SCARF (藍白條紋圍巾) ════════
+    // Canvas texture with blue & white knitted stripes
+    const scarfTex = this.makeCanvasTex(256, 64, ctx => {
+      ctx.fillStyle = '#2563eb'; // Royal blue
+      ctx.fillRect(0, 0, 256, 64);
+      ctx.fillStyle = '#ffffff'; // White stripes
+      for (let x = 0; x < 256; x += 32) {
+        ctx.fillRect(x, 0, 16, 64);
+      }
+      // Subtle knitted stitch texture line
+      ctx.strokeStyle = 'rgba(0,0,0,0.15)';
+      ctx.lineWidth = 2;
+      for (let y = 0; y < 64; y += 8) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(256, y); ctx.stroke();
+      }
+    });
+    scarfTex.wrapS = THREE.RepeatWrapping;
+    scarfTex.repeat.set(6, 1);
+
+    const scarfMat = new THREE.MeshStandardMaterial({
+      map: scarfTex,
+      roughness: 0.7,
+      metalness: 0.05
+    });
+
+    // Scarf neck ring
+    const scarfRing = new THREE.Mesh(new THREE.TorusGeometry(0.27, 0.052, 10, 24), scarfMat);
+    scarfRing.position.set(0, 0.22, 0);
+    scarfRing.rotation.x = Math.PI * 0.55;
+    group.add(scarfRing);
+
+    // Scarf tail 1 (hanging down front left)
+    const tail1Tex = this.makeCanvasTex(64, 256, ctx => {
+      ctx.fillStyle = '#2563eb'; ctx.fillRect(0, 0, 64, 256);
+      ctx.fillStyle = '#ffffff';
+      for (let y = 0; y < 256; y += 32) {
+        ctx.fillRect(0, y, 64, 16);
+      }
+      // Fringe tassel at bottom
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 240, 64, 16);
+    });
+    const tail1Mat = new THREE.MeshStandardMaterial({ map: tail1Tex, roughness: 0.7 });
+    const scarfTail1 = new THREE.Mesh(new THREE.BoxGeometry(0.10, 0.32, 0.025), tail1Mat);
+    scarfTail1.position.set(-0.10, 0.06, 0.28);
+    scarfTail1.rotation.z = -0.15;
+    scarfTail1.rotation.x = 0.2;
+    group.add(scarfTail1);
+
+    // Scarf tail 2 (overlapping)
+    const scarfTail2 = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.24, 0.025), tail1Mat);
+    scarfTail2.position.set(-0.04, 0.08, 0.30);
+    scarfTail2.rotation.z = 0.12;
+    scarfTail2.rotation.x = 0.25;
+    group.add(scarfTail2);
+
+    // ══ CHUBBY PAWS & LEGS ══════════════════════════════════════
+    // Left paw (cream with black patch)
+    const leftPaw = new THREE.Mesh(new THREE.SphereGeometry(0.125, 10, 10), creamMat);
+    leftPaw.position.set(-0.46, 0.02, 0.12);
+    leftPaw.scale.set(0.75, 0.9, 0.75);
     leftPaw.castShadow = true;
     group.add(leftPaw);
-    // Right paw: orange
-    const rightPaw = new THREE.Mesh(new THREE.SphereGeometry(0.13, 10, 10), orangeMat);
-    rightPaw.position.set(0.50, 0.02, 0.08);
-    rightPaw.scale.set(0.72, 0.88, 0.72);
+    const leftPawPatch = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 8), blackMat);
+    leftPawPatch.position.set(-0.48, 0.04, 0.14);
+    group.add(leftPawPatch);
+
+    // Right paw (cream with orange patch)
+    const rightPaw = new THREE.Mesh(new THREE.SphereGeometry(0.125, 10, 10), creamMat);
+    rightPaw.position.set(0.46, 0.02, 0.12);
+    rightPaw.scale.set(0.75, 0.9, 0.75);
     rightPaw.castShadow = true;
     group.add(rightPaw);
+    const rightPawPatch = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 8), orangeMat);
+    rightPawPatch.position.set(0.48, 0.04, 0.14);
+    group.add(rightPawPatch);
 
-    // ══ FEET ══════════════════════════════════════════════════════
-    const leftFoot = new THREE.Mesh(new THREE.SphereGeometry(0.135, 10, 10), creamMat);
-    leftFoot.position.set(-0.20, -0.52, 0.14);
+    // Sitting feet at bottom
+    const leftFoot = new THREE.Mesh(new THREE.SphereGeometry(0.13, 10, 10), orangeMat);
+    leftFoot.position.set(-0.22, -0.48, 0.16);
     leftFoot.scale.set(1.05, 0.58, 1.18);
     group.add(leftFoot);
-    const rightFoot = new THREE.Mesh(new THREE.SphereGeometry(0.135, 10, 10), orangeMat);
-    rightFoot.position.set(0.20, -0.52, 0.14);
+
+    const rightFoot = new THREE.Mesh(new THREE.SphereGeometry(0.13, 10, 10), orangeMat);
+    rightFoot.position.set(0.22, -0.48, 0.16);
     rightFoot.scale.set(1.05, 0.58, 1.18);
     group.add(rightFoot);
 
     // ══ TAIL ══════════════════════════════════════════════════════
-    const tailSeg1 = new THREE.Mesh(new THREE.CylinderGeometry(0.065, 0.085, 0.50, 10), blackMat);
-    tailSeg1.position.set(0.08, -0.22, -0.44);
-    tailSeg1.rotation.x = -0.85; tailSeg1.rotation.z = 0.22;
-    group.add(tailSeg1);
-    const tailTip = new THREE.Mesh(new THREE.SphereGeometry(0.085, 8, 8), creamMat);
-    tailTip.position.set(0.18, 0.10, -0.68);
+    // Calico spotted tail curling up behind
+    const tailSeg = new THREE.Mesh(new THREE.CylinderGeometry(0.065, 0.085, 0.52, 10), orangeMat);
+    tailSeg.position.set(0.14, -0.20, -0.42);
+    tailSeg.rotation.x = -0.85;
+    tailSeg.rotation.z = 0.25;
+    group.add(tailSeg);
+    const tailTip = new THREE.Mesh(new THREE.SphereGeometry(0.085, 8, 8), blackMat);
+    tailTip.position.set(0.24, 0.12, -0.66);
     group.add(tailTip);
-
-    // ══ COLLAR ════════════════════════════════════════════════════
-    // Small cute pink collar with tiny bell
-    const collarMat = new THREE.MeshStandardMaterial({ color: 0xff6eb4, roughness: 0.4 });
-    const collar = new THREE.Mesh(new THREE.TorusGeometry(0.26, 0.038, 8, 20), collarMat);
-    collar.position.set(0, 0.22, 0);
-    collar.rotation.x = Math.PI * 0.08;
-    group.add(collar);
-    // Bell
-    const bellMat = new THREE.MeshStandardMaterial({ color: 0xffd700, metalness: 0.8, roughness: 0.2 });
-    const bell = new THREE.Mesh(new THREE.SphereGeometry(0.055, 10, 10), bellMat);
-    bell.position.set(0, 0.18, 0.26);
-    bell.scale.set(1, 1.1, 1);
-    group.add(bell);
 
     this.scene.add(group);
     this.prizes.push(group);
 
+    // ══ ⚙️ RAPIER PHYSICS BODY REGISTRATION (FIXES FLOATING BUG) ══
     if (this.physics.world) {
       const phyBody = this.makeDynBody(x, y, z);
       this.physics.world.createCollider(
         RAPIER.ColliderDesc.ball(0.44).setMass(0.2).setFriction(0.42).setRestitution(0.12), phyBody);
       this.physics.world.createCollider(
-        RAPIER.ColliderDesc.ball(0.38).setTranslation(0, 0.60, 0).setFriction(0.42), phyBody);
+        RAPIER.ColliderDesc.ball(0.38).setTranslation(0, 0.58, 0).setFriction(0.42), phyBody);
       this.physics.world.createCollider(
-        RAPIER.ColliderDesc.ball(0.13).setTranslation(-0.50, 0.02, 0.08).setFriction(0.45), phyBody);
+        RAPIER.ColliderDesc.ball(0.13).setTranslation(-0.46, 0.02, 0.12).setFriction(0.45), phyBody);
       this.physics.world.createCollider(
-        RAPIER.ColliderDesc.ball(0.13).setTranslation(0.50, 0.02, 0.08).setFriction(0.45), phyBody);
-      }
+        RAPIER.ColliderDesc.ball(0.13).setTranslation(0.46, 0.02, 0.12).setFriction(0.45), phyBody);
+
+      this.physics.registerBody(phyBody, group);
+      this.bodies.push(phyBody);
+    }
   }
 }
