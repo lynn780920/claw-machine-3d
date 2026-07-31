@@ -694,266 +694,358 @@ function setupKeyboardListeners() {
 }
 
 function createArcadeEnvironment(scene: THREE.Scene) {
-  // Gritty Dark Cyberpunk Ambient Atmosphere
-  scene.background = new THREE.Color(0x05020a);
-  scene.fog = new THREE.FogExp2(0x05020a, 0.005);
+  // Deep Nightclub Cyberpunk Ambient Atmosphere
+  scene.background = new THREE.Color(0x04020a);
+  scene.fog = new THREE.FogExp2(0x04020a, 0.004);
 
-  // ===== 1. CYBERPUNK STEEL GRID FLOOR: Dark Metallic Tread Plate with Neon Circuit Seams =====
+  // ===== 1. REFLECTIVE NIGHTCLUB FLOOR: Glossy Mirror Steel Tiles with Neon Grids =====
   const floorCanvas = document.createElement('canvas');
   floorCanvas.width = 512;
   floorCanvas.height = 512;
   const fctx = floorCanvas.getContext('2d')!;
 
-  // Dark industrial steel plate background
-  fctx.fillStyle = '#0f111a';
+  // Dark obsidian mirror tile base
+  fctx.fillStyle = '#0a0614';
   fctx.fillRect(0, 0, 512, 512);
 
-  // Metal tread plate diamond pattern texture
-  fctx.strokeStyle = '#1e2238';
-  fctx.lineWidth = 2;
+  // Diagonal laser grid lines
+  fctx.strokeStyle = 'rgba(170, 0, 255, 0.15)';
+  fctx.lineWidth = 1.5;
   for (let x = -512; x < 1024; x += 32) {
     fctx.beginPath(); fctx.moveTo(x, 0); fctx.lineTo(x + 512, 512); fctx.stroke();
     fctx.beginPath(); fctx.moveTo(x, 512); fctx.lineTo(x + 512, 0); fctx.stroke();
   }
 
-  // Steel panel grid squares
+  // Large Nightclub Floor Tiles (128x128)
   for (let r = 0; r < 4; r++) {
     for (let c = 0; c < 4; c++) {
-      // Panel border outline
-      fctx.strokeStyle = '#2d3748';
+      fctx.strokeStyle = '#1a1030';
       fctx.lineWidth = 4;
       fctx.strokeRect(c * 128 + 4, r * 128 + 4, 120, 120);
 
-      // Metallic corner rivets
-      fctx.fillStyle = '#718096';
-      const rivets = [
-        [c * 128 + 12, r * 128 + 12],
-        [c * 128 + 116, r * 128 + 12],
-        [c * 128 + 12, r * 128 + 116],
-        [c * 128 + 116, r * 128 + 116]
-      ];
-      rivets.forEach(([rx, ry]) => {
-        fctx.beginPath(); fctx.arc(rx, ry, 3.5, 0, Math.PI * 2); fctx.fill();
-      });
+      // Soft reflection sheen on tile corners
+      fctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
+      fctx.fillRect(c * 128 + 8, r * 128 + 8, 45, 20);
     }
   }
 
-  // Glowing Cyberpunk Circuit Seam Lines (Alternating Cyan & Magenta)
+  // Glowing Cyberpunk Seam Lines (Cyan & Hot Pink)
   for (let i = 0; i <= 512; i += 128) {
-    // Glowing Cyan Vertical Seams
     fctx.shadowColor = '#00f0ff';
-    fctx.shadowBlur = 12;
+    fctx.shadowBlur = 10;
     fctx.strokeStyle = '#00f0ff';
     fctx.lineWidth = 3;
     fctx.beginPath(); fctx.moveTo(i, 0); fctx.lineTo(i, 512); fctx.stroke();
 
-    // Glowing Hot Pink Horizontal Seams
-    fctx.shadowColor = '#ff0055';
-    fctx.shadowBlur = 12;
-    fctx.strokeStyle = '#ff0055';
+    fctx.shadowColor = '#ff0075';
+    fctx.shadowBlur = 10;
+    fctx.strokeStyle = '#ff0075';
     fctx.beginPath(); fctx.moveTo(0, i); fctx.lineTo(512, i); fctx.stroke();
   }
-  fctx.shadowBlur = 0; // reset shadow
-
-  // Hazard Caution Stripes on floor border
-  fctx.fillStyle = '#eab308';
-  for (let i = 0; i < 512; i += 32) {
-    fctx.fillRect(i, 0, 16, 12);
-    fctx.fillRect(i, 500, 16, 12);
-  }
+  fctx.shadowBlur = 0;
 
   const floorTex = new THREE.CanvasTexture(floorCanvas);
   floorTex.wrapS = THREE.RepeatWrapping;
   floorTex.wrapT = THREE.RepeatWrapping;
-  floorTex.repeat.set(10, 10);
+  floorTex.repeat.set(12, 12);
 
+  // Ultra-reflective nightclub polished floor
   const floorMat = new THREE.MeshStandardMaterial({
     map: floorTex,
-    roughness: 0.18,
-    metalness: 0.82 // High metallic reflection for cyberpunk steel look
+    roughness: 0.10, // Glossy mirror-like finish
+    metalness: 0.85  // High metallic reflection for glowing neon machines
   });
-  const floorMesh = new THREE.Mesh(new THREE.PlaneGeometry(80, 80), floorMat);
+  const floorMesh = new THREE.Mesh(new THREE.PlaneGeometry(90, 90), floorMat);
   floorMesh.rotation.x = -Math.PI / 2;
   floorMesh.position.y = -0.01;
   floorMesh.receiveShadow = true;
   scene.add(floorMesh);
 
-  // ===== 2. CYBERPUNK GRAFFITI STREET WALL =====
+  // ===== 2. NIGHTCLUB DJ SOUNDPROOF BACK WALL =====
   const wallCanvas = document.createElement('canvas');
   wallCanvas.width = 2048;
   wallCanvas.height = 1024;
   const wctx = wallCanvas.getContext('2d')!;
 
-  // Gritty Dark Cyberpunk Alley Gradient (Midnight Black -> Deep Violet -> Cyber Indigo)
+  // Deep Violet Nightclub Gradient
   const wallGrad = wctx.createLinearGradient(0, 0, 0, 1024);
-  wallGrad.addColorStop(0, '#06020c');
-  wallGrad.addColorStop(0.5, '#120722');
-  wallGrad.addColorStop(1, '#090314');
+  wallGrad.addColorStop(0, '#04020a');
+  wallGrad.addColorStop(0.5, '#120524');
+  wallGrad.addColorStop(1, '#080312');
   wctx.fillStyle = wallGrad;
   wctx.fillRect(0, 0, 2048, 1024);
 
-  // Gritty Metal Wall Plates
+  // Soundproof acoustic wall panels pattern
   wctx.strokeStyle = 'rgba(0, 240, 255, 0.12)';
   wctx.lineWidth = 2;
-  for (let gx = 0; gx <= 2048; gx += 256) {
+  for (let gx = 0; gx <= 2048; gx += 128) {
     wctx.beginPath(); wctx.moveTo(gx, 0); wctx.lineTo(gx, 1024); wctx.stroke();
   }
-  for (let gy = 0; gy <= 1024; gy += 256) {
+  for (let gy = 0; gy <= 1024; gy += 128) {
     wctx.beginPath(); wctx.moveTo(0, gy); wctx.lineTo(2048, gy); wctx.stroke();
   }
 
-  // Glowing Neon Circuit Traces on Wall
-  wctx.shadowColor = '#00f0ff';
-  wctx.shadowBlur = 15;
-  wctx.strokeStyle = 'rgba(0, 240, 255, 0.4)';
-  wctx.lineWidth = 3;
-  wctx.beginPath();
-  wctx.moveTo(100, 200); wctx.lineTo(400, 200); wctx.lineTo(500, 300); wctx.lineTo(500, 700);
-  wctx.stroke();
-  wctx.beginPath();
-  wctx.moveTo(1948, 200); wctx.lineTo(1648, 200); wctx.lineTo(1548, 300); wctx.lineTo(1548, 700);
-  wctx.stroke();
-
-  // Cyberpunk Neon Glow Circles
-  const bokehs = [
-    { x: 350, y: 300, r: 160, color: 'rgba(255, 0, 85, 0.12)' },
-    { x: 1700, y: 350, r: 180, color: 'rgba(0, 240, 255, 0.12)' },
-    { x: 1024, y: 700, r: 220, color: 'rgba(170, 0, 255, 0.10)' },
-  ];
-  bokehs.forEach(b => {
-    const bg = wctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, b.r);
-    bg.addColorStop(0, b.color);
-    bg.addColorStop(1, 'transparent');
-    wctx.fillStyle = bg;
-    wctx.beginPath(); wctx.arc(b.x, b.y, b.r, 0, Math.PI * 2); wctx.fill();
-  });
-
-  // Punk Graffiti Tags & Spray Art (賽博龐克街頭塗鴉)
-  wctx.shadowColor = '#ff0055';
-  wctx.shadowBlur = 20;
-  wctx.fillStyle = '#ff0055';
-  wctx.font = '900 96px sans-serif';
-  wctx.fillText('⚡ CYBER PUNK ⚡', 180, 420);
+  // Neon Nightclub Art & Typography (夜店龐克霓虹藝術)
+  wctx.shadowColor = '#ff0075';
+  wctx.shadowBlur = 25;
+  wctx.fillStyle = '#ff0075';
+  wctx.font = '900 100px sans-serif';
+  wctx.fillText('🎧 CLUB CLAW 2077 🍸', 120, 380);
 
   wctx.shadowColor = '#00f0ff';
-  wctx.shadowBlur = 20;
+  wctx.shadowBlur = 25;
   wctx.fillStyle = '#00f0ff';
-  wctx.font = '900 110px sans-serif';
-  wctx.fillText('NEON RAGE 2077', 1100, 450);
+  wctx.font = '900 105px sans-serif';
+  wctx.fillText('⚡ VIP NIGHT PUNK ⚡', 1050, 420);
 
   wctx.shadowColor = '#ffe600';
-  wctx.shadowBlur = 15;
+  wctx.shadowBlur = 18;
   wctx.fillStyle = '#ffe600';
-  wctx.font = '800 64px sans-serif';
-  wctx.fillText('☠️ NO FUTURE ☠️', 400, 820);
-  wctx.fillText('🤘 HIGH TORQUE ⚡', 1250, 820);
+  wctx.font = '800 65px sans-serif';
+  wctx.fillText('🎶 BASS BOOST ARCADE 🎶', 300, 850);
+  wctx.fillText('☠️ NO SLEEP TILL DAWN ☠️', 1200, 850);
 
-  wctx.shadowBlur = 0; // reset
+  wctx.shadowBlur = 0;
 
   const wallTex = new THREE.CanvasTexture(wallCanvas);
-  wallTex.wrapS = THREE.ClampToEdgeWrapping;
-  wallTex.wrapT = THREE.ClampToEdgeWrapping;
-
-  const wallMat = new THREE.MeshStandardMaterial({ map: wallTex, roughness: 0.65, metalness: 0.35 });
-  const wallMesh = new THREE.Mesh(new THREE.PlaneGeometry(80, 40), wallMat);
-  wallMesh.position.set(0, 18, -20);
+  const wallMat = new THREE.MeshStandardMaterial({ map: wallTex, roughness: 0.5, metalness: 0.4 });
+  const wallMesh = new THREE.Mesh(new THREE.PlaneGeometry(90, 42), wallMat);
+  wallMesh.position.set(0, 19, -22);
   scene.add(wallMesh);
 
-  // Side Walls (Gritty Dark Metallic Plates)
-  const sideWallMat = new THREE.MeshStandardMaterial({ color: 0x090314, roughness: 0.8, metalness: 0.4 });
-  const leftWall = new THREE.Mesh(new THREE.PlaneGeometry(50, 40), sideWallMat);
-  leftWall.position.set(-35, 18, 5);
+  // Side Walls
+  const sideWallMat = new THREE.MeshStandardMaterial({ color: 0x060310, roughness: 0.85, metalness: 0.3 });
+  const leftWall = new THREE.Mesh(new THREE.PlaneGeometry(60, 42), sideWallMat);
+  leftWall.position.set(-42, 19, 5);
   leftWall.rotation.y = Math.PI / 2;
   scene.add(leftWall);
-  const rightWall = new THREE.Mesh(new THREE.PlaneGeometry(50, 40), sideWallMat);
-  rightWall.position.set(35, 18, 5);
+  const rightWall = new THREE.Mesh(new THREE.PlaneGeometry(60, 42), sideWallMat);
+  rightWall.position.set(42, 19, 5);
   rightWall.rotation.y = -Math.PI / 2;
   scene.add(rightWall);
 
-  // ===== 3. CYBERPUNK NEON STORE HEADER BANNER =====
+  // ===== 3. MAIN MACHINE NIGHTCLUB HEADER BANNER =====
   const bannerGroup = new THREE.Group();
   bannerGroup.position.set(0, 13.5, -11.5);
 
-  // Dark metallic back chassis
   const bannerBack = new THREE.Mesh(new THREE.BoxGeometry(18, 4.2, 0.2),
-    new THREE.MeshStandardMaterial({ color: 0x090314, roughness: 0.3, metalness: 0.8 }));
+    new THREE.MeshStandardMaterial({ color: 0x060310, roughness: 0.3, metalness: 0.8 }));
   bannerGroup.add(bannerBack);
 
-  // Hot Magenta outer neon frame
   const bannerFrame = new THREE.Mesh(new THREE.BoxGeometry(18.5, 4.7, 0.08),
-    new THREE.MeshBasicMaterial({ color: 0xff0055 }));
+    new THREE.MeshBasicMaterial({ color: 0xff0075 }));
   bannerFrame.position.z = -0.08;
   bannerGroup.add(bannerFrame);
 
-  // Cyber Cyan inner neon glow rim
   const innerRim = new THREE.Mesh(new THREE.BoxGeometry(18.1, 4.3, 0.05),
     new THREE.MeshBasicMaterial({ color: 0x00f0ff }));
   innerRim.position.z = -0.04;
   bannerGroup.add(innerRim);
 
-  // Banner canvas texture
   const bannerCanvas = document.createElement('canvas');
   bannerCanvas.width = 2048;
   bannerCanvas.height = 480;
   const bctx = bannerCanvas.getContext('2d')!;
 
-  // Deep dark gradient bg
   const bgrad = bctx.createLinearGradient(0, 0, 2048, 0);
-  bgrad.addColorStop(0, '#05020a');
-  bgrad.addColorStop(0.5, '#150628');
-  bgrad.addColorStop(1, '#05020a');
+  bgrad.addColorStop(0, '#04020a');
+  bgrad.addColorStop(0.5, '#180430');
+  bgrad.addColorStop(1, '#04020a');
   bctx.fillStyle = bgrad;
   bctx.fillRect(0, 0, 2048, 480);
 
-  // Neon Cyberpunk Title Glow
-  bctx.shadowColor = '#ff0055';
+  bctx.shadowColor = '#ff0075';
   bctx.shadowBlur = 35;
   bctx.fillStyle = '#ffffff';
   bctx.font = '900 88px sans-serif';
   bctx.textAlign = 'center';
-  bctx.fillText('⚡ CYBER PUNK 3D 娃娃機專賣店 ⚡', 1024, 175);
+  bctx.fillText('🍸 NIGHTCLUB 3D 娃娃機旗艦店 🎧', 1024, 175);
 
   bctx.shadowColor = '#00f0ff';
   bctx.shadowBlur = 25;
   bctx.fillStyle = '#00f0ff';
   bctx.font = '700 52px sans-serif';
-  bctx.fillText('🔥 經典甩爪 · 擬真物理 · 龐克極速體驗 🔥', 1024, 285);
+  bctx.fillText('⚡ 賽博龐克 · 滿滿機台 · 極限甩爪狂歡 ⚡', 1024, 285);
 
   bctx.shadowColor = '#ffe600';
   bctx.shadowBlur = 18;
   bctx.fillStyle = '#ffe600';
   bctx.font = '600 38px sans-serif';
-  bctx.fillText('☠️ 100 個堆山山崩 · 50 刮好禮重磅狂歡 ☠️', 1024, 385);
+  bctx.fillText('🔥 100 個堆山爆抓 · 50 刮彩券好禮連發 🔥', 1024, 385);
 
   const bannerTex = new THREE.CanvasTexture(bannerCanvas);
   const bannerMat = new THREE.MeshBasicMaterial({ map: bannerTex, transparent: true });
   const bannerPlane = new THREE.Mesh(new THREE.PlaneGeometry(17.5, 3.9), bannerMat);
   bannerPlane.position.z = 0.12;
   bannerGroup.add(bannerPlane);
-
   scene.add(bannerGroup);
 
-  // ===== 4. CYBERPUNK NEON LIGHT STRIPS ON CEILING =====
-  const neonColors = [0xff0055, 0x00f0ff, 0xffe600, 0xaa00ff];
+  // ===== 4. BUSTLING ARCADE HALL: SURROUNDING CLAW MACHINES =====
+  // Create 6 glowing decorative claw machines around the room
+  createSideArcadeMachines(scene);
+
+  // ===== 5. NIGHTCLUB CEILING STROBE LIGHT STRIPS =====
+  const neonColors = [0xff0075, 0x00f0ff, 0xffe600, 0xaa00ff, 0x00ff88];
   neonColors.forEach((col, i) => {
     const stripMat = new THREE.MeshBasicMaterial({ color: col });
-    const strip = new THREE.Mesh(new THREE.BoxGeometry(30, 0.15, 0.15), stripMat);
-    strip.position.set(0, 9.2 + i * 0.3, -8 + i * 2);
+    const strip = new THREE.Mesh(new THREE.BoxGeometry(36, 0.16, 0.16), stripMat);
+    strip.position.set(0, 9.4 + i * 0.3, -10 + i * 2.2);
     scene.add(strip);
   });
 
-  // ===== 5. CYBERPUNK NEON POINT LIGHTS =====
-  const neonLight1 = new THREE.PointLight(0xff0055, 1.8, 30);
-  neonLight1.position.set(-12, 8, -6);
-  scene.add(neonLight1);
+  // ===== 6. DYNAMIC NIGHTCLUB POINT LIGHTS =====
+  const n1 = new THREE.PointLight(0xff0075, 2.2, 35);
+  n1.position.set(-14, 9, -5);
+  scene.add(n1);
 
-  const neonLight2 = new THREE.PointLight(0x00f0ff, 1.6, 30);
-  neonLight2.position.set(12, 8, -6);
-  scene.add(neonLight2);
+  const n2 = new THREE.PointLight(0x00f0ff, 2.0, 35);
+  n2.position.set(14, 9, -5);
+  scene.add(n2);
 
-  const neonLight3 = new THREE.PointLight(0xaa00ff, 1.2, 35);
-  neonLight3.position.set(0, 11, 4);
-  scene.add(neonLight3);
+  const n3 = new THREE.PointLight(0xaa00ff, 1.6, 40);
+  n3.position.set(0, 12, 5);
+  scene.add(n3);
+}
+
+/**
+ * Creates 6 detailed surrounding arcade claw machines to form a bustling Nightclub Arcade Hall
+ */
+function createSideArcadeMachines(scene: THREE.Scene) {
+  const machineConfigs = [
+    // Left Row
+    { x: -14.5, z: 1.0,  rotY: Math.PI * 0.12,  bodyHex: 0x00f0ff, glowHex: 0x00f0ff, title: 'UFO CATCHER 9' },
+    { x: -22.5, z: -2.5, rotY: Math.PI * 0.18,  bodyHex: 0xff0075, glowHex: 0xff0075, title: 'GASHAPON KING' },
+    { x: -30.5, z: -6.0, rotY: Math.PI * 0.25,  bodyHex: 0xaa00ff, glowHex: 0xaa00ff, title: 'CYBER TOY 2077' },
+
+    // Right Row
+    { x: 14.5,  z: 1.0,  rotY: -Math.PI * 0.12, bodyHex: 0xffb703, glowHex: 0xffb703, title: 'TOY STORY 3D' },
+    { x: 22.5,  z: -2.5, rotY: -Math.PI * 0.18, bodyHex: 0x00ff88, glowHex: 0x00ff88, title: 'NEON CLAW 999' },
+    { x: 30.5,  z: -6.0, rotY: -Math.PI * 0.25, bodyHex: 0xff0055, glowHex: 0xff0055, title: 'MONSTER PRIZE' },
+  ];
+
+  machineConfigs.forEach((cfg) => {
+    const group = new THREE.Group();
+    group.position.set(cfg.x, 0, cfg.z);
+    group.rotation.y = cfg.rotY;
+
+    const W = 8.5, H = 8.2, D = 8.0;
+
+    // ── Machine Outer Cabinet Frame ──
+    const frameMat = new THREE.MeshStandardMaterial({ color: cfg.bodyHex, roughness: 0.2, metalness: 0.4 });
+    const darkBodyMat = new THREE.MeshStandardMaterial({ color: 0x11111a, roughness: 0.4, metalness: 0.6 });
+    const chromeMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.1, metalness: 0.9 });
+
+    // Lower cabinet base
+    const base = new THREE.Mesh(new THREE.BoxGeometry(W, 3.2, D), darkBodyMat);
+    base.position.y = 1.6;
+    group.add(base);
+
+    // Front coin console
+    const consoleMesh = new THREE.Mesh(new THREE.BoxGeometry(W - 0.4, 0.8, 1.4), frameMat);
+    consoleMesh.position.set(0, 3.0, D / 2 - 0.5);
+    group.add(consoleMesh);
+
+    // Illuminated coin slot
+    const coinSlot = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.6, 0.1),
+      new THREE.MeshBasicMaterial({ color: cfg.glowHex }));
+    coinSlot.position.set(0, 2.6, D / 2 + 0.02);
+    group.add(coinSlot);
+
+    // 4 Corner Pillars
+    const pillarR = 0.28;
+    const p1 = new THREE.Mesh(new THREE.CylinderGeometry(pillarR, pillarR, H, 12), frameMat);
+    p1.position.set(-W / 2 + 0.3, H / 2, D / 2 - 0.3);
+    const p2 = new THREE.Mesh(new THREE.CylinderGeometry(pillarR, pillarR, H, 12), frameMat);
+    p2.position.set(W / 2 - 0.3, H / 2, D / 2 - 0.3);
+    const p3 = new THREE.Mesh(new THREE.CylinderGeometry(pillarR, pillarR, H, 12), frameMat);
+    p3.position.set(-W / 2 + 0.3, H / 2, -D / 2 + 0.3);
+    const p4 = new THREE.Mesh(new THREE.CylinderGeometry(pillarR, pillarR, H, 12), frameMat);
+    p4.position.set(W / 2 - 0.3, H / 2, -D / 2 + 0.3);
+    group.add(p1, p2, p3, p4);
+
+    // ── Glowing Inner Prize Chamber ──
+    const chamberGlowMat = new THREE.MeshBasicMaterial({
+      color: cfg.glowHex,
+      transparent: true,
+      opacity: 0.25
+    });
+    const chamberBox = new THREE.Mesh(new THREE.BoxGeometry(W - 0.8, 3.8, D - 0.8), chamberGlowMat);
+    chamberBox.position.set(0, 5.0, 0);
+    group.add(chamberBox);
+
+    // Prize chamber floor
+    const chamberFloor = new THREE.Mesh(new THREE.BoxGeometry(W - 0.6, 0.2, D - 0.6), frameMat);
+    chamberFloor.position.set(0, 3.3, 0);
+    group.add(chamberFloor);
+
+    // ── Dummy Prize Items Inside Chamber ──
+    const prizeColors = [0xff0055, 0x00f0ff, 0xffe600, 0xffffff, 0xaa00ff];
+    for (let i = 0; i < 14; i++) {
+      const pColor = prizeColors[i % prizeColors.length];
+      const pMat = new THREE.MeshStandardMaterial({ color: pColor, roughness: 0.3 });
+      const px = (Math.random() - 0.5) * (W - 2.0);
+      const pz = (Math.random() - 0.5) * (D - 2.0);
+      const py = 3.6 + (i % 3) * 0.45;
+
+      let prizeMesh: THREE.Mesh;
+      if (i % 2 === 0) {
+        prizeMesh = new THREE.Mesh(new THREE.SphereGeometry(0.38, 10, 10), pMat);
+      } else {
+        prizeMesh = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.7, 0.7), pMat);
+      }
+      prizeMesh.position.set(px, py, pz);
+      group.add(prizeMesh);
+    }
+
+    // Dummy gantry & claw rails
+    const gantryRail = new THREE.Mesh(new THREE.BoxGeometry(W - 1.0, 0.15, 0.15), chromeMat);
+    gantryRail.position.set(0, 6.7, 0);
+    group.add(gantryRail);
+
+    // ── Clear Glass Walls ──
+    const glassMat = new THREE.MeshStandardMaterial({
+      color: 0xffffff,
+      opacity: 0.18,
+      transparent: true,
+      roughness: 0.0
+    });
+    const frontGlass = new THREE.Mesh(new THREE.PlaneGeometry(W - 0.8, 3.8), glassMat);
+    frontGlass.position.set(0, 5.0, D / 2 - 0.2);
+    group.add(frontGlass);
+
+    // ── Top Header Marquee Banner ──
+    const bannerCanvas = document.createElement('canvas');
+    bannerCanvas.width = 512;
+    bannerCanvas.height = 128;
+    const bctx = bannerCanvas.getContext('2d')!;
+
+    // Header bg
+    bctx.fillStyle = '#' + cfg.bodyHex.toString(16).padStart(6, '0');
+    bctx.fillRect(0, 0, 512, 128);
+    bctx.strokeStyle = '#ffffff'; bctx.lineWidth = 6;
+    bctx.strokeRect(6, 6, 500, 116);
+
+    // Header text
+    bctx.shadowColor = '#ffffff';
+    bctx.shadowBlur = 12;
+    bctx.fillStyle = '#ffffff';
+    bctx.font = '900 42px sans-serif';
+    bctx.textAlign = 'center';
+    bctx.fillText(cfg.title, 256, 75);
+
+    const bannerTex = new THREE.CanvasTexture(bannerCanvas);
+    const marqueeMesh = new THREE.Mesh(new THREE.BoxGeometry(W, 1.4, D),
+      new THREE.MeshStandardMaterial({ map: bannerTex, roughness: 0.3 }));
+    marqueeMesh.position.set(0, 7.5, 0);
+    group.add(marqueeMesh);
+
+    // ── Emissive Light Source Inside Each Machine ──
+    const mLight = new THREE.PointLight(cfg.glowHex, 1.4, 18);
+    mLight.position.set(0, 5.5, 0);
+    group.add(mLight);
+
+    scene.add(group);
+  });
 }
 
 // Start Game
