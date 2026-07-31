@@ -1047,10 +1047,10 @@ export class PrizesManager {
 
   // ══════════════════════════════════════════════════════════════
   //  🎮  PS5 CONSOLE GIANT BOX (K-霸 巨無霸家電大盒)
-  //  Size: W: 3.2, H: 4.0, D: 1.7 (TRULY GIANT BOX)
+  //  Size: W: 1.7, H: 1.9, D: 0.85
   // ══════════════════════════════════════════════════════════════
   private spawnPS5Box(x: number, y: number, z: number) {
-    const W = 3.2, H = 4.0, D = 1.7;
+    const W = 1.7, H = 1.9, D = 0.85;
     const group = new THREE.Group();
     group.position.set(x, y, z);
     group.rotation.y = Math.random() * Math.PI * 2;
@@ -1090,7 +1090,7 @@ export class PrizesManager {
     if (this.physics.world) {
       const body = this.makeDynBody(x, y, z);
       this.physics.world.createCollider(
-        RAPIER.ColliderDesc.cuboid(W / 2, H / 2, D / 2).setMass(0.85).setFriction(0.50).setRestitution(0.05), body);
+        RAPIER.ColliderDesc.cuboid(W / 2, H / 2, D / 2).setMass(0.60).setFriction(0.48).setRestitution(0.05), body);
       this.physics.registerBody(body, group);
       this.bodies.push(body);
     }
@@ -1098,10 +1098,10 @@ export class PrizesManager {
 
   // ══════════════════════════════════════════════════════════════
   //  🎮  NINTENDO SWITCH OLED BOX (K-霸 巨無霸遊戲機盒)
-  //  Size: W: 3.0, H: 2.4, D: 1.4
+  //  Size: W: 1.5, H: 1.2, D: 0.7
   // ══════════════════════════════════════════════════════════════
   private spawnSwitchBox(x: number, y: number, z: number) {
-    const W = 3.0, H = 2.4, D = 1.4;
+    const W = 1.5, H = 1.2, D = 0.7;
     const group = new THREE.Group();
     group.position.set(x, y, z);
     group.rotation.y = Math.random() * Math.PI * 2;
@@ -1131,18 +1131,18 @@ export class PrizesManager {
     if (this.physics.world) {
       const body = this.makeDynBody(x, y, z);
       this.physics.world.createCollider(
-        RAPIER.ColliderDesc.cuboid(W / 2, H / 2, D / 2).setMass(0.75).setFriction(0.50), body);
+        RAPIER.ColliderDesc.cuboid(W / 2, H / 2, D / 2).setMass(0.50).setFriction(0.48), body);
       this.physics.registerBody(body, group);
       this.bodies.push(body);
     }
   }
 
   // ══════════════════════════════════════════════════════════════
-  //  🌀  DYSON VACUUM CLEANER GIANT BOX (K-霸 巨無霸家電大盒)
-  //  Size: W: 1.8, H: 5.0, D: 1.6
+  //  🌀  DYSON VACUUM CLEANER GIANT BOX (K-霸 家電大盒)
+  //  Size: W: 0.9, H: 2.4, D: 0.8
   // ══════════════════════════════════════════════════════════════
   private spawnDysonVacuumBox(x: number, y: number, z: number) {
-    const W = 1.8, H = 5.0, D = 1.6;
+    const W = 0.9, H = 2.4, D = 0.8;
     const group = new THREE.Group();
     group.position.set(x, y, z);
     group.rotation.y = Math.random() * Math.PI * 2;
@@ -1171,7 +1171,7 @@ export class PrizesManager {
     if (this.physics.world) {
       const body = this.makeDynBody(x, y, z);
       this.physics.world.createCollider(
-        RAPIER.ColliderDesc.cuboid(W / 2, H / 2, D / 2).setMass(0.85).setFriction(0.48), body);
+        RAPIER.ColliderDesc.cuboid(W / 2, H / 2, D / 2).setMass(0.55).setFriction(0.48), body);
       this.physics.registerBody(body, group);
       this.bodies.push(body);
     }
@@ -1179,10 +1179,10 @@ export class PrizesManager {
 
   // ══════════════════════════════════════════════════════════════
   //  📻  MARSHALL SPEAKER GIANT BOX (K-霸 家電大盒)
-  //  Size: W: 3.2, H: 2.3, D: 2.0
+  //  Size: W: 1.5, H: 1.1, D: 0.95
   // ══════════════════════════════════════════════════════════════
   private spawnMarshallSpeaker(x: number, y: number, z: number) {
-    const W = 3.2, H = 2.3, D = 2.0;
+    const W = 1.5, H = 1.1, D = 0.95;
     const group = new THREE.Group();
     group.position.set(x, y, z);
     group.rotation.y = Math.random() * Math.PI * 2;
@@ -1209,7 +1209,7 @@ export class PrizesManager {
     if (this.physics.world) {
       const body = this.makeDynBody(x, y, z);
       this.physics.world.createCollider(
-        RAPIER.ColliderDesc.cuboid(W / 2, H / 2, D / 2).setMass(0.8).setFriction(0.50), body);
+        RAPIER.ColliderDesc.cuboid(W / 2, H / 2, D / 2).setMass(0.55).setFriction(0.48), body);
       this.physics.registerBody(body, group);
       this.bodies.push(body);
     }
@@ -1217,10 +1217,10 @@ export class PrizesManager {
 
   // ══════════════════════════════════════════════════════════════
   //  🏎️  LEGO TECHNIC RACING CAR GIANT BOX (K-霸 巨無霸積木盒)
-  //  Size: W: 4.0, H: 2.8, D: 1.8
+  //  Size: W: 1.8, H: 1.2, D: 0.8
   // ══════════════════════════════════════════════════════════════
   private spawnGiantLegoBox(x: number, y: number, z: number) {
-    const W = 4.0, H = 2.8, D = 1.8;
+    const W = 1.8, H = 1.2, D = 0.8;
     const group = new THREE.Group();
     group.position.set(x, y, z);
     group.rotation.y = Math.random() * Math.PI * 2;
@@ -1253,21 +1253,21 @@ export class PrizesManager {
     if (this.physics.world) {
       const body = this.makeDynBody(x, y, z);
       this.physics.world.createCollider(
-        RAPIER.ColliderDesc.cuboid(W / 2, H / 2, D / 2).setMass(0.85).setFriction(0.50), body);
+        RAPIER.ColliderDesc.cuboid(W / 2, H / 2, D / 2).setMass(0.55).setFriction(0.48), body);
       this.physics.registerBody(body, group);
       this.bodies.push(body);
     }
   }
 
   // ══════════════════════════════════════════════════════════════
-  //  🧸  1.5M GIANT TEDDY BEAR PLUSH (K-霸 巨無霸熊娃娃)
-  //  Scaled 2.2x
+  //  🧸  GIANT TEDDY BEAR PLUSH (K-霸 熊娃娃)
+  //  Scaled 1.2x
   // ══════════════════════════════════════════════════════════════
   private spawnGiantTeddyBear(x: number, y: number, z: number) {
     const group = new THREE.Group();
     group.position.set(x, y, z);
     group.rotation.y = Math.random() * Math.PI * 2;
-    group.scale.set(2.2, 2.2, 2.2); // 2.2x Giant scale!
+    group.scale.set(1.2, 1.2, 1.2);
 
     const bearMat  = new THREE.MeshStandardMaterial({ color: 0x9a6035, roughness: 0.90 });
     const snoutMat = new THREE.MeshStandardMaterial({ color: 0xfde047, roughness: 0.85 });
@@ -1311,9 +1311,9 @@ export class PrizesManager {
     if (this.physics.world) {
       const phyBody = this.makeDynBody(x, y, z);
       this.physics.world.createCollider(
-        RAPIER.ColliderDesc.ball(1.28).setMass(0.65).setFriction(0.50), phyBody);
+        RAPIER.ColliderDesc.ball(0.72).setMass(0.40).setFriction(0.48), phyBody);
       this.physics.world.createCollider(
-        RAPIER.ColliderDesc.ball(1.10).setTranslation(0, 1.80, 0).setFriction(0.50), phyBody);
+        RAPIER.ColliderDesc.ball(0.62).setTranslation(0, 0.98, 0).setFriction(0.48), phyBody);
       this.physics.registerBody(phyBody, group);
       this.bodies.push(phyBody);
     }

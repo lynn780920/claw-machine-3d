@@ -585,40 +585,43 @@ function setupUIEventListeners() {
     prizesManager.clearPrizes();
 
     if (mode === 'kbasket') {
-      // ⚡ K-霸 巨型家電玩具機台 (1.6x Giant Claw + 12 Massive PS5/Switch/Dyson Box items)
-      claw.setClawScale(1.6);
+      // ⚡ K-霸 巨型家電玩具機台 (1.3x Big Claw + Line Length 3.0 + 8 Appliance Boxes)
+      claw.setClawScale(1.3);
       cabinet.setBaffleHeight(0.3);
       (document.getElementById('setting-baffle') as HTMLInputElement).value = '0.3';
-      (document.getElementById('setting-length') as HTMLInputElement).value = '14.5';
-      (document.getElementById('setting-dolls') as HTMLInputElement).value = '12';
-      document.getElementById('val-dolls')!.textContent = '12';
+      (document.getElementById('setting-length') as HTMLInputElement).value = '3.0';
+      document.getElementById('val-length')!.textContent = '3.0';
+      (document.getElementById('setting-dolls') as HTMLInputElement).value = '8';
+      document.getElementById('val-dolls')!.textContent = '8';
       applyDIPSettings();
 
       if (prizeSelect) prizeSelect.value = 'giant_appliances';
-      prizesManager.spawnPrizes(12, 'giant_appliances');
-
-      controls.target.set(0, 3.2, 0);
-      camera.position.set(0, 5.6, 9.4);
-      controls.update();
-
-      showWinToast('⚡ 已切換至【K-霸 巨型家電玩具機台】！全新 12 件 PS5 / Switch / Dyson 巨型家電已補滿！');
-    } else {
-      // 👑 經典黃色 TOY STORY 娃娃機
-      claw.setClawScale(1.0);
-      cabinet.setBaffleHeight(0.5);
-      (document.getElementById('setting-baffle') as HTMLInputElement).value = '0.5';
-      (document.getElementById('setting-dolls') as HTMLInputElement).value = '35';
-      document.getElementById('val-dolls')!.textContent = '35';
-      applyDIPSettings();
-
-      if (prizeSelect) prizeSelect.value = 'mixed';
-      prizesManager.spawnPrizes(35, 'mixed');
+      prizesManager.spawnPrizes(8, 'giant_appliances');
 
       controls.target.set(0, 3.2, 0);
       camera.position.set(0, 5.6, 9.2);
       controls.update();
 
-      showWinToast('👑 已切換至【經典黃色 TOY STORY 娃娃機】！');
+      showWinToast('⚡ 已切換至【K-霸 巨型家電玩具機台】！線長設為 3.0，預設 8 件專屬大盒家電！');
+    } else {
+      // 👑 經典黃色 TOY STORY 娃娃機
+      claw.setClawScale(1.0);
+      cabinet.setBaffleHeight(0.5);
+      (document.getElementById('setting-baffle') as HTMLInputElement).value = '0.5';
+      (document.getElementById('setting-length') as HTMLInputElement).value = '13.5';
+      document.getElementById('val-length')!.textContent = '13.5';
+      (document.getElementById('setting-dolls') as HTMLInputElement).value = '80';
+      document.getElementById('val-dolls')!.textContent = '80';
+      applyDIPSettings();
+
+      if (prizeSelect) prizeSelect.value = 'mixed';
+      prizesManager.spawnPrizes(80, 'mixed');
+
+      controls.target.set(0, 3.2, 0);
+      camera.position.set(0, 5.6, 9.2);
+      controls.update();
+
+      showWinToast('👑 已切換至【經典黃色 TOY STORY 娃娃機】！線長恢復 13.5，預設 80 件娃娃！');
     }
   }
 
