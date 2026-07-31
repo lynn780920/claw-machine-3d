@@ -581,35 +581,38 @@ function setupUIEventListeners() {
 
     const prizeSelect = document.getElementById('setting-prizetype') as HTMLSelectElement;
 
+    // Clear all existing prizes completely first!
+    prizesManager.clearPrizes();
+
     if (mode === 'kbasket') {
-      // ⚡ K-霸 巨型家電玩具機台 (2.5x Giant Claw + 15 Massive PS5/Switch/Dyson Box items)
-      claw.setClawScale(2.5);
+      // ⚡ K-霸 巨型家電玩具機台 (1.6x Giant Claw + 12 Massive PS5/Switch/Dyson Box items)
+      claw.setClawScale(1.6);
       cabinet.setBaffleHeight(0.3);
       (document.getElementById('setting-baffle') as HTMLInputElement).value = '0.3';
       (document.getElementById('setting-length') as HTMLInputElement).value = '14.5';
-      (document.getElementById('setting-dolls') as HTMLInputElement).value = '15';
-      document.getElementById('val-dolls')!.textContent = '15';
+      (document.getElementById('setting-dolls') as HTMLInputElement).value = '12';
+      document.getElementById('val-dolls')!.textContent = '12';
       applyDIPSettings();
 
       if (prizeSelect) prizeSelect.value = 'giant_appliances';
-      prizesManager.spawnPrizes(15, 'giant_appliances');
+      prizesManager.spawnPrizes(12, 'giant_appliances');
 
       controls.target.set(0, 3.2, 0);
-      camera.position.set(0, 6.0, 10.5);
+      camera.position.set(0, 5.6, 9.4);
       controls.update();
 
-      showWinToast('⚡ 已切換至【K-霸 巨型家電玩具機台】！2.5倍特大巨爪已裝備 (預設15件大盒家電)！');
+      showWinToast('⚡ 已切換至【K-霸 巨型家電玩具機台】！全新 12 件 PS5 / Switch / Dyson 巨型家電已補滿！');
     } else {
       // 👑 經典黃色 TOY STORY 娃娃機
       claw.setClawScale(1.0);
       cabinet.setBaffleHeight(0.5);
       (document.getElementById('setting-baffle') as HTMLInputElement).value = '0.5';
-      (document.getElementById('setting-dolls') as HTMLInputElement).value = '40';
-      document.getElementById('val-dolls')!.textContent = '40';
+      (document.getElementById('setting-dolls') as HTMLInputElement).value = '35';
+      document.getElementById('val-dolls')!.textContent = '35';
       applyDIPSettings();
 
       if (prizeSelect) prizeSelect.value = 'mixed';
-      prizesManager.spawnPrizes(40, 'mixed');
+      prizesManager.spawnPrizes(35, 'mixed');
 
       controls.target.set(0, 3.2, 0);
       camera.position.set(0, 5.6, 9.2);
