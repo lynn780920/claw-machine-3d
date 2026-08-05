@@ -517,7 +517,7 @@ export class Claw {
       }
     }
 
-    // ── G. 3-Prong Physical Contact & Corner Nudging Physics (三爪單爪實體觸碰推角落與撥動翻滾物理) ──
+    // ── G. Full-Blade 3-Node Physical Solid Arm Collision (全爪臂 3 點實體防穿越碰撞體) ──
     if (prizesManager && prizesManager.bodies.length > 0) {
       const clawScale = this.baseMesh ? this.baseMesh.scale.x : 1.0;
       const isClosing = (this.targetArmAngle === this.config.clawCloseAngle);
@@ -533,49 +533,62 @@ export class Claw {
           outwardDir.y = 0;
           outwardDir.normalize();
 
-          const tipWorldPos = prongWorldPos.clone();
-          tipWorldPos.addScaledVector(outwardDir, 0.28 * clawScale);
-          tipWorldPos.y -= 0.65 * clawScale;
+          // 3 Collision Nodes along the entire curved metal arm blade (Upper, Mid, Tip)
+          const nodeUpper = prongWorldPos.clone().addScaledVector(outwardDir, 0.05 * clawScale);
+          nodeUpper.y -= 0.15 * clawScale;
 
-          const contactRadius = 0.38 * clawScale;
+          const nodeMid = prongWorldPos.clone().addScaledVector(outwardDir, 0.22 * clawScale);
+          nodeMid.y -= 0.42 * clawScale;
 
-          for (const pBody of prizesManager.bodies) {
-            if (pBody === this.grabbedBody) continue;
+          const nodeTip = prongWorldPos.clone().addScaledVector(outwardDir, 0.28 * clawScale);
+          nodeTip.y -= 0.68 * clawScale;
 
-            const bPos = pBody.translation();
-            const dx = bPos.x - tipWorldPos.x;
-            const dy = bPos.y - tipWorldPos.y;
-            const dz = bPos.z - tipWorldPos.z;
-            const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+          const armNodes = [
+            { pos: nodeUpper, radius: 0.32 * clawScale },
+            { pos: nodeMid,   radius: 0.36 * clawScale },
+            { pos: nodeTip,   radius: 0.38 * clawScale }
+          ];
 
-            if (dist < contactRadius && dist > 0.001) {
-              const overlap = (contactRadius - dist) / contactRadius;
-              
-              let pushX = dx / dist;
-              let pushY = dy / dist;
-              let pushZ = dz / dist;
+          for (const node of armNodes) {
+            for (const pBody of prizesManager.bodies) {
+              if (pBody === this.grabbedBody) continue;
 
-              let forceMag = overlap * 0.55;
-              if (isClosing) {
-                pushX = -outwardDir.x;
-                pushZ = -outwardDir.z;
-                pushY = 0.35;
-                forceMag *= 1.8;
-              } else if (isOpening) {
-                pushX = outwardDir.x;
-                pushZ = outwardDir.z;
-                pushY = 0.25;
-                forceMag *= 1.4;
+              const bPos = pBody.translation();
+              const dx = bPos.x - node.pos.x;
+              const dy = bPos.y - node.pos.y;
+              const dz = bPos.z - node.pos.z;
+              const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+
+              if (dist < node.radius && dist > 0.001) {
+                const overlap = (node.radius - dist) / node.radius;
+
+                let pushX = dx / dist;
+                let pushY = dy / dist;
+                let pushZ = dz / dist;
+
+                let forceMag = overlap * 0.70;
+                if (isClosing) {
+                  pushX = -outwardDir.x;
+                  pushZ = -outwardDir.z;
+                  pushY = 0.40;
+                  forceMag *= 2.2;
+                } else if (isOpening) {
+                  pushX = outwardDir.x;
+                  pushZ = outwardDir.z;
+                  pushY = 0.30;
+                  forceMag *= 1.8;
+                }
+
+                // Instant solid physical separation & corner torque
+                pBody.applyImpulse(
+                  { x: pushX * forceMag, y: pushY * forceMag, z: pushZ * forceMag },
+                  true
+                );
+                pBody.applyTorqueImpulse(
+                  { x: pushZ * forceMag * 0.5, y: forceMag * 0.25, z: -pushX * forceMag * 0.5 },
+                  true
+                );
               }
-
-              pBody.applyImpulse(
-                { x: pushX * forceMag, y: pushY * forceMag, z: pushZ * forceMag },
-                true
-              );
-              pBody.applyTorqueImpulse(
-                { x: pushZ * forceMag * 0.4, y: forceMag * 0.2, z: -pushX * forceMag * 0.4 },
-                true
-              );
             }
           }
         }
