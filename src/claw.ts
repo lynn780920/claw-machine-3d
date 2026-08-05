@@ -517,6 +517,71 @@ export class Claw {
       }
     }
 
+    // ── G. 3-Prong Physical Contact & Corner Nudging Physics (三爪單爪實體觸碰推角落與撥動翻滾物理) ──
+    if (prizesManager && prizesManager.bodies.length > 0) {
+      const clawScale = this.baseMesh ? this.baseMesh.scale.x : 1.0;
+      const isClosing = (this.targetArmAngle === this.config.clawCloseAngle);
+      const isOpening = (this.targetArmAngle === this.config.clawOpenAngle);
+
+      for (let i = 0; i < 3; i++) {
+        const pivot = this.armPivots[i];
+        const hinge = pivot ? pivot.getObjectByName('armHinge') : null;
+        if (hinge) {
+          const prongWorldPos = new THREE.Vector3();
+          hinge.getWorldPosition(prongWorldPos);
+          const outwardDir = prongWorldPos.clone().sub(this.baseMesh.position);
+          outwardDir.y = 0;
+          outwardDir.normalize();
+
+          const tipWorldPos = prongWorldPos.clone();
+          tipWorldPos.addScaledVector(outwardDir, 0.28 * clawScale);
+          tipWorldPos.y -= 0.65 * clawScale;
+
+          const contactRadius = 0.38 * clawScale;
+
+          for (const pBody of prizesManager.bodies) {
+            if (pBody === this.grabbedBody) continue;
+
+            const bPos = pBody.translation();
+            const dx = bPos.x - tipWorldPos.x;
+            const dy = bPos.y - tipWorldPos.y;
+            const dz = bPos.z - tipWorldPos.z;
+            const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+
+            if (dist < contactRadius && dist > 0.001) {
+              const overlap = (contactRadius - dist) / contactRadius;
+              
+              let pushX = dx / dist;
+              let pushY = dy / dist;
+              let pushZ = dz / dist;
+
+              let forceMag = overlap * 0.55;
+              if (isClosing) {
+                pushX = -outwardDir.x;
+                pushZ = -outwardDir.z;
+                pushY = 0.35;
+                forceMag *= 1.8;
+              } else if (isOpening) {
+                pushX = outwardDir.x;
+                pushZ = outwardDir.z;
+                pushY = 0.25;
+                forceMag *= 1.4;
+              }
+
+              pBody.applyImpulse(
+                { x: pushX * forceMag, y: pushY * forceMag, z: pushZ * forceMag },
+                true
+              );
+              pBody.applyTorqueImpulse(
+                { x: pushZ * forceMag * 0.4, y: forceMag * 0.2, z: -pushX * forceMag * 0.4 },
+                true
+              );
+            }
+          }
+        }
+      }
+    }
+
     // ── E. State Machine with Touch-Stop ──
     switch (this.state) {
       case 'DESCENDING':
