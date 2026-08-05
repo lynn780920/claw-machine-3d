@@ -339,7 +339,7 @@ export class Claw {
     if (Math.abs(carrVelX) > 0.4) {
       const dirX = Math.sign(carrVelX);
       if (this.lastDirX !== 0 && dirX !== this.lastDirX) {
-        this.swayVelX += dirX * 3.2; // High responsiveness momentum excitation
+        this.swayVelX += dirX * 1.3; // Responsive momentum excitation without wild spinning
       }
       this.lastDirX = dirX;
     } else {
@@ -349,7 +349,7 @@ export class Claw {
     if (Math.abs(carrVelZ) > 0.4) {
       const dirZ = Math.sign(carrVelZ);
       if (this.lastDirZ !== 0 && dirZ !== this.lastDirZ) {
-        this.swayVelZ += dirZ * 3.2;
+        this.swayVelZ += dirZ * 1.3;
       }
       this.lastDirZ = dirZ;
     } else {
@@ -359,16 +359,16 @@ export class Claw {
     // 2. Continuous 360-Degree Circular Swivel Excitation
     const joystickSpeedSq = carrVelX * carrVelX + carrVelZ * carrVelZ;
     if (joystickSpeedSq > 0.2) {
-      this.swayVelX += carrVelX * 0.45 * deltaTime * 60;
-      this.swayVelZ += carrVelZ * 0.45 * deltaTime * 60;
+      this.swayVelX += carrVelX * 0.22 * deltaTime * 60;
+      this.swayVelZ += carrVelZ * 0.22 * deltaTime * 60;
     }
 
-    const g = 35.0;
+    const g = 12.0;
     const L = Math.max(0.6, this.ropeLength);
     const omegaSq = g / L;
 
-    const accelX = carrVelX * 3.5;
-    const accelZ = carrVelZ * 3.5;
+    const accelX = carrVelX * 2.2;
+    const accelZ = carrVelZ * 2.2;
 
     const swayAccelX = -omegaSq * Math.sin(this.swayAngleX) - (accelX / L);
     const swayAccelZ = -omegaSq * Math.sin(this.swayAngleZ) - (accelZ / L);
@@ -376,15 +376,17 @@ export class Claw {
     this.swayVelX += swayAccelX * deltaTime;
     this.swayVelZ += swayAccelZ * deltaTime;
 
-    const dampingFactor = this.config.antiSwingEnabled ? 0.80 : 0.99;
+    // Cable stabilization damping when descending to prevent vertical stuttering
+    const isDropping = (this.state === 'DESCENDING');
+    const dampingFactor = this.config.antiSwingEnabled ? 0.80 : (isDropping ? 0.94 : 0.985);
     this.swayVelX *= dampingFactor;
     this.swayVelZ *= dampingFactor;
 
     this.swayAngleX += this.swayVelX * deltaTime;
     this.swayAngleZ += this.swayVelZ * deltaTime;
 
-    // Realistic Arcade Max Swing Angle (~37 degrees / 0.65 rad) for flexible responsive swinging
-    const maxAngle = 0.65;
+    // Realistic Arcade Max Swing Angle (~22 degrees / 0.38 rad)
+    const maxAngle = 0.38;
     this.swayAngleX = Math.max(-maxAngle, Math.min(maxAngle, this.swayAngleX));
     this.swayAngleZ = Math.max(-maxAngle, Math.min(maxAngle, this.swayAngleZ));
 
@@ -509,15 +511,15 @@ export class Claw {
         let touchedPrize = false;
 
         if (prizesManager && prizesManager.bodies.length > 0) {
-          const clawTipY = targetY - 0.75;
+          const clawTipY = targetY - 0.70;
           for (const pBody of prizesManager.bodies) {
             const pos = pBody.translation();
             const dx = pos.x - finalX;
             const dy = pos.y - clawTipY;
             const dz = pos.z - finalZ;
             const distXZ = Math.sqrt(dx * dx + dz * dz);
-            // Strict descent check: Trigger touch-stop only when claw fingers physically envelope prize (distXZ < 0.45m & absDY < 0.50m)
-            if (distXZ < 0.45 && Math.abs(dy) < 0.50) {
+            // Touch-stop only when claw base plate physically touches/rests on top of a prize body
+            if (distXZ < 0.28 && (dy >= -0.20 && dy <= 0.25)) {
               touchedPrize = true;
               break;
             }

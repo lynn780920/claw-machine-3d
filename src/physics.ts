@@ -8,8 +8,8 @@ export class PhysicsSystem {
 
   async init() {
     await RAPIER.init();
-    // Accelerated game gravity for fast snappy drops & heavy realistic impacts
-    const gravity = { x: 0.0, y: -35.0, z: 0.0 };
+    // Accelerated 2x game gravity for fast snappy drops (avoids slow-motion floatiness)
+    const gravity = { x: 0.0, y: -19.6, z: 0.0 };
     this.world = new RAPIER.World(gravity);
 
     // Increase solver iterations for maximum stability and zero interpenetration/merging
