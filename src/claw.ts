@@ -72,9 +72,11 @@ export class Claw {
   private descentDepth = 0;
   private hasTriggeredWeakForce = false;
 
-  // Carriage velocity tracking & direction reversal beats
+  // Carriage velocity & acceleration tracking for zero-lag braking inertia
   private lastCarrX = 0;
   private lastCarrZ = 0;
+  private lastCarrVelX = 0;
+  private lastCarrVelZ = 0;
   private lastDirX = 0;
   private lastDirZ = 0;
 
@@ -332,14 +334,31 @@ export class Claw {
     const carrPos = this.carriageBody.translation();
     const carrVelX = (carrPos.x - this.lastCarrX) / Math.max(0.0001, deltaTime);
     const carrVelZ = (carrPos.z - this.lastCarrZ) / Math.max(0.0001, deltaTime);
+
+    // Compute carriage acceleration (braking deceleration when stopping)
+    const carrAccelX = (carrVelX - this.lastCarrVelX) / Math.max(0.0001, deltaTime);
+    const carrAccelZ = (carrVelZ - this.lastCarrVelZ) / Math.max(0.0001, deltaTime);
+
     this.lastCarrX = carrPos.x;
     this.lastCarrZ = carrPos.z;
+    this.lastCarrVelX = carrVelX;
+    this.lastCarrVelZ = carrVelZ;
 
-    // 1. Detect Direction Reversal Flicking (真實娃娃機微幅數拍頓甩 Pumping)
+    // 1. Instantaneous Braking Inertia Kick (When stopping rightward movement, inertia kicks claw RIGHT immediately with zero lag!)
+    if (Math.abs(carrVelX) < 0.1 && Math.abs(this.lastCarrVelX) > 0.8) {
+      const lastDirX = Math.sign(this.lastCarrVelX);
+      this.swayVelX += lastDirX * 1.8;
+    }
+    if (Math.abs(carrVelZ) < 0.1 && Math.abs(this.lastCarrVelZ) > 0.8) {
+      const lastDirZ = Math.sign(this.lastCarrVelZ);
+      this.swayVelZ += lastDirZ * 1.8;
+    }
+
+    // 2. Direction Reversal Flicking (Pumping)
     if (Math.abs(carrVelX) > 0.4) {
       const dirX = Math.sign(carrVelX);
       if (this.lastDirX !== 0 && dirX !== this.lastDirX) {
-        this.swayVelX += dirX * 1.3; // Responsive momentum excitation without wild spinning
+        this.swayVelX += dirX * 1.5;
       }
       this.lastDirX = dirX;
     } else {
@@ -349,36 +368,30 @@ export class Claw {
     if (Math.abs(carrVelZ) > 0.4) {
       const dirZ = Math.sign(carrVelZ);
       if (this.lastDirZ !== 0 && dirZ !== this.lastDirZ) {
-        this.swayVelZ += dirZ * 1.3;
+        this.swayVelZ += dirZ * 1.5;
       }
       this.lastDirZ = dirZ;
     } else {
       this.lastDirZ = 0;
     }
 
-    // 2. Continuous 360-Degree Circular Swivel Excitation
-    const joystickSpeedSq = carrVelX * carrVelX + carrVelZ * carrVelZ;
-    if (joystickSpeedSq > 0.2) {
-      this.swayVelX += carrVelX * 0.22 * deltaTime * 60;
-      this.swayVelZ += carrVelZ * 0.22 * deltaTime * 60;
-    }
-
-    const g = 12.0;
+    const g = 14.0;
     const L = Math.max(0.6, this.ropeLength);
     const omegaSq = g / L;
 
-    const accelX = carrVelX * 2.2;
-    const accelZ = carrVelZ * 2.2;
+    // Non-inertial frame fictitious inertia acceleration: -carrAccel
+    const inertiaAccelX = -carrAccelX * 0.08;
+    const inertiaAccelZ = -carrAccelZ * 0.08;
 
-    const swayAccelX = -omegaSq * Math.sin(this.swayAngleX) - (accelX / L);
-    const swayAccelZ = -omegaSq * Math.sin(this.swayAngleZ) - (accelZ / L);
+    const swayAccelX = -omegaSq * Math.sin(this.swayAngleX) + inertiaAccelX;
+    const swayAccelZ = -omegaSq * Math.sin(this.swayAngleZ) + inertiaAccelZ;
 
     this.swayVelX += swayAccelX * deltaTime;
     this.swayVelZ += swayAccelZ * deltaTime;
 
     // Cable stabilization damping when descending to prevent vertical stuttering
     const isDropping = (this.state === 'DESCENDING');
-    const dampingFactor = this.config.antiSwingEnabled ? 0.80 : (isDropping ? 0.94 : 0.985);
+    const dampingFactor = this.config.antiSwingEnabled ? 0.80 : (isDropping ? 0.94 : 0.982);
     this.swayVelX *= dampingFactor;
     this.swayVelZ *= dampingFactor;
 

@@ -686,7 +686,7 @@ function setupUIEventListeners() {
         weak: '40',
         tophit: '25',
         speed: '4.0',
-        length: '13.5',
+        length: '7.0',
         baffle: '0.5',
         dolls: '80',
         antiswing: 'disabled',
