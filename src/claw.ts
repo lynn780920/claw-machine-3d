@@ -578,16 +578,14 @@ export class Claw {
                   forceMag *= 2.0;
                 }
 
-                // Instant Solid Velocity Repulsion (0% Passthrough Guarantee)
-                const currentVel = pBody.linvel();
-                const pushVelX = pushX * forceMag * 4.5;
-                const pushVelY = Math.max(currentVel.y, pushY * forceMag * 3.5);
-                const pushVelZ = pushZ * forceMag * 4.5;
-                pBody.setLinvel({ x: pushVelX, y: pushVelY, z: pushVelZ }, true);
-
-                // Corner torque impulse
+                // Smooth solid physical separation & corner torque without explosive velocity jumps
+                const impulseMag = Math.min(0.25, overlap * 0.18 * (isClosing ? 1.5 : 1.0));
+                pBody.applyImpulse(
+                  { x: pushX * impulseMag, y: pushY * impulseMag * 0.5, z: pushZ * impulseMag },
+                  true
+                );
                 pBody.applyTorqueImpulse(
-                  { x: pushZ * forceMag * 0.6, y: forceMag * 0.3, z: -pushX * forceMag * 0.6 },
+                  { x: pushZ * impulseMag * 0.2, y: impulseMag * 0.1, z: -pushX * impulseMag * 0.2 },
                   true
                 );
               }
