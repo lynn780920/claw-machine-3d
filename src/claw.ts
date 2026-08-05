@@ -641,11 +641,16 @@ export class Claw {
 
   private attemptGrab(physics: PhysicsSystem, prizesManager?: PrizesManager) {
     const basePos = this.baseMesh.position;
-    // Claw center cup volume Y (-0.75 below base plate)
-    const clawTipPos = { x: basePos.x, y: basePos.y - 0.75, z: basePos.z };
+    const clawScale = this.baseMesh ? this.baseMesh.scale.x : 1.0;
+    // Claw center cup volume Y (-0.75 * scale below base plate)
+    const clawTipPos = { x: basePos.x, y: basePos.y - 0.75 * clawScale, z: basePos.z };
 
     let nearestBody: RAPIER.RigidBody | null = null;
     let nearestDist = Infinity;
+
+    // Scale-aware grab envelope (0.44m * scale radius for 3-prong cup)
+    const maxDistXZ = 0.44 * clawScale;
+    const maxAbsDY = 0.60 * clawScale;
 
     if (prizesManager && prizesManager.bodies.length > 0) {
       for (const pBody of prizesManager.bodies) {
@@ -657,9 +662,8 @@ export class Claw {
         const distXZ = Math.sqrt(dx * dx + dz * dz);
         const absDY = Math.abs(dy);
 
-        // Strict 3-Prong Cup Envelope (distXZ <= 0.25m, absDY <= 0.45m)
-        // Only grabs objects physically enclosed inside the claw arms without telekinetic snapping or air grabbing
-        if (distXZ <= 0.25 && absDY <= 0.45) {
+        // Scale-aware envelope check matching physical claw arm dimensions
+        if (distXZ <= maxDistXZ && absDY <= maxAbsDY) {
           const totalDist = Math.sqrt(distXZ * distXZ + dy * dy);
           if (totalDist < nearestDist) {
             nearestDist = totalDist;
@@ -673,7 +677,7 @@ export class Claw {
       const targetBody = nearestBody as RAPIER.RigidBody;
       const bPos = targetBody.translation();
 
-      // No forced teleportation! Attach joint at prize's current physical location relative to claw base
+      // Attach joint at prize's current physical location relative to claw base
       const localAnchorX = bPos.x - basePos.x;
       const localAnchorY = bPos.y - basePos.y;
       const localAnchorZ = bPos.z - basePos.z;
@@ -681,11 +685,15 @@ export class Claw {
       for (let i = 0; i < targetBody.numColliders(); i++) {
         const col = targetBody.collider(i);
         col.setSensor(false);
-        col.setFriction(0.65);
-        col.setRestitution(0.04);
+        col.setFriction(0.85);
+        col.setRestitution(0.02);
       }
 
-      // Spherical Joint anchors prize at current physical position relative to claw base
+      // Add stabilization damping during lift
+      targetBody.setLinearDamping(0.8);
+      targetBody.setAngularDamping(0.8);
+
+      // Spherical Joint anchors prize securely at current physical position relative to claw base
       const sphericalJointData = RAPIER.JointData.spherical(
         { x: localAnchorX, y: localAnchorY, z: localAnchorZ },
         { x: 0, y: 0, z: 0 }
