@@ -8,8 +8,8 @@ export class PhysicsSystem {
 
   async init() {
     await RAPIER.init();
-    // Standard earth gravity
-    const gravity = { x: 0.0, y: -9.81, z: 0.0 };
+    // Accelerated game gravity for fast snappy drops & heavy realistic impacts
+    const gravity = { x: 0.0, y: -35.0, z: 0.0 };
     this.world = new RAPIER.World(gravity);
 
     // Increase solver iterations for maximum stability and zero interpenetration/merging

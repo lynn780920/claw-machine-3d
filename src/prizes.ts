@@ -96,7 +96,7 @@ export class PrizesManager {
   private makeDynBody(x: number, y: number, z: number) {
     return this.physics.world.createRigidBody(
       RAPIER.RigidBodyDesc.dynamic().setTranslation(x, y, z)
-        .setCcdEnabled(true).setLinearDamping(0.35).setAngularDamping(1.8)
+        .setCcdEnabled(true).setLinearDamping(0.45).setAngularDamping(2.0)
     );
   }
 
@@ -214,10 +214,26 @@ export class PrizesManager {
 
     if (this.physics.world) {
       const body2 = this.makeDynBody(x, y, z);
-      this.physics.world.createCollider(RAPIER.ColliderDesc.ball(0.42).setMass(0.18).setFriction(0.42).setRestitution(0.12), body2);
-      this.physics.world.createCollider(RAPIER.ColliderDesc.ball(0.36).setTranslation(0, 0.56, 0).setFriction(0.42), body2);
-      this.physics.world.createCollider(RAPIER.ColliderDesc.ball(0.11).setTranslation(-0.48, 0.05, 0.1).setFriction(0.45), body2);
-      this.physics.world.createCollider(RAPIER.ColliderDesc.ball(0.11).setTranslation(0.48, 0.05, 0.1).setFriction(0.45), body2);
+      // Main plush body & head compound shapes with high friction & damp plush restitution
+      this.physics.world.createCollider(RAPIER.ColliderDesc.ball(0.42).setMass(0.18).setFriction(0.62).setRestitution(0.04), body2);
+      this.physics.world.createCollider(RAPIER.ColliderDesc.ball(0.36).setTranslation(0, 0.56, 0).setFriction(0.62).setRestitution(0.04), body2);
+      // Nubbin arms
+      this.physics.world.createCollider(RAPIER.ColliderDesc.ball(0.11).setTranslation(-0.48, 0.05, 0.1).setFriction(0.65), body2);
+      this.physics.world.createCollider(RAPIER.ColliderDesc.ball(0.11).setTranslation(0.48, 0.05, 0.1).setFriction(0.65), body2);
+      // Ear colliders for Hooking (槍位/勾耳朵)
+      if (charIdx === 2) {
+        // Usagi long rabbit ears
+        this.physics.world.createCollider(RAPIER.ColliderDesc.capsule(0.15, 0.08).setTranslation(-0.22, 1.08, 0).setFriction(0.65), body2);
+        this.physics.world.createCollider(RAPIER.ColliderDesc.capsule(0.15, 0.08).setTranslation(0.22, 1.08, 0).setFriction(0.65), body2);
+      } else {
+        // Chiikawa / Hachiware round ears
+        this.physics.world.createCollider(RAPIER.ColliderDesc.ball(0.11).setTranslation(-0.3, 0.88, 0).setFriction(0.65), body2);
+        this.physics.world.createCollider(RAPIER.ColliderDesc.ball(0.11).setTranslation(0.3, 0.88, 0).setFriction(0.65), body2);
+      }
+      // Small feet colliders
+      this.physics.world.createCollider(RAPIER.ColliderDesc.ball(0.11).setTranslation(-0.2, -0.5, 0.14).setFriction(0.65), body2);
+      this.physics.world.createCollider(RAPIER.ColliderDesc.ball(0.2, -0.5, 0.14).setFriction(0.65), body2);
+
       this.physics.registerBody(body2, group);
       this.bodies.push(body2);
     }
@@ -1028,17 +1044,29 @@ export class PrizesManager {
     this.scene.add(group);
     this.prizes.push(group);
 
-    // ══ ⚙️ RAPIER PHYSICS BODY REGISTRATION (FIXES FLOATING BUG) ══
+    // ══ ⚙️ RAPIER PHYSICS BODY REGISTRATION ══
     if (this.physics.world) {
       const phyBody = this.makeDynBody(x, y, z);
+      // Soft plush body & head compound shapes
       this.physics.world.createCollider(
-        RAPIER.ColliderDesc.ball(0.44).setMass(0.2).setFriction(0.42).setRestitution(0.12), phyBody);
+        RAPIER.ColliderDesc.ball(0.44).setMass(0.2).setFriction(0.65).setRestitution(0.04), phyBody);
       this.physics.world.createCollider(
-        RAPIER.ColliderDesc.ball(0.38).setTranslation(0, 0.58, 0).setFriction(0.42), phyBody);
+        RAPIER.ColliderDesc.ball(0.38).setTranslation(0, 0.58, 0).setFriction(0.65).setRestitution(0.04), phyBody);
+      // Chubby paws
       this.physics.world.createCollider(
-        RAPIER.ColliderDesc.ball(0.13).setTranslation(-0.46, 0.02, 0.12).setFriction(0.45), phyBody);
+        RAPIER.ColliderDesc.ball(0.13).setTranslation(-0.46, 0.02, 0.12).setFriction(0.65), phyBody);
       this.physics.world.createCollider(
-        RAPIER.ColliderDesc.ball(0.13).setTranslation(0.46, 0.02, 0.12).setFriction(0.45), phyBody);
+        RAPIER.ColliderDesc.ball(0.13).setTranslation(0.46, 0.02, 0.12).setFriction(0.65), phyBody);
+      // Cat ears colliders (槍位/勾貓耳朵)
+      this.physics.world.createCollider(
+        RAPIER.ColliderDesc.capsule(0.08, 0.06).setTranslation(-0.27, 0.92, 0.04).setFriction(0.68), phyBody);
+      this.physics.world.createCollider(
+        RAPIER.ColliderDesc.capsule(0.08, 0.06).setTranslation(0.27, 0.92, 0.04).setFriction(0.68), phyBody);
+      // Scarf tail & spotted tail colliders
+      this.physics.world.createCollider(
+        RAPIER.ColliderDesc.cuboid(0.05, 0.16, 0.03).setTranslation(-0.10, 0.06, 0.28).setFriction(0.65), phyBody);
+      this.physics.world.createCollider(
+        RAPIER.ColliderDesc.capsule(0.20, 0.06).setTranslation(0.14, -0.20, -0.42).setFriction(0.65), phyBody);
 
       this.physics.registerBody(phyBody, group);
       this.bodies.push(phyBody);
@@ -1310,10 +1338,22 @@ export class PrizesManager {
 
     if (this.physics.world) {
       const phyBody = this.makeDynBody(x, y, z);
+      // Soft plush body & head
       this.physics.world.createCollider(
-        RAPIER.ColliderDesc.ball(0.72).setMass(0.40).setFriction(0.48), phyBody);
+        RAPIER.ColliderDesc.ball(0.72).setMass(0.40).setFriction(0.60).setRestitution(0.04), phyBody);
       this.physics.world.createCollider(
-        RAPIER.ColliderDesc.ball(0.62).setTranslation(0, 0.98, 0).setFriction(0.48), phyBody);
+        RAPIER.ColliderDesc.ball(0.62).setTranslation(0, 0.98, 0).setFriction(0.60).setRestitution(0.04), phyBody);
+      // Big round bear ears (槍位/勾熊耳朵)
+      this.physics.world.createCollider(
+        RAPIER.ColliderDesc.ball(0.20).setTranslation(-0.45, 1.22, 0.05).setFriction(0.65), phyBody);
+      this.physics.world.createCollider(
+        RAPIER.ColliderDesc.ball(0.20).setTranslation(0.45, 1.22, 0.05).setFriction(0.65), phyBody);
+      // Snout & Bow tie colliders
+      this.physics.world.createCollider(
+        RAPIER.ColliderDesc.ball(0.22).setTranslation(0, 0.72, 0.42).setFriction(0.60), phyBody);
+      this.physics.world.createCollider(
+        RAPIER.ColliderDesc.cuboid(0.20, 0.09, 0.06).setTranslation(0, 0.35, 0.52).setFriction(0.60), phyBody);
+
       this.physics.registerBody(phyBody, group);
       this.bodies.push(phyBody);
     }

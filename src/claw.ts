@@ -339,7 +339,7 @@ export class Claw {
     if (Math.abs(carrVelX) > 0.4) {
       const dirX = Math.sign(carrVelX);
       if (this.lastDirX !== 0 && dirX !== this.lastDirX) {
-        this.swayVelX += dirX * 0.85; // Subtle realistic momentum buildup
+        this.swayVelX += dirX * 3.2; // High responsiveness momentum excitation
       }
       this.lastDirX = dirX;
     } else {
@@ -349,7 +349,7 @@ export class Claw {
     if (Math.abs(carrVelZ) > 0.4) {
       const dirZ = Math.sign(carrVelZ);
       if (this.lastDirZ !== 0 && dirZ !== this.lastDirZ) {
-        this.swayVelZ += dirZ * 0.85;
+        this.swayVelZ += dirZ * 3.2;
       }
       this.lastDirZ = dirZ;
     } else {
@@ -359,16 +359,16 @@ export class Claw {
     // 2. Continuous 360-Degree Circular Swivel Excitation
     const joystickSpeedSq = carrVelX * carrVelX + carrVelZ * carrVelZ;
     if (joystickSpeedSq > 0.2) {
-      this.swayVelX += carrVelX * 0.12 * deltaTime * 60;
-      this.swayVelZ += carrVelZ * 0.12 * deltaTime * 60;
+      this.swayVelX += carrVelX * 0.45 * deltaTime * 60;
+      this.swayVelZ += carrVelZ * 0.45 * deltaTime * 60;
     }
 
-    const g = 9.81;
+    const g = 35.0;
     const L = Math.max(0.6, this.ropeLength);
     const omegaSq = g / L;
 
-    const accelX = carrVelX * 2.5;
-    const accelZ = carrVelZ * 2.5;
+    const accelX = carrVelX * 3.5;
+    const accelZ = carrVelZ * 3.5;
 
     const swayAccelX = -omegaSq * Math.sin(this.swayAngleX) - (accelX / L);
     const swayAccelZ = -omegaSq * Math.sin(this.swayAngleZ) - (accelZ / L);
@@ -376,15 +376,15 @@ export class Claw {
     this.swayVelX += swayAccelX * deltaTime;
     this.swayVelZ += swayAccelZ * deltaTime;
 
-    const dampingFactor = this.config.antiSwingEnabled ? 0.80 : 0.985;
+    const dampingFactor = this.config.antiSwingEnabled ? 0.80 : 0.99;
     this.swayVelX *= dampingFactor;
     this.swayVelZ *= dampingFactor;
 
     this.swayAngleX += this.swayVelX * deltaTime;
     this.swayAngleZ += this.swayVelZ * deltaTime;
 
-    // Realistic Arcade Max Swing Angle (~16 degrees / 0.28 rad)
-    const maxAngle = 0.28;
+    // Realistic Arcade Max Swing Angle (~37 degrees / 0.65 rad) for flexible responsive swinging
+    const maxAngle = 0.65;
     this.swayAngleX = Math.max(-maxAngle, Math.min(maxAngle, this.swayAngleX));
     this.swayAngleZ = Math.max(-maxAngle, Math.min(maxAngle, this.swayAngleZ));
 
@@ -516,8 +516,8 @@ export class Claw {
             const dy = pos.y - clawTipY;
             const dz = pos.z - finalZ;
             const distXZ = Math.sqrt(dx * dx + dz * dz);
-            // Deep descent check: Trigger when claw fingers physically reach doll (distXZ < 0.75m & absDY < 0.55m)
-            if (distXZ < 0.75 && Math.abs(dy) < 0.55) {
+            // Strict descent check: Trigger touch-stop only when claw fingers physically envelope prize (distXZ < 0.45m & absDY < 0.50m)
+            if (distXZ < 0.45 && Math.abs(dy) < 0.50) {
               touchedPrize = true;
               break;
             }
@@ -655,9 +655,9 @@ export class Claw {
         const distXZ = Math.sqrt(dx * dx + dz * dz);
         const absDY = Math.abs(dy);
 
-        // Generous 3-Prong Cup Volume Envelope:
-        // Detects dolls positioned within the 3 metal claw prongs (distXZ <= 1.15m, absDY <= 1.25m)
-        if (distXZ <= 1.15 && absDY <= 1.25) {
+        // Strict 3-Prong Cup Envelope (distXZ <= 0.25m, absDY <= 0.45m)
+        // Only grabs objects physically enclosed inside the claw arms without telekinetic snapping or air grabbing
+        if (distXZ <= 0.25 && absDY <= 0.45) {
           const totalDist = Math.sqrt(distXZ * distXZ + dy * dy);
           if (totalDist < nearestDist) {
             nearestDist = totalDist;
@@ -669,28 +669,24 @@ export class Claw {
 
     if (nearestBody) {
       const targetBody = nearestBody as RAPIER.RigidBody;
+      const bPos = targetBody.translation();
 
-      // Position prize snuggly inside the 3 metal claw prongs cup (y = basePos.y - 0.75)
-      targetBody.setTranslation({
-        x: basePos.x,
-        y: basePos.y - 0.75,
-        z: basePos.z
-      }, true);
-
-      targetBody.setLinvel({ x: 0, y: 0, z: 0 }, true);
-      targetBody.setAngvel({ x: 0, y: 0, z: 0 }, true);
+      // No forced teleportation! Attach joint at prize's current physical location relative to claw base
+      const localAnchorX = bPos.x - basePos.x;
+      const localAnchorY = bPos.y - basePos.y;
+      const localAnchorZ = bPos.z - basePos.z;
 
       for (let i = 0; i < targetBody.numColliders(); i++) {
         const col = targetBody.collider(i);
         col.setSensor(false);
-        col.setFriction(0.5);
-        col.setRestitution(0.05);
+        col.setFriction(0.65);
+        col.setRestitution(0.04);
       }
 
-      // Spherical Hinge Joint: Anchors prize directly inside claw tip cup (y = -0.75m below base plate)
+      // Spherical Joint anchors prize at current physical position relative to claw base
       const sphericalJointData = RAPIER.JointData.spherical(
-        { x: 0, y: -0.72, z: 0 },
-        { x: 0, y: 0.15, z: 0 }
+        { x: localAnchorX, y: localAnchorY, z: localAnchorZ },
+        { x: 0, y: 0, z: 0 }
       );
 
       const joint = physics.world.createImpulseJoint(

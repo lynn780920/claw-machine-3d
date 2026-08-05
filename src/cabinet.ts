@@ -33,8 +33,9 @@ export class Cabinet {
 
   private baffleGroup: THREE.Group;
   private baffleBodies: RAPIER.RigidBody[] = [];
-  private baffleMat: THREE.MeshStandardMaterial;
-  private neonBorderMat: THREE.MeshStandardMaterial;
+  public bodyMat!: THREE.MeshStandardMaterial;
+  public bodyDarkMat!: THREE.MeshStandardMaterial;
+  public accentMat!: THREE.MeshStandardMaterial;
 
   constructor(scene: THREE.Scene, physics: PhysicsSystem) {
     this.mesh = new THREE.Group();
@@ -43,7 +44,7 @@ export class Cabinet {
     this.joystickGroup = new THREE.Group();
     this.mesh.add(this.baffleGroup);
 
-    // Crystal Clear Cyan Acrylic Chute Baffle Material
+    // Crystal Clear Acrylic Chute Baffle Material
     this.baffleMat = new THREE.MeshStandardMaterial({
       color: 0x00f0ff,
       opacity: 0.35,
@@ -59,6 +60,24 @@ export class Cabinet {
       emissiveIntensity: 0.9
     });
 
+    this.bodyMat = new THREE.MeshStandardMaterial({
+      color: 0xffcc00,
+      metalness: 0.1,
+      roughness: 0.25
+    });
+
+    this.bodyDarkMat = new THREE.MeshStandardMaterial({
+      color: 0xe6b800,
+      metalness: 0.1,
+      roughness: 0.3
+    });
+
+    this.accentMat = new THREE.MeshStandardMaterial({
+      color: 0xdc2626,
+      metalness: 0.2,
+      roughness: 0.2
+    });
+
     this.build(physics);
     scene.add(this.mesh);
   }
@@ -66,7 +85,7 @@ export class Cabinet {
   private build(physics: PhysicsSystem) {
     const floorThickness = 0.5;
 
-    // ── 1. Classic Taiwanese Yellow Toy Story Machine Materials ──
+    // ── 1. Machine Materials ──
     const glassMat = new THREE.MeshStandardMaterial({
       color: 0xe0f7fa,
       opacity: 0.1,
@@ -75,24 +94,9 @@ export class Cabinet {
       metalness: 0.1
     });
 
-    // Bright Arcade Yellow Body & Frame
-    const yellowBodyMat = new THREE.MeshStandardMaterial({
-      color: 0xffcc00,
-      metalness: 0.1,
-      roughness: 0.25
-    });
-
-    const yellowDarkMat = new THREE.MeshStandardMaterial({
-      color: 0xe6b800,
-      metalness: 0.1,
-      roughness: 0.3
-    });
-
-    const redAccentMat = new THREE.MeshStandardMaterial({
-      color: 0xdc2626,
-      metalness: 0.2,
-      roughness: 0.2
-    });
+    const yellowBodyMat = this.bodyMat;
+    const yellowDarkMat = this.bodyDarkMat;
+    const redAccentMat = this.accentMat;
 
     const chromeMat = new THREE.MeshStandardMaterial({
       color: 0xe2e8f0,
@@ -448,5 +452,26 @@ export class Cabinet {
     const maxTilt = 0.35; // ~20 degrees max tilt
     this.joystickGroup.rotation.z = -tiltX * maxTilt;
     this.joystickGroup.rotation.x = tiltZ * maxTilt;
+  }
+
+  // Dynamic Theme Switching (Standard Yellow Toy Story vs K-霸 Gaming Obsidian Black/Red)
+  public setTheme(theme: 'standard' | 'kbasket') {
+    if (theme === 'kbasket') {
+      // 🎮 酷炫極致電競黑紅主題 (沉穩曜石黑機殼 + 熾熱烈焰紅飾條)
+      this.bodyMat.color.setHex(0x111116);
+      this.bodyDarkMat.color.setHex(0x22222d);
+      this.accentMat.color.setHex(0xff0033);
+      this.baffleMat.color.setHex(0xff0033);
+      this.neonBorderMat.color.setHex(0xff0033);
+      this.neonBorderMat.emissive.setHex(0xff0033);
+    } else {
+      // 👑 經典黃色 TOY STORY 娃娃機
+      this.bodyMat.color.setHex(0xffcc00);
+      this.bodyDarkMat.color.setHex(0xe6b800);
+      this.accentMat.color.setHex(0xdc2626);
+      this.baffleMat.color.setHex(0x00f0ff);
+      this.neonBorderMat.color.setHex(0x00f0ff);
+      this.neonBorderMat.emissive.setHex(0x00f0ff);
+    }
   }
 }

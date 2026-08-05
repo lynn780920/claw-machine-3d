@@ -652,6 +652,7 @@ function setupUIEventListeners() {
 
     // Clear all existing prizes completely first!
     prizesManager.clearPrizes();
+    if (cabinet) cabinet.setTheme(mode);
 
     if (mode === 'kbasket') {
       // ⚡ K-霸 巨型家電玩具機台 (100% exact matching parameters from user screenshot)
