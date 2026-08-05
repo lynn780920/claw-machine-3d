@@ -597,20 +597,23 @@ export class Claw {
 
     // ── E. State Machine with Touch-Stop ──
     switch (this.state) {
-      case 'DESCENDING':
+      case 'DESCENDING': {
+        const clawScale = this.baseMesh ? this.baseMesh.scale.x : 1.0;
         const touchedFloor = targetY <= minBaseY + 0.05;
         let touchedPrize = false;
 
         if (prizesManager && prizesManager.bodies.length > 0) {
-          const clawTipY = targetY - 0.70;
+          const clawTipY = targetY - 0.70 * clawScale;
+          const stopRadiusXZ = 0.48 * clawScale;
+
           for (const pBody of prizesManager.bodies) {
             const pos = pBody.translation();
             const dx = pos.x - finalX;
             const dy = pos.y - clawTipY;
             const dz = pos.z - finalZ;
             const distXZ = Math.sqrt(dx * dx + dz * dz);
-            // Touch-stop only when claw base plate physically touches/rests on top of a prize body
-            if (distXZ < 0.28 && (dy >= -0.20 && dy <= 0.25)) {
+            // Scale-aware pile stop: triggers cleanly when claw rests on top of prize pile
+            if (distXZ <= stopRadiusXZ && (dy >= -0.35 * clawScale && dy <= 0.45 * clawScale)) {
               touchedPrize = true;
               break;
             }
@@ -622,6 +625,7 @@ export class Claw {
           this.triggerGrab();
         }
         break;
+      }
 
       case 'GRABBING':
         if (this.stateTimer > 0.4) {

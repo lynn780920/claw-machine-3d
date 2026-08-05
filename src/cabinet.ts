@@ -126,9 +126,11 @@ export class Cabinet {
       this.mesh.add(m);
 
       if (physics.world) {
-        const bodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(x, -floorThickness / 2, z);
+        const bodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(x, -0.5, z);
         const body = physics.world.createRigidBody(bodyDesc);
-        const colDesc = RAPIER.ColliderDesc.cuboid(w / 2, floorThickness / 2, d / 2);
+        const colDesc = RAPIER.ColliderDesc.cuboid(w / 2, 0.5, d / 2)
+          .setFriction(0.6)
+          .setRestitution(0.02);
         physics.world.createCollider(colDesc, body);
       }
     };

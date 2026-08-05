@@ -62,10 +62,10 @@ async function init() {
   camera = new THREE.PerspectiveCamera(48, window.innerWidth / window.innerHeight, 0.1, 100);
   camera.position.set(0, 5.6, 9.2); // Player eye-level front-facing view matching user screenshot
 
-  // Renderer setup
-  renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('three-canvas') as HTMLCanvasElement, antialias: true });
+  // Mobile-optimized Renderer setup (capped pixel ratio 1.25 to prevent battery drain)
+  renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('three-canvas') as HTMLCanvasElement, antialias: true, powerPreference: 'high-performance' });
   renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.25));
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFShadowMap;
 
@@ -95,7 +95,7 @@ async function init() {
   mainSpot.shadow.mapSize.height = 1024;
   mainSpot.shadow.camera.near = 0.5;
   mainSpot.shadow.camera.far = 10;
-  mainSpot.shadow.bias = -0.0005;
+  mainSpot.shadow.bias = -0.0008;
   scene.add(mainSpot);
 
   // Front Studio Fill Light illuminating colorful dolls
@@ -115,11 +115,18 @@ async function init() {
   setupUIEventListeners();
   setupKeyboardListeners();
 
-  // 6. Game loop
+  // 6. Game loop with FPS Throttling for battery saving
   const clock = new THREE.Clock();
+  let lastFrameTime = 0;
+  const targetFPS = 60;
+  const frameInterval = 1000 / targetFPS;
   
-  function animate() {
+  function animate(now: number) {
     requestAnimationFrame(animate);
+
+    const elapsed = now - lastFrameTime;
+    if (elapsed < frameInterval - 1) return; // Skip extra frames for battery saving
+    lastFrameTime = now - (elapsed % frameInterval);
     
     const dt = Math.min(clock.getDelta(), 0.03); // cap delta to keep physics stable
     
@@ -148,7 +155,7 @@ async function init() {
     renderer.render(scene, camera);
   }
   
-  animate();
+  animate(0);
 }
 
 // Check if any dolls fell down the exit chute
