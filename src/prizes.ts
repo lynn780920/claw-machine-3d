@@ -96,7 +96,7 @@ export class PrizesManager {
   private makeDynBody(x: number, y: number, z: number) {
     return this.physics.world.createRigidBody(
       RAPIER.RigidBodyDesc.dynamic().setTranslation(x, y, z)
-        .setCcdEnabled(true).setLinearDamping(0.45).setAngularDamping(2.0)
+        .setCcdEnabled(true).setLinearDamping(0.05).setAngularDamping(0.12)
     );
   }
 

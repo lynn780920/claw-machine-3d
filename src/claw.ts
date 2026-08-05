@@ -375,13 +375,13 @@ export class Claw {
       this.lastDirZ = 0;
     }
 
-    const g = 14.0;
+    const g = 16.0;
     const L = Math.max(0.6, this.ropeLength);
     const omegaSq = g / L;
 
     // Non-inertial frame fictitious inertia acceleration: -carrAccel
-    const inertiaAccelX = -carrAccelX * 0.08;
-    const inertiaAccelZ = -carrAccelZ * 0.08;
+    const inertiaAccelX = -carrAccelX * 0.09;
+    const inertiaAccelZ = -carrAccelZ * 0.09;
 
     const swayAccelX = -omegaSq * Math.sin(this.swayAngleX) + inertiaAccelX;
     const swayAccelZ = -omegaSq * Math.sin(this.swayAngleZ) + inertiaAccelZ;
@@ -389,17 +389,16 @@ export class Claw {
     this.swayVelX += swayAccelX * deltaTime;
     this.swayVelZ += swayAccelZ * deltaTime;
 
-    // Cable stabilization damping when descending to prevent vertical stuttering
-    const isDropping = (this.state === 'DESCENDING');
-    const dampingFactor = this.config.antiSwingEnabled ? 0.80 : (isDropping ? 0.94 : 0.982);
+    // Preserve natural swing momentum during descent for authentic arc sweeping (甩爪弧線落爪)
+    const dampingFactor = this.config.antiSwingEnabled ? 0.80 : 0.986;
     this.swayVelX *= dampingFactor;
     this.swayVelZ *= dampingFactor;
 
     this.swayAngleX += this.swayVelX * deltaTime;
     this.swayAngleZ += this.swayVelZ * deltaTime;
 
-    // Realistic Arcade Max Swing Angle (~22 degrees / 0.38 rad)
-    const maxAngle = 0.38;
+    // Realistic Arcade Max Swing Angle (~27.5 degrees / 0.48 rad)
+    const maxAngle = 0.48;
     this.swayAngleX = Math.max(-maxAngle, Math.min(maxAngle, this.swayAngleX));
     this.swayAngleZ = Math.max(-maxAngle, Math.min(maxAngle, this.swayAngleZ));
 
@@ -566,26 +565,29 @@ export class Claw {
                 let pushY = dy / dist;
                 let pushZ = dz / dist;
 
-                let forceMag = overlap * 0.70;
+                let forceMag = overlap * 1.4;
                 if (isClosing) {
                   pushX = -outwardDir.x;
                   pushZ = -outwardDir.z;
                   pushY = 0.40;
-                  forceMag *= 2.2;
+                  forceMag *= 2.5;
                 } else if (isOpening) {
                   pushX = outwardDir.x;
                   pushZ = outwardDir.z;
                   pushY = 0.30;
-                  forceMag *= 1.8;
+                  forceMag *= 2.0;
                 }
 
-                // Instant solid physical separation & corner torque
-                pBody.applyImpulse(
-                  { x: pushX * forceMag, y: pushY * forceMag, z: pushZ * forceMag },
-                  true
-                );
+                // Instant Solid Velocity Repulsion (0% Passthrough Guarantee)
+                const currentVel = pBody.linvel();
+                const pushVelX = pushX * forceMag * 4.5;
+                const pushVelY = Math.max(currentVel.y, pushY * forceMag * 3.5);
+                const pushVelZ = pushZ * forceMag * 4.5;
+                pBody.setLinvel({ x: pushVelX, y: pushVelY, z: pushVelZ }, true);
+
+                // Corner torque impulse
                 pBody.applyTorqueImpulse(
-                  { x: pushZ * forceMag * 0.5, y: forceMag * 0.25, z: -pushX * forceMag * 0.5 },
+                  { x: pushZ * forceMag * 0.6, y: forceMag * 0.3, z: -pushX * forceMag * 0.6 },
                   true
                 );
               }
