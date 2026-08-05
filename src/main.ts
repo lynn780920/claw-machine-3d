@@ -664,14 +664,14 @@ function setupUIEventListeners() {
         weak: '43',
         tophit: '29',
         speed: '3.5',
-        length: '4.5',
-        baffle: '1.1',
-        dolls: '20',
+        length: '5.0',
+        baffle: '0.7',
+        dolls: '40',
         antiswing: 'disabled',
         prizetype: 'giant_appliances'
       });
 
-      prizesManager.spawnPrizes(20, 'giant_appliances');
+      prizesManager.spawnPrizes(40, 'giant_appliances');
 
       controls.target.set(0, 3.2, 0);
       camera.position.set(0, 5.6, 9.2);
