@@ -344,31 +344,38 @@ export class Claw {
     this.lastCarrVelX = carrVelX;
     this.lastCarrVelZ = carrVelZ;
 
-    // 1. Instantaneous Braking Inertia Kick (When stopping rightward movement, inertia kicks claw RIGHT immediately with zero lag!)
-    if (Math.abs(carrVelX) < 0.1 && Math.abs(this.lastCarrVelX) > 0.8) {
-      const lastDirX = Math.sign(this.lastCarrVelX);
-      this.swayVelX += lastDirX * 1.8;
-    }
-    if (Math.abs(carrVelZ) < 0.1 && Math.abs(this.lastCarrVelZ) > 0.8) {
-      const lastDirZ = Math.sign(this.lastCarrVelZ);
-      this.swayVelZ += lastDirZ * 1.8;
+    // 1. Continuous Smooth Carriage Velocity Coupling (Every movement continuously pumps momentum into swing)
+    const velSq = carrVelX * carrVelX + carrVelZ * carrVelZ;
+    if (velSq > 0.04) {
+      this.swayVelX += carrVelX * 0.38 * deltaTime * 60;
+      this.swayVelZ += carrVelZ * 0.38 * deltaTime * 60;
     }
 
-    // 2. Direction Reversal Flicking (Pumping)
-    if (Math.abs(carrVelX) > 0.4) {
+    // 2. Proportional Deceleration Inertia Release (Zero lag when stopping or releasing joystick)
+    if (Math.abs(carrVelX) < 0.2 && Math.abs(this.lastCarrVelX) > 0.3) {
+      const dirX = Math.sign(this.lastCarrVelX);
+      this.swayVelX += dirX * Math.min(2.5, Math.abs(this.lastCarrVelX) * 0.85);
+    }
+    if (Math.abs(carrVelZ) < 0.2 && Math.abs(this.lastCarrVelZ) > 0.3) {
+      const dirZ = Math.sign(this.lastCarrVelZ);
+      this.swayVelZ += dirZ * Math.min(2.5, Math.abs(this.lastCarrVelZ) * 0.85);
+    }
+
+    // 3. Direction Reversal Beats (Pumping)
+    if (Math.abs(carrVelX) > 0.3) {
       const dirX = Math.sign(carrVelX);
       if (this.lastDirX !== 0 && dirX !== this.lastDirX) {
-        this.swayVelX += dirX * 1.5;
+        this.swayVelX += dirX * 1.8;
       }
       this.lastDirX = dirX;
     } else {
       this.lastDirX = 0;
     }
 
-    if (Math.abs(carrVelZ) > 0.4) {
+    if (Math.abs(carrVelZ) > 0.3) {
       const dirZ = Math.sign(carrVelZ);
       if (this.lastDirZ !== 0 && dirZ !== this.lastDirZ) {
-        this.swayVelZ += dirZ * 1.5;
+        this.swayVelZ += dirZ * 1.8;
       }
       this.lastDirZ = dirZ;
     } else {
@@ -379,26 +386,22 @@ export class Claw {
     const L = Math.max(0.6, this.ropeLength);
     const omegaSq = g / L;
 
-    // Non-inertial frame fictitious inertia acceleration: -carrAccel
-    const inertiaAccelX = -carrAccelX * 0.09;
-    const inertiaAccelZ = -carrAccelZ * 0.09;
-
-    const swayAccelX = -omegaSq * Math.sin(this.swayAngleX) + inertiaAccelX;
-    const swayAccelZ = -omegaSq * Math.sin(this.swayAngleZ) + inertiaAccelZ;
+    const swayAccelX = -omegaSq * Math.sin(this.swayAngleX) - carrAccelX * 0.10;
+    const swayAccelZ = -omegaSq * Math.sin(this.swayAngleZ) - carrAccelZ * 0.10;
 
     this.swayVelX += swayAccelX * deltaTime;
     this.swayVelZ += swayAccelZ * deltaTime;
 
-    // Preserve natural swing momentum during descent for authentic arc sweeping (甩爪弧線落爪)
-    const dampingFactor = this.config.antiSwingEnabled ? 0.80 : 0.986;
+    // Smooth silky damping factor
+    const dampingFactor = this.config.antiSwingEnabled ? 0.80 : 0.988;
     this.swayVelX *= dampingFactor;
     this.swayVelZ *= dampingFactor;
 
     this.swayAngleX += this.swayVelX * deltaTime;
     this.swayAngleZ += this.swayVelZ * deltaTime;
 
-    // Realistic Arcade Max Swing Angle (~27.5 degrees / 0.48 rad)
-    const maxAngle = 0.48;
+    // Wide fluid arcade swing angle (~30 degrees / 0.52 rad)
+    const maxAngle = 0.52;
     this.swayAngleX = Math.max(-maxAngle, Math.min(maxAngle, this.swayAngleX));
     this.swayAngleZ = Math.max(-maxAngle, Math.min(maxAngle, this.swayAngleZ));
 

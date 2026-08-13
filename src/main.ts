@@ -62,12 +62,34 @@ async function init() {
   camera = new THREE.PerspectiveCamera(48, window.innerWidth / window.innerHeight, 0.1, 100);
   camera.position.set(0, 5.6, 9.2); // Player eye-level front-facing view matching user screenshot
 
-  // Mobile-optimized Renderer setup (capped pixel ratio 1.25 to prevent battery drain)
-  renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('three-canvas') as HTMLCanvasElement, antialias: true, powerPreference: 'high-performance' });
+  // Auto-detect Mobile Device & Power Saver Defaults
+  const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
+  let powerSaverMode = isMobileDevice;
+
+  // Mobile-optimized Renderer setup (capped pixel ratio 1.0 on mobile to stop battery drain)
+  renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('three-canvas') as HTMLCanvasElement, antialias: !isMobileDevice, powerPreference: 'low-power' });
   renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.25));
-  renderer.shadowMap.enabled = true;
+  renderer.setPixelRatio(powerSaverMode ? 1.0 : Math.min(window.devicePixelRatio, 1.25));
+  renderer.shadowMap.enabled = !powerSaverMode;
   renderer.shadowMap.type = THREE.PCFShadowMap;
+
+  // Global Power Saver Toggle
+  (window as any).togglePowerSaver = (enable?: boolean) => {
+    powerSaverMode = (enable !== undefined) ? enable : !powerSaverMode;
+    renderer.setPixelRatio(powerSaverMode ? 1.0 : Math.min(window.devicePixelRatio, 1.25));
+    renderer.shadowMap.enabled = !powerSaverMode;
+    scene.traverse((obj) => {
+      if (obj instanceof THREE.Mesh) {
+        obj.castShadow = !powerSaverMode;
+        obj.receiveShadow = !powerSaverMode;
+      }
+    });
+    const btn = document.getElementById('power-saver-btn');
+    if (btn) {
+      btn.textContent = powerSaverMode ? '⚡ 手機極速省電 (已開啟)' : '🚀 高畫質流暢模式';
+      btn.style.background = powerSaverMode ? '#10b981' : '#6366f1';
+    }
+  };
 
   // View controls
   controls = new OrbitControls(camera, renderer.domElement);
@@ -710,6 +732,10 @@ function setupUIEventListeners() {
 
   // Expose globally for instant button bindings
   (window as any).switchMachineMode = switchMachineMode;
+
+  document.getElementById('power-saver-btn')?.addEventListener('click', () => {
+    (window as any).togglePowerSaver();
+  });
 
   document.getElementById('switch-machine-btn')?.addEventListener('click', () => {
     const nextMode = currentMachineMode === 'standard' ? 'kbasket' : 'standard';
