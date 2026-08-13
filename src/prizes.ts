@@ -13,15 +13,15 @@ export class PrizesManager {
     this.physics = physics;
   }
 
-  spawnPrizes(count = 40, typeFilter: string = 'mixed') {
+  spawnPrizes(count = 80, typeFilter: string = 'mixed') {
     this.clearPrizes();
     for (let i = 0; i < count; i++) {
-      let x = (Math.random() - 0.5) * 7.2;
-      let z = (Math.random() - 0.5) * 7.2;
-      if (x < -1.2 && z > 1.2) x += 3.2;
-      const tier = Math.floor(i / 12);
-      const heightOffset = Math.max(0, (z < 0 ? -z * 0.25 : 0));
-      const y = 0.8 + tier * 0.75 + heightOffset + (Math.random() * 0.2);
+      let x = (Math.random() - 0.35) * 5.2;
+      let z = (Math.random() - 0.45) * 5.2;
+      if (x < -1.4 && z > 1.4) x += 2.8; // Clear exit chute area
+      const tier = Math.floor(i / 16);
+      const heightOffset = Math.max(0, (z < 0 ? -z * 0.20 : 0));
+      const y = 0.85 + tier * 0.70 + heightOffset + (Math.random() * 0.25);
       this.spawnPrizeByType(x, y, z, typeFilter);
     }
   }
@@ -108,6 +108,7 @@ export class PrizesManager {
   private spawnChiikawa(x: number, y: number, z: number) {
     const group = new THREE.Group();
     group.position.set(x, y, z);
+    group.scale.set(1.35, 1.35, 1.35);
 
     // Character variants: Chiikawa (white), Hachiware (blue stripe), Usagi (yellow+long ears)
     const charIdx = Math.floor(Math.random() * 3);
@@ -214,21 +215,19 @@ export class PrizesManager {
 
     if (this.physics.world) {
       const body2 = this.makeDynBody(x, y, z);
-      // Main plush body & head compound shapes with high friction & damp plush restitution
-      this.physics.world.createCollider(RAPIER.ColliderDesc.ball(0.42).setMass(0.18).setFriction(0.62).setRestitution(0.04), body2);
-      this.physics.world.createCollider(RAPIER.ColliderDesc.ball(0.36).setTranslation(0, 0.56, 0).setFriction(0.62).setRestitution(0.04), body2);
+      // Main plush body & head compound shapes (scaled 1.35x)
+      this.physics.world.createCollider(RAPIER.ColliderDesc.ball(0.57).setMass(0.25).setFriction(0.65).setRestitution(0.04), body2);
+      this.physics.world.createCollider(RAPIER.ColliderDesc.ball(0.49).setTranslation(0, 0.75, 0).setFriction(0.65).setRestitution(0.04), body2);
       // Nubbin arms
-      this.physics.world.createCollider(RAPIER.ColliderDesc.ball(0.11).setTranslation(-0.48, 0.05, 0.1).setFriction(0.65), body2);
-      this.physics.world.createCollider(RAPIER.ColliderDesc.ball(0.11).setTranslation(0.48, 0.05, 0.1).setFriction(0.65), body2);
-      // Ear colliders for Hooking (槍位/勾耳朵)
+      this.physics.world.createCollider(RAPIER.ColliderDesc.ball(0.15).setTranslation(-0.65, 0.07, 0.13).setFriction(0.65), body2);
+      this.physics.world.createCollider(RAPIER.ColliderDesc.ball(0.15).setTranslation(0.65, 0.07, 0.13).setFriction(0.65), body2);
+      // Ear colliders for Hooking
       if (charIdx === 2) {
-        // Usagi long rabbit ears
-        this.physics.world.createCollider(RAPIER.ColliderDesc.capsule(0.15, 0.08).setTranslation(-0.22, 1.08, 0).setFriction(0.65), body2);
-        this.physics.world.createCollider(RAPIER.ColliderDesc.capsule(0.15, 0.08).setTranslation(0.22, 1.08, 0).setFriction(0.65), body2);
+        this.physics.world.createCollider(RAPIER.ColliderDesc.capsule(0.20, 0.11).setTranslation(-0.30, 1.45, 0).setFriction(0.65), body2);
+        this.physics.world.createCollider(RAPIER.ColliderDesc.capsule(0.20, 0.11).setTranslation(0.30, 1.45, 0).setFriction(0.65), body2);
       } else {
-        // Chiikawa / Hachiware round ears
-        this.physics.world.createCollider(RAPIER.ColliderDesc.ball(0.11).setTranslation(-0.3, 0.88, 0).setFriction(0.65), body2);
-        this.physics.world.createCollider(RAPIER.ColliderDesc.ball(0.11).setTranslation(0.3, 0.88, 0).setFriction(0.65), body2);
+        this.physics.world.createCollider(RAPIER.ColliderDesc.ball(0.15).setTranslation(-0.40, 1.18, 0).setFriction(0.65), body2);
+        this.physics.world.createCollider(RAPIER.ColliderDesc.ball(0.15).setTranslation(0.40, 1.18, 0).setFriction(0.65), body2);
       }
       // Small feet colliders
       this.physics.world.createCollider(RAPIER.ColliderDesc.ball(0.11).setTranslation(-0.2, -0.5, 0.14).setFriction(0.65), body2);
