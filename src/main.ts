@@ -701,27 +701,27 @@ function setupUIEventListeners() {
         weak: '43',
         tophit: '29',
         speed: '3.5',
-        length: '5.0',
-        baffle: '0.7',
-        dolls: '40',
+        length: '4.5',
+        baffle: '1.1',
+        dolls: '20',
         antiswing: 'disabled',
         prizetype: 'giant_appliances'
       });
 
-      prizesManager.spawnPrizes(40, 'giant_appliances');
+      prizesManager.spawnPrizes(20, 'giant_appliances');
 
       controls.target.set(0, 3.2, 0);
       camera.position.set(0, 5.6, 9.2);
       controls.update();
     } else if (mode === 'sanrio') {
       // ✨ 三麗鷗精品水壺機台 (可愛水壺)
-      claw.setClawScale(1.0);
+      claw.setClawScale(0.95);
 
       syncDIPPanelUI({
-        strong: '90',
-        height: '55',
-        weak: '45',
-        tophit: '20',
+        strong: '88',
+        height: '50',
+        weak: '48',
+        tophit: '18',
         speed: '4.5',
         length: '6.5',
         baffle: '0.6',
@@ -737,22 +737,22 @@ function setupUIEventListeners() {
       controls.update();
     } else if (mode === 'anime') {
       // ⚡ 動漫模型大賞機台 (七龍珠/航海王盒裝模型)
-      claw.setClawScale(1.0);
+      claw.setClawScale(1.05);
 
       syncDIPPanelUI({
         strong: '95',
         height: '70',
-        weak: '35',
-        tophit: '30',
+        weak: '32',
+        tophit: '35',
         speed: '4.2',
         length: '7.5',
         baffle: '0.5',
-        dolls: '45',
+        dolls: '35',
         antiswing: 'disabled',
-        prizetype: 'dragonball'
+        prizetype: 'anime'
       });
 
-      prizesManager.spawnPrizes(45, 'dragonball');
+      prizesManager.spawnPrizes(35, 'anime');
 
       controls.target.set(0, 3.2, 0);
       camera.position.set(0, 5.6, 9.2);

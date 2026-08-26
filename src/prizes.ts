@@ -52,6 +52,9 @@ export class PrizesManager {
     } else if (typeFilter === 'giant_appliances') {
       const types = ['ps5', 'switch', 'dyson', 'marshall', 'lego', 'giant_bear'];
       prizeType = types[Math.floor(Math.random() * types.length)];
+    } else if (typeFilter === 'anime') {
+      const types = ['dragonball', 'onepiece'];
+      prizeType = types[Math.floor(Math.random() * types.length)];
     }
     switch (prizeType) {
       case 'chiikawa':    this.spawnChiikawa(x, y, z); break;
