@@ -679,6 +679,14 @@ function setupUIEventListeners() {
     const modeSelect = document.getElementById('setting-machinemode') as HTMLSelectElement | null;
     if (modeSelect) modeSelect.value = mode;
 
+    const btnLabel = document.querySelector('#switch-machine-btn .nav-btn-label');
+    if (btnLabel) {
+      if (mode === 'kbasket') btnLabel.textContent = '切換機台 (#02 K-霸家電大爪)';
+      else if (mode === 'sanrio') btnLabel.textContent = '切換機台 (#03 三麗鷗水壺)';
+      else if (mode === 'anime') btnLabel.textContent = '切換機台 (#04 動漫模型)';
+      else btnLabel.textContent = '切換機台 (#01 經典娃娃機)';
+    }
+
     // Clear all existing prizes completely first!
     prizesManager.clearPrizes();
     if (cabinet) cabinet.setTheme(mode);

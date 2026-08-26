@@ -36,6 +36,8 @@ export class Cabinet {
   public bodyMat!: THREE.MeshStandardMaterial;
   public bodyDarkMat!: THREE.MeshStandardMaterial;
   public accentMat!: THREE.MeshStandardMaterial;
+  public marqueeCanvas!: HTMLCanvasElement;
+  public marqueeTex!: THREE.CanvasTexture;
 
   constructor(scene: THREE.Scene, physics: PhysicsSystem) {
     this.mesh = new THREE.Group();
@@ -257,10 +259,11 @@ export class Cabinet {
     backWallPlane.position.set(0, 3.75, -4.9);
     this.mesh.add(backWallPlane);
 
-    // ── 7. Top Yellow "TOY STORY" Marquee Banner (Matching Reference Photo) ──
-    const marqueeCanvas = document.createElement('canvas');
-    marqueeCanvas.width = 1024;
-    marqueeCanvas.height = 256;
+    // ── 7. Top "TOY STORY" Marquee Banner (Matching Reference Photo) ──
+    this.marqueeCanvas = document.createElement('canvas');
+    this.marqueeCanvas.width = 1024;
+    this.marqueeCanvas.height = 256;
+    const marqueeCanvas = this.marqueeCanvas;
     const mctx = marqueeCanvas.getContext('2d')!;
     
     // Yellow Header Background with Red Decorative Borders
@@ -278,7 +281,8 @@ export class Cabinet {
     mctx.textAlign = 'center';
     mctx.fillText('TOY STORY', 512, 170);
 
-    const marqueeTex = new THREE.CanvasTexture(marqueeCanvas);
+    this.marqueeTex = new THREE.CanvasTexture(marqueeCanvas);
+    const marqueeTex = this.marqueeTex;
 
     const marqueeGeo = new THREE.BoxGeometry(10.6, 1.8, 0.4);
     const marqueeMat = new THREE.MeshStandardMaterial({ map: marqueeTex, roughness: 0.2 });
@@ -456,7 +460,29 @@ export class Cabinet {
     this.joystickGroup.rotation.x = tiltZ * maxTilt;
   }
 
-  // Dynamic Theme Switching (Standard Yellow, K-霸 Gaming Black, Sanrio Dreamy Pink)
+  public updateMarqueeText(text: string, textColor: string, shadowColor: string, bgHex: string) {
+    if (!this.marqueeCanvas) return;
+    const mctx = this.marqueeCanvas.getContext('2d');
+    if (!mctx) return;
+
+    mctx.fillStyle = bgHex;
+    mctx.fillRect(0, 0, 1024, 256);
+
+    mctx.fillStyle = shadowColor;
+    mctx.fillRect(0, 0, 1024, 20);
+    mctx.fillRect(0, 236, 1024, 20);
+
+    mctx.shadowColor = shadowColor;
+    mctx.shadowBlur = 12;
+    mctx.fillStyle = textColor;
+    mctx.font = '900 110px "Arial Black", sans-serif';
+    mctx.textAlign = 'center';
+    mctx.fillText(text, 512, 170);
+
+    if (this.marqueeTex) this.marqueeTex.needsUpdate = true;
+  }
+
+  // Dynamic Theme Switching (Standard Yellow, K-霸 Gaming Black, Sanrio Dreamy Pink, Anime Gold)
   public setTheme(theme: string) {
     if (theme === 'kbasket') {
       // 🎮 酷炫極致電競黑紅主題 (沉穩曜石黑機殼 + 熾熱烈焰紅飾條)
@@ -466,6 +492,7 @@ export class Cabinet {
       this.baffleMat.color.setHex(0xff0033);
       this.neonBorderMat.color.setHex(0xff0033);
       this.neonBorderMat.emissive.setHex(0xff0033);
+      this.updateMarqueeText('K-霸 GAME', '#ffffff', '#ff0033', '#111116');
     } else if (theme === 'sanrio') {
       // ✨ 三麗鷗夢幻粉紫主題
       this.bodyMat.color.setHex(0xf472b6);
@@ -474,6 +501,7 @@ export class Cabinet {
       this.baffleMat.color.setHex(0xf472b6);
       this.neonBorderMat.color.setHex(0xc084fc);
       this.neonBorderMat.emissive.setHex(0xc084fc);
+      this.updateMarqueeText('SANRIO 水壺', '#ffffff', '#a855f7', '#f472b6');
     } else if (theme === 'anime') {
       // ⚡ 動漫模型黑金尊爵主題
       this.bodyMat.color.setHex(0x1a1625);
@@ -482,6 +510,7 @@ export class Cabinet {
       this.baffleMat.color.setHex(0xf59e0b);
       this.neonBorderMat.color.setHex(0xfcb316);
       this.neonBorderMat.emissive.setHex(0xfcb316);
+      this.updateMarqueeText('ANIME 模型', '#ffffff', '#f59e0b', '#1a1625');
     } else {
       // 👑 經典黃色 TOY STORY 娃娃機
       this.bodyMat.color.setHex(0xffcc00);
@@ -490,6 +519,7 @@ export class Cabinet {
       this.baffleMat.color.setHex(0x00f0ff);
       this.neonBorderMat.color.setHex(0x00f0ff);
       this.neonBorderMat.emissive.setHex(0x00f0ff);
+      this.updateMarqueeText('TOY STORY', '#dc2626', '#ffe600', '#ffcc00');
     }
   }
 }
