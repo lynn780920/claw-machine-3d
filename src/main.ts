@@ -672,9 +672,9 @@ function setupUIEventListeners() {
     applyDIPSettings();
   }
 
-  let currentMachineMode: 'standard' | 'kbasket' = 'standard';
+  let currentMachineMode: string = 'standard';
 
-  function switchMachineMode(mode: 'standard' | 'kbasket') {
+  function switchMachineMode(mode: string) {
     currentMachineMode = mode;
     const modeSelect = document.getElementById('setting-machinemode') as HTMLSelectElement | null;
     if (modeSelect) modeSelect.value = mode;
@@ -701,6 +701,50 @@ function setupUIEventListeners() {
       });
 
       prizesManager.spawnPrizes(40, 'giant_appliances');
+
+      controls.target.set(0, 3.2, 0);
+      camera.position.set(0, 5.6, 9.2);
+      controls.update();
+    } else if (mode === 'sanrio') {
+      // ✨ 三麗鷗精品水壺機台 (可愛水壺)
+      claw.setClawScale(1.0);
+
+      syncDIPPanelUI({
+        strong: '90',
+        height: '55',
+        weak: '45',
+        tophit: '20',
+        speed: '4.5',
+        length: '6.5',
+        baffle: '0.6',
+        dolls: '50',
+        antiswing: 'disabled',
+        prizetype: 'sanrio_bottle'
+      });
+
+      prizesManager.spawnPrizes(50, 'sanrio_bottle');
+
+      controls.target.set(0, 3.2, 0);
+      camera.position.set(0, 5.6, 9.2);
+      controls.update();
+    } else if (mode === 'anime') {
+      // ⚡ 動漫模型大賞機台 (七龍珠/航海王盒裝模型)
+      claw.setClawScale(1.0);
+
+      syncDIPPanelUI({
+        strong: '95',
+        height: '70',
+        weak: '35',
+        tophit: '30',
+        speed: '4.2',
+        length: '7.5',
+        baffle: '0.5',
+        dolls: '45',
+        antiswing: 'disabled',
+        prizetype: 'dragonball'
+      });
+
+      prizesManager.spawnPrizes(45, 'dragonball');
 
       controls.target.set(0, 3.2, 0);
       camera.position.set(0, 5.6, 9.2);
@@ -738,12 +782,13 @@ function setupUIEventListeners() {
   });
 
   document.getElementById('switch-machine-btn')?.addEventListener('click', () => {
-    const nextMode = currentMachineMode === 'standard' ? 'kbasket' : 'standard';
-    switchMachineMode(nextMode);
+    const modes = ['standard', 'kbasket', 'sanrio', 'anime'];
+    const nextIdx = (modes.indexOf(currentMachineMode) + 1) % modes.length;
+    switchMachineMode(modes[nextIdx]);
   });
 
   document.getElementById('setting-machinemode')?.addEventListener('change', (e) => {
-    const targetMode = (e.target as HTMLSelectElement).value as 'standard' | 'kbasket';
+    const targetMode = (e.target as HTMLSelectElement).value;
     switchMachineMode(targetMode);
   });
 

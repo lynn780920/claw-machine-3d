@@ -456,8 +456,8 @@ export class Cabinet {
     this.joystickGroup.rotation.x = tiltZ * maxTilt;
   }
 
-  // Dynamic Theme Switching (Standard Yellow Toy Story vs K-霸 Gaming Obsidian Black/Red)
-  public setTheme(theme: 'standard' | 'kbasket') {
+  // Dynamic Theme Switching (Standard Yellow, K-霸 Gaming Black, Sanrio Dreamy Pink)
+  public setTheme(theme: string) {
     if (theme === 'kbasket') {
       // 🎮 酷炫極致電競黑紅主題 (沉穩曜石黑機殼 + 熾熱烈焰紅飾條)
       this.bodyMat.color.setHex(0x111116);
@@ -466,6 +466,22 @@ export class Cabinet {
       this.baffleMat.color.setHex(0xff0033);
       this.neonBorderMat.color.setHex(0xff0033);
       this.neonBorderMat.emissive.setHex(0xff0033);
+    } else if (theme === 'sanrio') {
+      // ✨ 三麗鷗夢幻粉紫主題
+      this.bodyMat.color.setHex(0xf472b6);
+      this.bodyDarkMat.color.setHex(0xdb2777);
+      this.accentMat.color.setHex(0xa855f7);
+      this.baffleMat.color.setHex(0xf472b6);
+      this.neonBorderMat.color.setHex(0xc084fc);
+      this.neonBorderMat.emissive.setHex(0xc084fc);
+    } else if (theme === 'anime') {
+      // ⚡ 動漫模型黑金尊爵主題
+      this.bodyMat.color.setHex(0x1a1625);
+      this.bodyDarkMat.color.setHex(0x2d2438);
+      this.accentMat.color.setHex(0xf59e0b);
+      this.baffleMat.color.setHex(0xf59e0b);
+      this.neonBorderMat.color.setHex(0xfcb316);
+      this.neonBorderMat.emissive.setHex(0xfcb316);
     } else {
       // 👑 經典黃色 TOY STORY 娃娃機
       this.bodyMat.color.setHex(0xffcc00);
