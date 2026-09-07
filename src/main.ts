@@ -935,8 +935,8 @@ function setupUIEventListeners() {
     });
   }
 
-  // Apply initial machine mode preset (Classic standard)
-  switchMachineMode('standard');
+  // Apply initial machine mode preset (#01 Small Blind Box Machine)
+  switchMachineMode('small');
   updateStatsUI();
 }
 
@@ -1085,7 +1085,7 @@ function createArcadeEnvironment(scene: THREE.Scene) {
   });
   const floorMesh = new THREE.Mesh(new THREE.PlaneGeometry(90, 90), floorMat);
   floorMesh.rotation.x = -Math.PI / 2;
-  floorMesh.position.y = -0.01;
+  floorMesh.position.y = -5.35;
   floorMesh.receiveShadow = true;
   scene.add(floorMesh);
 

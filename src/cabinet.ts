@@ -109,8 +109,8 @@ export class Cabinet {
     this.marqueeCanvas.height = 256;
     this.marqueeTex = new THREE.CanvasTexture(this.marqueeCanvas);
 
-    this.updateMarqueeText('TOY STORY', '👑 中型機台 · 經典標準街機', '#dc2626', '#ffe600', '#ffcc00');
-    this.updateBackdrop('medium');
+    this.updateMarqueeText('賭博就是不歸路', '', '#fef08a', '#f59e0b', '#101014');
+    this.updateBackdrop('small');
 
     this.build(physics);
     scene.add(this.mesh);
@@ -156,7 +156,7 @@ export class Cabinet {
     const ctx = this.backdropCanvas.getContext('2d');
     if (!ctx) return;
 
-    let mainTitle = '賞 翻 天';
+    let mainTitle = '賭博就是不歸路';
     let subTitle = '景品コーナー';
     let enTitle = 'PRIZE MACHINE';
     let accentHex = '#f59e0b';
@@ -175,10 +175,10 @@ export class Cabinet {
       accentHex = '#ef4444';
       bgTop = '#1c0d12';
       bgBot = '#0f0508';
-    } else if (theme === 'medium') {
-      mainTitle = '賞 翻 天';
-      subTitle = '景品コーナー';
-      enTitle = 'TOY STORY ARCADE';
+    } else {
+      mainTitle = '賭博就是不歸路';
+      subTitle = '謹慎理財 · 遠離沉迷';
+      enTitle = 'PRIZE MACHINE';
       accentHex = '#f59e0b';
     }
 
@@ -211,11 +211,12 @@ export class Cabinet {
     ctx.lineWidth = 2.5;
     ctx.strokeRect(fx + 12, fy + 12, fw - 24, fh - 24);
 
-    // Main Gold Title: 賞 翻 天
+    // Main Gold Title: 賭博就是不歸路
     ctx.shadowColor = accentHex;
     ctx.shadowBlur = 18;
     ctx.fillStyle = '#fef08a';
-    ctx.font = '900 92px "Hiragino Kaku Gothic Pro", "Microsoft JhengHei", "Noto Sans TC", sans-serif';
+    const mainFontSize = mainTitle.length > 5 ? 70 : 92;
+    ctx.font = `900 ${mainFontSize}px "Hiragino Kaku Gothic Pro", "Microsoft JhengHei", "Noto Sans TC", sans-serif`;
     ctx.textAlign = 'center';
     ctx.fillText(mainTitle, 512, fy + 240);
 
@@ -702,7 +703,11 @@ export class Cabinet {
       color: 0x38bdf8,
       transparent: true,
       opacity: 0.6,
-      side: THREE.DoubleSide
+      side: THREE.DoubleSide,
+      depthWrite: false,
+      polygonOffset: true,
+      polygonOffsetFactor: -1,
+      polygonOffsetUnits: -1
     });
     this.outerRing = new THREE.Mesh(outerIndicatorGeo, outerIndicatorMat);
     this.outerRing.rotation.x = -Math.PI / 2;
@@ -713,7 +718,11 @@ export class Cabinet {
       color: 0x38bdf8,
       transparent: true,
       opacity: 0.6,
-      side: THREE.DoubleSide
+      side: THREE.DoubleSide,
+      depthWrite: false,
+      polygonOffset: true,
+      polygonOffsetFactor: -1,
+      polygonOffsetUnits: -1
     });
     this.innerCircle = new THREE.Mesh(innerIndicatorGeo, innerIndicatorMat);
     this.innerCircle.rotation.x = -Math.PI / 2;
@@ -821,9 +830,10 @@ export class Cabinet {
     mctx.stroke();
     mctx.shadowBlur = 0;
 
-    // Golden Main Big Title: 賞 翻 天
+    // Golden Main Big Title: 賭博就是不歸路
     mctx.fillStyle = textColor;
-    mctx.font = '900 116px "Hiragino Kaku Gothic Pro", "Microsoft JhengHei", "Noto Sans TC", sans-serif';
+    const fontSize = mainTitle.length > 5 ? 84 : 108;
+    mctx.font = `900 ${fontSize}px "Hiragino Kaku Gothic Pro", "Microsoft JhengHei", "Noto Sans TC", sans-serif`;
     mctx.textAlign = 'center';
     mctx.textBaseline = 'middle';
     mctx.shadowColor = shadowColor;
@@ -855,7 +865,7 @@ export class Cabinet {
       this.baffleMat.transparent = true;
       this.neonBorderMat.color.setHex(0xf59e0b);
       this.neonBorderMat.emissive.setHex(0xf59e0b);
-      this.updateMarqueeText('賞 翻 天', '', '#fef08a', '#f59e0b', '#101014');
+      this.updateMarqueeText('賭博就是不歸路', '', '#fef08a', '#f59e0b', '#101014');
     } else if (theme === 'anime' || theme === 'large') {
       // ⚡ 中大機台 (動漫模型黑金尊爵 + 加大強爪)
       this.bodyMat.color.setHex(0x1a1625);
@@ -866,14 +876,14 @@ export class Cabinet {
       this.neonBorderMat.emissive.setHex(0xfcb316);
       this.updateMarqueeText('BIG PRIZE', '⚡ 中大機台 · 動漫模型大賞', '#ffffff', '#f59e0b', '#1a1625');
     } else {
-      // 👑 中型機台 (經典黃色 TOY STORY 娃娃機)
+      // 👑 中型機台 (經典黃色街機)
       this.bodyMat.color.setHex(0xffcc00);
       this.bodyDarkMat.color.setHex(0xe6b800);
       this.accentMat.color.setHex(0xdc2626);
       this.baffleMat.color.setHex(0x00f0ff);
       this.neonBorderMat.color.setHex(0x00f0ff);
       this.neonBorderMat.emissive.setHex(0x00f0ff);
-      this.updateMarqueeText('TOY STORY', '👑 中型機台 · 經典標準街機', '#dc2626', '#ffe600', '#ffcc00');
+      this.updateMarqueeText('賭博就是不歸路', '', '#fef08a', '#f59e0b', '#101014');
     }
   }
 }
