@@ -505,7 +505,7 @@ export class Cabinet {
     const baseHeight = Math.max(4.8, this.height * 0.82);
     const baseCabinetGeo = new THREE.BoxGeometry(this.width + 0.35, baseHeight, this.depth + 0.35);
     const baseCabinetMesh = new THREE.Mesh(baseCabinetGeo, this.bodyMat);
-    baseCabinetMesh.position.set(0, -baseHeight / 2, 0);
+    baseCabinetMesh.position.set(0, -floorThickness - baseHeight / 2, 0);
     this.mesh.add(baseCabinetMesh);
 
     // 4 Base Swivel Wheels at Bottom Corners
@@ -514,7 +514,7 @@ export class Cabinet {
     const addWheel = (wx: number, wz: number) => {
       const wheel = new THREE.Mesh(wheelGeo, wheelMat);
       wheel.rotation.z = Math.PI / 2;
-      wheel.position.set(wx, -baseHeight - 0.25, wz);
+      wheel.position.set(wx, -floorThickness - baseHeight - 0.25, wz);
       this.mesh.add(wheel);
     };
     const wheelDistX = halfW - 0.4;
@@ -620,17 +620,17 @@ export class Cabinet {
       new THREE.BoxGeometry(1.2, 1.4, 0.1),
       new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.8, roughness: 0.2 })
     );
-    coinPlate.position.set(0.65, -baseHeight * 0.25, halfD + 0.05);
+    coinPlate.position.set(0.65, -floorThickness - baseHeight * 0.25, halfD + 0.05);
     this.mesh.add(coinPlate);
 
     // Chrome Coin Insertion Slot & Return Button
     const coinSlotMesh = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.45, 0.06), chromeMat);
-    coinSlotMesh.position.set(0.65, -baseHeight * 0.22, halfD + 0.11);
+    coinSlotMesh.position.set(0.65, -floorThickness - baseHeight * 0.22, halfD + 0.11);
     this.mesh.add(coinSlotMesh);
 
     const coinBtnMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.06, 16), chromeMat);
     coinBtnMesh.rotation.x = Math.PI / 2;
-    coinBtnMesh.position.set(0.65, -baseHeight * 0.33, halfD + 0.11);
+    coinBtnMesh.position.set(0.65, -floorThickness - baseHeight * 0.33, halfD + 0.11);
     this.mesh.add(coinBtnMesh);
 
     // Prize Retrieval Door with Vibrant Orange Door Flap (Left of Lower Cabinet near Knees)
@@ -638,14 +638,14 @@ export class Cabinet {
       new THREE.BoxGeometry(1.9, 1.9, 0.08),
       new THREE.MeshStandardMaterial({ color: 0x475569, metalness: 0.5, roughness: 0.4 })
     );
-    doorFrame.position.set(-1.45, -baseHeight * 0.65, halfD + 0.04);
+    doorFrame.position.set(-1.45, -floorThickness - baseHeight * 0.65, halfD + 0.04);
     this.mesh.add(doorFrame);
 
     const doorFlap = new THREE.Mesh(
       new THREE.BoxGeometry(1.6, 1.6, 0.06),
       new THREE.MeshStandardMaterial({ color: 0xea580c, metalness: 0.15, roughness: 0.35 })
     );
-    doorFlap.position.set(-1.45, -baseHeight * 0.65, halfD + 0.07);
+    doorFlap.position.set(-1.45, -floorThickness - baseHeight * 0.65, halfD + 0.07);
     this.mesh.add(doorFlap);
 
     // 🕹️ Interactive Joystick Group (Left Side of Console Deck)

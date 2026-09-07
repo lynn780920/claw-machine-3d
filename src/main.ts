@@ -117,7 +117,8 @@ async function init() {
   mainSpot.shadow.mapSize.height = 1024;
   mainSpot.shadow.camera.near = 0.5;
   mainSpot.shadow.camera.far = 10;
-  mainSpot.shadow.bias = -0.0008;
+  mainSpot.shadow.bias = 0.00005;
+  mainSpot.shadow.normalBias = 0.02;
   scene.add(mainSpot);
 
   // Front Studio Fill Light illuminating colorful dolls
@@ -1085,7 +1086,7 @@ function createArcadeEnvironment(scene: THREE.Scene) {
   });
   const floorMesh = new THREE.Mesh(new THREE.PlaneGeometry(90, 90), floorMat);
   floorMesh.rotation.x = -Math.PI / 2;
-  floorMesh.position.y = -5.35;
+  floorMesh.position.y = -7.5;
   floorMesh.receiveShadow = true;
   scene.add(floorMesh);
 
