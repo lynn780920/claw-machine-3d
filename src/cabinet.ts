@@ -4,11 +4,13 @@ import { PhysicsSystem } from './physics';
 
 /**
  * 3D Arcade Claw Machine Cabinet
- * Dynamically resizes to 4 physical scales:
- * - 小型機台 (Small): 7.6m x 7.6m playfield
- * - 中型機台 (Medium): 10.0m x 10.0m standard Taiwanese arcade playfield
- * - 中大機台 (Large): 12.0m x 12.0m wide playfield
- * - K霸機台 (K-Pa Giant): 14.6m x 14.6m massive giant playfield
+ * Modeled after Taiwanese Arcade & Online Claw Machines (e.g. 冠興 / 飛絡力 / 賞翻天 Kujiflip)
+ * - Authentic textured non-slip playfield liner (菱格/防滑紋理底墊)
+ * - Chute with acrylic baffle, safety bumper trim tube (防撞膠條) & metal corner clamp
+ * - Slanted slide ramp inside prize chute (出貨導流滑梯)
+ * - Back wall radiant arcade sunburst backdrop / mirror
+ * - Vertical LED pillar glow bars
+ * - Dynamic physical resizing across 4 scales (Small 7.6m, Medium 10.0m, Large 12.0m, K-Pa 14.6m)
  */
 export class Cabinet {
   public mesh: THREE.Group;
@@ -42,8 +44,13 @@ export class Cabinet {
   public baffleMat!: THREE.MeshStandardMaterial;
   public neonBorderMat!: THREE.MeshStandardMaterial;
 
+  public floorMatTex!: THREE.CanvasTexture;
+  public backdropCanvas!: HTMLCanvasElement;
+  public backdropTex!: THREE.CanvasTexture;
   public marqueeCanvas!: HTMLCanvasElement;
   public marqueeTex!: THREE.CanvasTexture;
+
+  private currentTheme: string = 'medium';
 
   constructor(scene: THREE.Scene, physics: PhysicsSystem) {
     this.mesh = new THREE.Group();
@@ -51,20 +58,22 @@ export class Cabinet {
     this.baffleGroup = new THREE.Group();
     this.joystickGroup = new THREE.Group();
 
-    // Crystal Clear Acrylic Chute Baffle Material
+    // 1. Crystal Clear Acrylic Chute Baffle Material
     this.baffleMat = new THREE.MeshStandardMaterial({
-      color: 0x00f0ff,
+      color: 0xe0f7fa,
       opacity: 0.35,
       transparent: true,
-      roughness: 0.0,
-      metalness: 0.2,
+      roughness: 0.02,
+      metalness: 0.15,
       side: THREE.DoubleSide
     });
 
+    // 2. Safety Bumper Trim Material (防撞膠條 / 螢光護邊條)
     this.neonBorderMat = new THREE.MeshStandardMaterial({
       color: 0x00f0ff,
       emissive: 0x00f0ff,
-      emissiveIntensity: 0.9
+      emissiveIntensity: 0.85,
+      roughness: 0.3
     });
 
     this.bodyMat = new THREE.MeshStandardMaterial({
@@ -85,20 +94,131 @@ export class Cabinet {
       roughness: 0.2
     });
 
-    // Marquee canvas initialized once
+    // 3. Create Textured Anti-Slip Floor Mat Texture (Matching Kujiflip / Taiwanese Arcades)
+    this.floorMatTex = this.createFloorMatTex();
+
+    // 4. Create Radiant Backdrop Texture
+    this.backdropCanvas = document.createElement('canvas');
+    this.backdropCanvas.width = 1024;
+    this.backdropCanvas.height = 1024;
+    this.backdropTex = new THREE.CanvasTexture(this.backdropCanvas);
+
+    // 5. Marquee Canvas
     this.marqueeCanvas = document.createElement('canvas');
     this.marqueeCanvas.width = 1024;
     this.marqueeCanvas.height = 256;
     this.marqueeTex = new THREE.CanvasTexture(this.marqueeCanvas);
 
-    // Initial Marquee draw
     this.updateMarqueeText('TOY STORY', '👑 中型機台 · 經典標準街機', '#dc2626', '#ffe600', '#ffcc00');
+    this.updateBackdrop('medium');
 
     this.build(physics);
     scene.add(this.mesh);
   }
 
+  // ── Authentic Arcade Non-Slip Playfield Mat Texture ──
+  private createFloorMatTex(): THREE.CanvasTexture {
+    const c = document.createElement('canvas');
+    c.width = 512;
+    c.height = 512;
+    const ctx = c.getContext('2d')!;
+
+    // Deep dark slate/graphite base
+    ctx.fillStyle = '#222836';
+    ctx.fillRect(0, 0, 512, 512);
+
+    // Fine woven crosshatch grid lines
+    for (let i = 0; i < 512; i += 8) {
+      ctx.fillStyle = (i % 16 === 0) ? 'rgba(255, 255, 255, 0.038)' : 'rgba(0, 0, 0, 0.08)';
+      ctx.fillRect(i, 0, 3, 512);
+      ctx.fillRect(0, i, 512, 3);
+    }
+
+    // Anti-slip rubber grip micro-dots
+    for (let i = 0; i < 220; i++) {
+      const radius = 2.5 + (i % 4) * 1.5;
+      ctx.fillStyle = (i % 2 === 0) ? 'rgba(255, 255, 255, 0.025)' : 'rgba(0, 0, 0, 0.05)';
+      ctx.beginPath();
+      ctx.arc((i * 113) % 512, (i * 227) % 512, radius, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    const tex = new THREE.CanvasTexture(c);
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.wrapT = THREE.RepeatWrapping;
+    tex.repeat.set(5, 5);
+    return tex;
+  }
+
+  // ── Arcade Sunburst Radiant Backdrop (Matching Kujiflip rM()) ──
+  public updateBackdrop(theme: string) {
+    if (!this.backdropCanvas) return;
+    const ctx = this.backdropCanvas.getContext('2d');
+    if (!ctx) return;
+
+    let cTop = '#0b1424', cMid = '#14253d', cBottom = '#070d18', accentHex = '#00f0ff', labelText = 'TOY STORY ARCADE';
+    if (theme === 'small' || theme === 'sanrio') {
+      cTop = '#2a1138'; cMid = '#451a5c'; cBottom = '#170820'; accentHex = '#f472b6'; labelText = '★ POP MART 潮玩盲盒旗艦店 ★';
+    } else if (theme === 'large' || theme === 'anime') {
+      cTop = '#1c152a'; cMid = '#2e2145'; cBottom = '#0f0b17'; accentHex = '#f59e0b'; labelText = '⚡ ANIME FIGURE 動漫一番賞 ⚡';
+    } else if (theme === 'kbasket') {
+      cTop = '#1a080c'; cMid = '#331018'; cBottom = '#0d0406'; accentHex = '#ff0033'; labelText = '🥊 MEGA CLAW 霸王家電展 🥊';
+    }
+
+    const grad = ctx.createLinearGradient(0, 0, 0, 1024);
+    grad.addColorStop(0, cTop);
+    grad.addColorStop(0.55, cMid);
+    grad.addColorStop(1, cBottom);
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 1024, 1024);
+
+    // Radiant arcade sunburst rays from center
+    ctx.save();
+    ctx.translate(512, 420);
+    for (let i = 0; i < 28; i++) {
+      ctx.rotate((Math.PI * 2) / 28);
+      ctx.fillStyle = (i % 2 === 0) ? 'rgba(255, 255, 255, 0.035)' : 'rgba(0, 0, 0, 0.04)';
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(-70, -700);
+      ctx.lineTo(70, -700);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.restore();
+
+    // Center circular radiant glow badge
+    const rg = ctx.createRadialGradient(512, 420, 20, 512, 420, 280);
+    rg.addColorStop(0, 'rgba(255, 255, 255, 0.12)');
+    rg.addColorStop(0.5, 'rgba(255, 255, 255, 0.03)');
+    rg.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    ctx.fillStyle = rg;
+    ctx.beginPath();
+    ctx.arc(512, 420, 280, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Backdrop Emblem Frame
+    ctx.strokeStyle = accentHex;
+    ctx.lineWidth = 4;
+    ctx.strokeRect(120, 720, 784, 120);
+
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+    ctx.fillRect(124, 724, 776, 112);
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '900 36px "Arial Black", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.shadowColor = accentHex;
+    ctx.shadowBlur = 18;
+    ctx.fillText(labelText, 512, 796);
+    ctx.shadowBlur = 0;
+
+    if (this.backdropTex) this.backdropTex.needsUpdate = true;
+  }
+
   public rebuildCabinet(mode: string, physics: PhysicsSystem) {
+    this.currentTheme = mode;
+
     // 1. Remove all static rigid bodies from physics world
     this.staticBodies.forEach(b => {
       if (physics && physics.world) {
@@ -166,8 +286,9 @@ export class Cabinet {
       this.chuteMaxZ = 4.5;
     }
 
-    // 4. Update theme materials
+    // 4. Update theme materials & backdrop
     this.setTheme(mode);
+    this.updateBackdrop(mode);
 
     // 5. Rebuild visual meshes & physics
     this.build(physics);
@@ -194,13 +315,15 @@ export class Cabinet {
 
     const chromeMat = new THREE.MeshStandardMaterial({
       color: 0xe2e8f0,
-      metalness: 0.9,
-      roughness: 0.1
+      metalness: 0.92,
+      roughness: 0.08
     });
 
+    // Textured Non-Slip Playfield Floor Mat
     const floorMat = new THREE.MeshStandardMaterial({
-      color: 0xfffae6,
-      roughness: 0.3
+      map: this.floorMatTex,
+      roughness: 0.65,
+      metalness: 0.12
     });
 
     const holeMat = new THREE.MeshStandardMaterial({ color: 0x09090b, roughness: 0.9, metalness: 0.1 });
@@ -224,7 +347,7 @@ export class Cabinet {
         const bodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(x, -0.5, z);
         const body = physics.world.createRigidBody(bodyDesc);
         const colDesc = RAPIER.ColliderDesc.cuboid(w / 2, 0.5, d / 2)
-          .setFriction(0.6)
+          .setFriction(0.75)
           .setRestitution(0.02);
         physics.world.createCollider(colDesc, body);
         this.staticBodies.push(body);
@@ -237,7 +360,19 @@ export class Cabinet {
     addFloorSection(-halfW, this.chuteMinX, this.chuteMinZ, halfD);
     addFloorSection(this.chuteMinX, this.chuteMaxX, this.chuteMaxZ, halfD);
 
-    // ── 3. Chute Baffles ──
+    // Floor Metal Perimeter Trim (鋁合金壓邊收口條)
+    const trimThick = 0.06;
+    const addFloorTrim = (tw: number, td: number, tx: number, tz: number) => {
+      const trimMesh = new THREE.Mesh(new THREE.BoxGeometry(tw, 0.04, td), chromeMat);
+      trimMesh.position.set(tx, 0.01, tz);
+      this.mesh.add(trimMesh);
+    };
+    addFloorTrim(this.width, trimThick, 0, -halfD + trimThick / 2);
+    addFloorTrim(this.width, trimThick, 0, halfD - trimThick / 2);
+    addFloorTrim(trimThick, this.depth, -halfW + trimThick / 2, 0);
+    addFloorTrim(trimThick, this.depth, halfW - trimThick / 2, 0);
+
+    // ── 3. Chute Baffles & Slanted Slide Ramp ──
     this.rebuildBaffles(this.chuteWallHeight, physics);
 
     const chuteW = this.chuteMaxX - this.chuteMinX;
@@ -245,14 +380,23 @@ export class Cabinet {
     const chuteCenterX = (this.chuteMinX + this.chuteMaxX) / 2;
     const chuteCenterZ = (this.chuteMinZ + this.chuteMaxZ) / 2;
 
-    // Chute Pit Hole Visual Dark Box (出貨口黑洞)
-    const holeGeo = new THREE.BoxGeometry(chuteW, 0.6, chuteD);
+    // Chute Pit Hole Visual Dark Box (出貨口深坑)
+    const holeGeo = new THREE.BoxGeometry(chuteW, 1.2, chuteD);
     const holeMesh = new THREE.Mesh(holeGeo, holeMat);
-    holeMesh.position.set(chuteCenterX, -0.55, chuteCenterZ);
+    holeMesh.position.set(chuteCenterX, -0.85, chuteCenterZ);
     this.mesh.add(holeMesh);
 
+    // Slanted Prize Slide Ramp inside Chute Pit (真實出貨導流滑梯)
+    const rampLen = Math.hypot(chuteD + 0.2, 0.8);
+    const rampAngle = Math.atan2(0.8, chuteD + 0.2);
+    const rampGeo = new THREE.BoxGeometry(chuteW - 0.08, 0.03, rampLen);
+    const rampMesh = new THREE.Mesh(rampGeo, chromeMat);
+    rampMesh.position.set(chuteCenterX, -0.65, chuteCenterZ + 0.1);
+    rampMesh.rotation.x = rampAngle;
+    this.mesh.add(rampMesh);
+
     // Dark Rim Frame around the chute hole
-    const rimGeo = new THREE.BoxGeometry(chuteW + 0.1, 0.05, chuteD + 0.1);
+    const rimGeo = new THREE.BoxGeometry(chuteW + 0.08, 0.04, chuteD + 0.08);
     const rimMesh = new THREE.Mesh(rimGeo, holeRimMat);
     rimMesh.position.set(chuteCenterX, -0.01, chuteCenterZ);
     this.mesh.add(rimMesh);
@@ -279,6 +423,16 @@ export class Cabinet {
     addColumn(halfW, -halfD);
     addColumn(-halfW, halfD);
     addColumn(halfW, halfD);
+
+    // Front Pillars Vertical Neon LED Glow Bars (立柱全彩氛圍燈條)
+    const neonBarGeo = new THREE.BoxGeometry(0.08, this.height - 1.8, 0.08);
+    const leftNeon = new THREE.Mesh(neonBarGeo, this.neonBorderMat);
+    leftNeon.position.set(-halfW + 0.24, (this.height - 1.8) / 2, halfD - 0.24);
+    this.mesh.add(leftNeon);
+
+    const rightNeon = new THREE.Mesh(neonBarGeo, this.neonBorderMat);
+    rightNeon.position.set(halfW - 0.24, (this.height - 1.8) / 2, halfD - 0.24);
+    this.mesh.add(rightNeon);
 
     // ── 5. Transparent Side Glass Windows ──
     const sideGlassMat = new THREE.MeshStandardMaterial({
@@ -357,10 +511,14 @@ export class Cabinet {
     // Front glass pane
     addGlassPane(this.width, this.height - 2.5, wallThick, 0, (this.height + 0.5) / 2, halfD, this.width, physThick);
 
-    // Soft Sky Blue Back Wall Panel Inside Cabinet
+    // High-End Radiant Arcade Backdrop Inside Cabinet (Matching Kujiflip rM())
     const backWallPlane = new THREE.Mesh(
       new THREE.PlaneGeometry(this.width - 0.2, this.height - 1.0),
-      new THREE.MeshStandardMaterial({ color: 0x87ceeb, roughness: 0.3 })
+      new THREE.MeshStandardMaterial({
+        map: this.backdropTex,
+        roughness: 0.25,
+        metalness: 0.35
+      })
     );
     backWallPlane.position.set(0, (this.height - 1.0) / 2, -halfD + 0.1);
     this.mesh.add(backWallPlane);
@@ -383,7 +541,7 @@ export class Cabinet {
     const ceilingLightMat = new THREE.MeshStandardMaterial({
       color: 0xffb703,
       emissive: 0xff9f1c,
-      emissiveIntensity: 0.8,
+      emissiveIntensity: 0.85,
       roughness: 0.2
     });
     const ceilingLightMesh = new THREE.Mesh(ceilingLightGeo, ceilingLightMat);
@@ -479,7 +637,7 @@ export class Cabinet {
     this.dropIndicatorGroup.position.set(0, 0.05, 0);
   }
 
-  /* ── Dynamic Chute Baffle Height Update ── */
+  /* ── Dynamic Chute Baffle Height & Guard Rail Update ── */
   public setBaffleHeight(height: number, physics: PhysicsSystem) {
     this.chuteWallHeight = Math.max(0.3, Math.min(3.0, height));
     this.rebuildBaffles(this.chuteWallHeight, physics);
@@ -505,17 +663,25 @@ export class Cabinet {
     const chuteCenterX = (this.chuteMinX + this.chuteMaxX) / 2;
     const chuteCenterZ = (this.chuteMinZ + this.chuteMaxZ) / 2;
 
-    const addBaffleWall = (w: number, d: number, x: number, z: number) => {
+    const chromeMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, metalness: 0.9, roughness: 0.1 });
+
+    const addBaffleWall = (w: number, d: number, x: number, z: number, isRightWall: boolean) => {
       const geo = new THREE.BoxGeometry(w, height, d);
       const mesh = new THREE.Mesh(geo, this.baffleMat);
       mesh.position.set(x, height / 2, z);
       this.baffleGroup.add(mesh);
 
-      // Glowing Neon Cyan Top Edge Highlight
-      const borderGeo = new THREE.BoxGeometry(w + 0.02, 0.04, d + 0.02);
-      const borderMesh = new THREE.Mesh(borderGeo, this.neonBorderMat);
-      borderMesh.position.set(x, height, z);
-      this.baffleGroup.add(borderMesh);
+      // Rounded Safety Bumper Trim Tube (防撞膠條 / 護邊圓條)
+      const len = isRightWall ? d : w;
+      const bumperGeo = new THREE.CylinderGeometry(0.045, 0.045, len, 16);
+      const bumperMesh = new THREE.Mesh(bumperGeo, this.neonBorderMat);
+      if (isRightWall) {
+        bumperMesh.rotation.x = Math.PI / 2;
+      } else {
+        bumperMesh.rotation.z = Math.PI / 2;
+      }
+      bumperMesh.position.set(x, height + 0.02, z);
+      this.baffleGroup.add(bumperMesh);
 
       if (physics && physics.world) {
         const bodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(x, height / 2, z);
@@ -529,9 +695,15 @@ export class Cabinet {
     };
 
     // Right baffle wall of the chute
-    addBaffleWall(wallThick, chuteD, this.chuteMaxX, chuteCenterZ);
+    addBaffleWall(wallThick, chuteD, this.chuteMaxX, chuteCenterZ, true);
     // Back baffle wall of the chute
-    addBaffleWall(chuteW, wallThick, chuteCenterX, this.chuteMinZ);
+    addBaffleWall(chuteW, wallThick, chuteCenterX, this.chuteMinZ, false);
+
+    // Chrome Metal Corner Bracket Post (金屬固定角柱)
+    const postGeo = new THREE.CylinderGeometry(0.045, 0.045, height + 0.08, 16);
+    const postMesh = new THREE.Mesh(postGeo, chromeMat);
+    postMesh.position.set(this.chuteMaxX, (height + 0.08) / 2, this.chuteMinZ);
+    this.baffleGroup.add(postMesh);
   }
 
   // Update target indicator position
@@ -562,7 +734,7 @@ export class Cabinet {
     // Subtitle capsule badge
     mctx.fillStyle = shadowColor;
     mctx.beginPath();
-    mctx.roundRect(280, 20, 464, 40, 8);
+    mctx.roundRect(260, 20, 504, 40, 8);
     mctx.fill();
 
     mctx.fillStyle = '#ffffff';
@@ -574,7 +746,7 @@ export class Cabinet {
     mctx.shadowColor = shadowColor;
     mctx.shadowBlur = 14;
     mctx.fillStyle = textColor;
-    mctx.font = '900 102px "Arial Black", sans-serif';
+    mctx.font = '900 96px "Arial Black", sans-serif';
     mctx.textAlign = 'center';
     mctx.fillText(mainTitle, 512, 178);
     mctx.shadowBlur = 0;
@@ -594,14 +766,14 @@ export class Cabinet {
       this.neonBorderMat.emissive.setHex(0xff0033);
       this.updateMarqueeText('MEGA CLAW', '🥊 K-霸機台 · 巨無霸家電霸王爪', '#ffffff', '#ff0033', '#111116');
     } else if (theme === 'sanrio' || theme === 'small') {
-      // 🌸 小型機台 (三麗鷗夢幻粉紫 + 精巧爪)
+      // 🌸 小型機台 (POP MART 潮玩盲盒精品台 · 夢幻粉紫)
       this.bodyMat.color.setHex(0xf472b6);
       this.bodyDarkMat.color.setHex(0xdb2777);
       this.accentMat.color.setHex(0xa855f7);
-      this.baffleMat.color.setHex(0xf472b6);
-      this.neonBorderMat.color.setHex(0xc084fc);
-      this.neonBorderMat.emissive.setHex(0xc084fc);
-      this.updateMarqueeText('MINI CLAW', '🌸 小型機台 · 精品小夾物', '#ffffff', '#a855f7', '#f472b6');
+      this.baffleMat.color.setHex(0x38bdf8);
+      this.neonBorderMat.color.setHex(0xec4899);
+      this.neonBorderMat.emissive.setHex(0xec4899);
+      this.updateMarqueeText('POP MART', '🌸 小型機台 · POP MART 潮玩盲盒大賞', '#ffffff', '#ec4899', '#831843');
     } else if (theme === 'anime' || theme === 'large') {
       // ⚡ 中大機台 (動漫模型黑金尊爵 + 加大強爪)
       this.bodyMat.color.setHex(0x1a1625);

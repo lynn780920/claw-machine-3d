@@ -20,6 +20,10 @@ export class PrizesManager {
     chuteBounds?: { minX: number; maxX: number; minZ: number; maxZ: number }
   ) {
     this.clearPrizes();
+    if (typeFilter === 'blindbox') {
+      this.spawnStagedBlindBoxes(chuteBounds, count);
+      return;
+    }
     for (let i = 0; i < count; i++) {
       let x = (Math.random() - 0.35) * spreadRadius;
       let z = (Math.random() - 0.45) * spreadRadius;
@@ -235,6 +239,18 @@ export class PrizesManager {
     return this.physics.world.createRigidBody(
       RAPIER.RigidBodyDesc.dynamic().setTranslation(x, y, z)
         .setCcdEnabled(true).setLinearDamping(0.18).setAngularDamping(0.35)
+    );
+  }
+
+  private makeDynBodyWithRotation(x: number, y: number, z: number, rx = 0, ry = 0, rz = 0) {
+    const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(rx, ry, rz));
+    return this.physics.world.createRigidBody(
+      RAPIER.RigidBodyDesc.dynamic()
+        .setTranslation(x, y, z)
+        .setRotation({ x: q.x, y: q.y, z: q.z, w: q.w })
+        .setCcdEnabled(true)
+        .setLinearDamping(0.25)
+        .setAngularDamping(0.40)
     );
   }
 
@@ -1836,18 +1852,32 @@ export class PrizesManager {
   //  perforated tear strip, barcode, series character lineup
   // ══════════════════════════════════════════════════════════════
   private spawnBlindBox(x: number, y: number, z: number) {
-    const W = 0.65, H = 0.95, D = 0.55;
+    this.spawnSingleBlindBoxWithRotation(x, y, z, 0, Math.random() * Math.PI * 2, 0);
+  }
+
+  private spawnSingleBlindBoxWithRotation(
+    x: number,
+    y: number,
+    z: number,
+    rx = 0,
+    ry = 0,
+    rz = 0,
+    seriesIdx?: number
+  ) {
+    const W = 0.68, H = 0.98, D = 0.58;
     const group = new THREE.Group();
     group.position.set(x, y, z);
-    group.rotation.y = Math.random() * Math.PI * 2;
+    group.rotation.set(rx, ry, rz);
 
     const series = [
-      { name: 'SKULLPANDA', sub: 'City of Night', bg: '#18181b', accent: '#a855f7', holo: '#e879f9' },
-      { name: 'LABUBU',     sub: 'The Monsters',  bg: '#1e1b4b', accent: '#38bdf8', holo: '#f43f5e' },
-      { name: 'DIMOO',      sub: 'Retro Series',  bg: '#14532d', accent: '#4ade80', holo: '#facc15' },
-      { name: 'MOLLY',      sub: 'Space V3',      bg: '#4c0519', accent: '#fb7185', holo: '#fbbf24' }
+      { name: 'SKULLPANDA', sub: 'City of Night', bg: '#18181b', accent: '#a855f7', holo: '#c084fc', icon: 'SP 🌙' },
+      { name: 'LABUBU',     sub: 'The Monsters',  bg: '#1e1b4b', accent: '#38bdf8', holo: '#f43f5e', icon: 'LABUBU 😈' },
+      { name: 'DIMOO',      sub: 'Retro Series',  bg: '#064e3b', accent: '#34d399', holo: '#facc15', icon: 'DIMOO ☁️' },
+      { name: 'CRYBABY',    sub: 'Crying Parade', bg: '#831843', accent: '#f472b6', holo: '#fde047', icon: 'CRYBABY 💧' },
+      { name: 'MOLLY',      sub: 'Space V3',      bg: '#4c0519', accent: '#fb7185', holo: '#38bdf8', icon: 'MOLLY 👑' },
+      { name: 'HIRONO',     sub: 'The Other One', bg: '#27272a', accent: '#fb923c', holo: '#a1a1aa', icon: 'HIRONO 🎭' }
     ];
-    const s = series[Math.floor(Math.random() * series.length)];
+    const s = series[seriesIdx !== undefined ? (seriesIdx % series.length) : Math.floor(Math.random() * series.length)];
 
     const frontTex = this.makeCanvasTex(320, 480, ctx => {
       ctx.fillStyle = s.bg; ctx.fillRect(0, 0, 320, 480);
@@ -1868,38 +1898,40 @@ export class PrizesManager {
       ctx.fillText('BLIND BOX', 245, 47);
 
       // Series Title
-      ctx.fillStyle = '#ffffff'; ctx.font = '900 32px sans-serif';
+      ctx.fillStyle = '#ffffff'; ctx.font = '900 30px sans-serif';
       ctx.shadowColor = s.holo; ctx.shadowBlur = 10;
-      ctx.fillText(s.name, 160, 110);
+      ctx.fillText(s.name, 160, 108);
       ctx.shadowBlur = 0;
-      ctx.fillStyle = s.accent; ctx.font = 'bold 17px sans-serif';
-      ctx.fillText(s.sub, 160, 136);
+      ctx.fillStyle = s.accent; ctx.font = 'bold 16px sans-serif';
+      ctx.fillText(s.sub, 160, 134);
 
       // Center Character Silhouette Circle
-      const cx = 160, cy = 250, cr = 85;
+      const cx = 160, cy = 245, cr = 82;
       const cg = ctx.createRadialGradient(cx, cy, 10, cx, cy, cr);
       cg.addColorStop(0, '#ffffff'); cg.addColorStop(0.7, s.accent); cg.addColorStop(1, s.bg);
       ctx.fillStyle = cg; ctx.beginPath(); ctx.arc(cx, cy, cr, 0, Math.PI * 2); ctx.fill();
 
-      // Mystery Question Mark
-      ctx.fillStyle = '#ffffff'; ctx.font = '900 85px sans-serif';
-      ctx.fillText('?', 160, 280);
+      // Mystery Character icon
+      ctx.fillStyle = '#ffffff'; ctx.font = '900 68px sans-serif';
+      ctx.fillText('?', 160, 268);
+      ctx.font = 'bold 15px sans-serif'; ctx.fillStyle = '#ffffff';
+      ctx.fillText(s.icon, 160, 305);
 
       // Tear strip perforation line
       ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 3; ctx.setLineDash([8, 8]);
-      ctx.beginPath(); ctx.moveTo(25, 370); ctx.lineTo(295, 370); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(25, 365); ctx.lineTo(295, 365); ctx.stroke();
       ctx.setLineDash([]);
       ctx.fillStyle = '#ffffff'; ctx.font = 'bold 11px sans-serif';
-      ctx.fillText('✂ PULL TO OPEN HERE ✂', 160, 362);
+      ctx.fillText('✂ PULL TO OPEN HERE ✂', 160, 356);
 
       // Bottom Barcode & Info
       ctx.fillStyle = '#ffffff';
       for (let x = 35; x < 285; x += 5) {
         const w = (x % 15 === 0) ? 3 : 2;
-        ctx.fillRect(x, 400, w, 35);
+        ctx.fillRect(x, 395, w, 32);
       }
       ctx.fillStyle = '#9ca3af'; ctx.font = '10px sans-serif';
-      ctx.fillText('1/12 CHANCE FOR SECRET ★ AGE 15+', 160, 455);
+      ctx.fillText('1/12 CHANCE FOR SECRET ★ AGE 15+', 160, 448);
     });
 
     const sideTex = this.makeCanvasTex(240, 480, ctx => {
@@ -1908,21 +1940,43 @@ export class PrizesManager {
       ctx.fillStyle = s.accent; ctx.font = 'bold 20px sans-serif'; ctx.textAlign = 'center';
       ctx.save(); ctx.translate(120, 240); ctx.rotate(-Math.PI / 2);
       ctx.fillText('POPMART · ' + s.name, 0, 8); ctx.restore();
+
+      // Mini character preview boxes
+      for (let i = 0; i < 4; i++) {
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
+        ctx.fillRect(30, 60 + i * 95, 180, 80);
+        ctx.strokeStyle = s.accent; ctx.lineWidth = 1;
+        ctx.strokeRect(30, 60 + i * 95, 180, 80);
+      }
     });
 
     const topTex = this.makeCanvasTex(320, 240, ctx => {
       ctx.fillStyle = s.bg; ctx.fillRect(0, 0, 320, 240);
       ctx.fillStyle = s.accent; ctx.fillRect(20, 20, 280, 200);
-      ctx.fillStyle = '#ffffff'; ctx.font = '900 32px sans-serif'; ctx.textAlign = 'center';
-      ctx.fillText('★ 盲盒 ★', 160, 130);
+      ctx.fillStyle = '#ffffff'; ctx.font = '900 30px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText('★ 盲盒 ★', 160, 110);
+      ctx.font = 'bold 18px sans-serif';
+      ctx.fillText('POP MART', 160, 150);
+    });
+
+    const bottomTex = this.makeCanvasTex(320, 240, ctx => {
+      ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, 320, 240);
+      ctx.fillStyle = '#000000';
+      ctx.font = 'bold 12px monospace'; ctx.textAlign = 'center';
+      ctx.fillText('697000000000', 160, 180);
+      for (let bx = 50; bx < 270; bx += 6) {
+        ctx.fillRect(bx, 60, (bx % 12 === 0) ? 4 : 2, 90);
+      }
+      ctx.font = '9px sans-serif';
+      ctx.fillText('© POP MART ENTERTAINMENT. ALL RIGHTS RESERVED', 160, 215);
     });
 
     const boxMat = new THREE.MeshStandardMaterial({ map: frontTex, roughness: 0.25, metalness: 0.2 });
     const sideMat = new THREE.MeshStandardMaterial({ map: sideTex, roughness: 0.3, metalness: 0.15 });
     const topMat = new THREE.MeshStandardMaterial({ map: topTex, roughness: 0.3 });
-    const darkMat = new THREE.MeshStandardMaterial({ color: 0x18181b, roughness: 0.5 });
+    const botMat = new THREE.MeshStandardMaterial({ map: bottomTex, roughness: 0.5 });
 
-    const mats = [sideMat, sideMat, topMat, darkMat, boxMat, sideMat];
+    const mats = [sideMat, sideMat, topMat, botMat, boxMat, sideMat];
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(W, H, D), mats);
     mesh.castShadow = true;
     group.add(mesh);
@@ -1935,12 +1989,83 @@ export class PrizesManager {
     this.prizes.push(group);
 
     if (this.physics.world) {
-      const body = this.makeDynBody(x, y, z);
+      const body = this.makeDynBodyWithRotation(x, y, z, rx, ry, rz);
       this.physics.world.createCollider(
-        RAPIER.ColliderDesc.cuboid(W / 2, H / 2, D / 2).setMass(0.30).setFriction(0.42).setRestitution(0.08), body);
+        RAPIER.ColliderDesc.cuboid(W / 2, H / 2, D / 2)
+          .setMass(0.32)
+          .setFriction(0.48)
+          .setRestitution(0.06),
+        body
+      );
       this.physics.registerBody(body, group);
       this.bodies.push(body);
     }
+  }
+
+  // ── Taiwanese Claw Machine Realistic Staged Blind Box Arrangement (排山倒海 + 槍位攻防) ──
+  private spawnStagedBlindBoxes(
+    chuteBounds?: { minX: number; maxX: number; minZ: number; maxZ: number },
+    targetCount = 36
+  ) {
+    const cx = chuteBounds ? chuteBounds.maxX : -1.1;
+    const cz = chuteBounds ? chuteBounds.minZ : 1.1;
+
+    let boxIdx = 0;
+
+    // ── 1. 槍位攻防組 (Chute Battle Line / 槍位封口盒) ──
+    // A: 大槍位 (Corner tip flip box - right at acrylic baffle post corner)
+    this.spawnSingleBlindBoxWithRotation(cx + 0.38, 0.52, cz + 0.10, 0, 0.12, 0, boxIdx++);
+    // B: 洞口後緣封口盒 (Resting horizontally along back baffle)
+    this.spawnSingleBlindBoxWithRotation(cx - 0.25, 0.32, cz - 0.45, Math.PI / 2, 0, 0, boxIdx++);
+    // C: 右側擋板攻防盒 (Leaning on side along right baffle)
+    this.spawnSingleBlindBoxWithRotation(cx + 0.35, 0.32, cz + 0.95, 0, 0, Math.PI / 2, boxIdx++);
+    // D: 前方右角封門盒
+    this.spawnSingleBlindBoxWithRotation(cx + 0.38, 0.52, cz + 1.85, 0, -0.08, 0, boxIdx++);
+    // E: 後方延伸第二擋位
+    this.spawnSingleBlindBoxWithRotation(cx - 1.10, 0.52, cz - 0.45, 0, 0.05, 0, boxIdx++);
+    // F: 橋位懸空誘惑盒 (Perched dynamically over corner of boxes A & B)
+    this.spawnSingleBlindBoxWithRotation(cx + 0.10, 1.05, cz - 0.18, 0.12, 0.35, 0.08, boxIdx++);
+    // G: 洞口轉角外側墊腳盒
+    this.spawnSingleBlindBoxWithRotation(cx + 1.15, 0.52, cz + 0.10, 0, -0.15, 0, boxIdx++);
+    // H: 右側第二排護衛盒
+    this.spawnSingleBlindBoxWithRotation(cx + 1.15, 0.52, cz + 0.95, 0, 0.08, 0, boxIdx++);
+
+    // ── 2. 排山倒海主貨堆 (Tiered Mountain Display Grid) ──
+    // Tier 1: Ground Display Grid (4 columns x 4 rows = 16 boxes)
+    const colXs = [0.4, 1.25, 2.1, 2.95];
+    const rowZs = [-2.1, -1.15, -0.2, 0.75];
+
+    for (let c = 0; c < colXs.length; c++) {
+      for (let r = 0; r < rowZs.length; r++) {
+        if (boxIdx >= targetCount - 10) break;
+        const x = colXs[c] + (Math.random() - 0.5) * 0.08;
+        const z = rowZs[r] + (Math.random() - 0.5) * 0.08;
+        const ry = (c * 0.06 - r * 0.04) + (Math.random() - 0.5) * 0.06;
+        this.spawnSingleBlindBoxWithRotation(x, 0.51, z, 0, ry, 0, boxIdx++);
+      }
+    }
+
+    // Tier 2: Mid-Elevation Stacking Layer (8-10 boxes resting on Tier 1)
+    const midCols = [0.8, 1.65, 2.5];
+    const midRows = [-1.6, -0.65, 0.3];
+    for (let c = 0; c < midCols.length; c++) {
+      for (let r = 0; r < midRows.length; r++) {
+        if (boxIdx >= targetCount - 3) break;
+        const x = midCols[c] + (Math.random() - 0.5) * 0.06;
+        const z = midRows[r] + (Math.random() - 0.5) * 0.06;
+        const isFlat = (c + r) % 2 === 0;
+        if (isFlat) {
+          this.spawnSingleBlindBoxWithRotation(x, 1.28, z, Math.PI / 2, 0, 0, boxIdx++);
+        } else {
+          this.spawnSingleBlindBoxWithRotation(x, 1.50, z, 0, (Math.random() - 0.5) * 0.1, 0, boxIdx++);
+        }
+      }
+    }
+
+    // Tier 3: Summit Peak (3 attractive showstopper boxes at the apex)
+    this.spawnSingleBlindBoxWithRotation(1.2, 1.98, -0.7, 0.08, 0.25, 0.05, boxIdx++);
+    this.spawnSingleBlindBoxWithRotation(2.0, 1.98, -0.5, -0.05, -0.20, 0.08, boxIdx++);
+    this.spawnSingleBlindBoxWithRotation(1.6, 2.05, -1.2, 0.12, 0, -0.10, boxIdx++);
   }
 
   // ══════════════════════════════════════════════════════════════

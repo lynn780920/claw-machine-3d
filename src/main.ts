@@ -58,8 +58,8 @@ async function init() {
   scene = new THREE.Scene();
   createArcadeEnvironment(scene);
 
-  // Camera settings matching User's preferred screenshot camera angle
-  camera = new THREE.PerspectiveCamera(48, window.innerWidth / window.innerHeight, 0.1, 100);
+  // Camera settings matching Kujiflip 40-degree low distortion perspective
+  camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 100);
   camera.position.set(0, 5.6, 9.2); // Player eye-level front-facing view matching user screenshot
 
   // Auto-detect Mobile Device & Power Saver Defaults
@@ -688,6 +688,7 @@ function setupUIEventListeners() {
   }
 
   let currentMachineMode: string = 'medium';
+  let cameraViewMode: 'front' | 'side' = 'front';
 
   function switchMachineMode(mode: string) {
     // Normalize aliases
@@ -701,7 +702,7 @@ function setupUIEventListeners() {
 
     const btnLabel = document.querySelector('#switch-machine-btn .nav-btn-label');
     if (btnLabel) {
-      if (mode === 'small') btnLabel.textContent = '切換機台 (#01 🌸 小型機台)';
+      if (mode === 'small') btnLabel.textContent = '切換機台 (#01 🌸 小型機台 · 潮玩盲盒)';
       else if (mode === 'medium') btnLabel.textContent = '切換機台 (#02 👑 中型機台)';
       else if (mode === 'large') btnLabel.textContent = '切換機台 (#03 ⚡ 中大機台)';
       else if (mode === 'kbasket') btnLabel.textContent = '切換機台 (#04 🥊 K霸機台)';
@@ -726,28 +727,31 @@ function setupUIEventListeners() {
     };
 
     if (mode === 'small') {
-      // 🌸 小型機台 (7.6m 寬深高, 精巧小爪 0.8x + 特寫視角 + 精緻小夾物水壺)
-      claw.setClawScale(0.80);
+      // 🌸 小型機台 (7.6m 寬深高, 精巧小爪 0.82x + Kujiflip特寫視角 + POP MART 潮玩盲盒精品台)
+      claw.setClawScale(0.82);
       claw.setMachineBounds(chuteHomeX, chuteHomeZ, 3.1);
 
       syncDIPPanelUI({
-        strong: '88',
-        height: '50',
-        weak: '48',
+        strong: '92',
+        height: '52',
+        weak: '45',
         tophit: '18',
-        speed: '4.5',
+        speed: '4.2',
         length: '6.5',
-        baffle: '0.4',
-        dolls: '50',
+        baffle: '0.45',
+        dolls: '36',
         antiswing: 'disabled',
-        prizetype: 'sanrio_bottle'
+        prizetype: 'blindbox'
       });
 
-      prizesManager.spawnPrizes(50, 'sanrio_bottle', 3.4, chuteBounds);
+      prizesManager.spawnPrizes(36, 'blindbox', 3.4, chuteBounds);
 
-      // Close-up intimate camera angle for mini/small cabinet
-      controls.target.set(0, 2.5, 0);
-      camera.position.set(0, 4.6, 7.5);
+      // Close-up intimate camera angle matching Kujiflip
+      cameraViewMode = 'front';
+      const camBtnLabel = document.querySelector('#toggle-camera-btn .nav-btn-label');
+      if (camBtnLabel) camBtnLabel.textContent = '視角: 正面';
+      controls.target.set(0.3, 1.8, 0.1);
+      camera.position.set(0.3, 4.0, 7.0);
       controls.update();
     } else if (mode === 'large') {
       // ⚡ 中大機台 (12.0m 寬深高, 加大強爪 1.12x + 寬闊公仔展示空間 + 動漫模型大賞)
@@ -824,8 +828,54 @@ function setupUIEventListeners() {
     }
   }
 
+  // 🎥 Perspective Angle Toggle (Front eye-level / Side chute depth inspection)
+  function toggleCameraView() {
+    cameraViewMode = (cameraViewMode === 'front') ? 'side' : 'front';
+    const btnLabel = document.querySelector('#toggle-camera-btn .nav-btn-label');
+    if (btnLabel) {
+      btnLabel.textContent = (cameraViewMode === 'front') ? '視角: 正面' : '視角: 側面 (出貨口)';
+    }
+
+    if (cameraViewMode === 'front') {
+      if (currentMachineMode === 'small') {
+        controls.target.set(0.3, 1.8, 0.1);
+        camera.position.set(0.3, 4.0, 7.0);
+      } else if (currentMachineMode === 'large') {
+        controls.target.set(0, 3.4, 0);
+        camera.position.set(0, 6.2, 11.2);
+      } else if (currentMachineMode === 'kbasket') {
+        controls.target.set(0, 3.8, 0);
+        camera.position.set(0, 7.5, 13.8);
+      } else {
+        controls.target.set(0, 3.2, 0);
+        camera.position.set(0, 5.6, 9.2);
+      }
+    } else {
+      // Side view looking directly through the transparent side window into chute battle line!
+      if (currentMachineMode === 'small') {
+        controls.target.set(-0.9, 1.6, 1.4);
+        camera.position.set(-4.6, 3.6, 3.6);
+      } else if (currentMachineMode === 'large') {
+        controls.target.set(-1.8, 2.5, 2.2);
+        camera.position.set(-7.5, 5.2, 5.8);
+      } else if (currentMachineMode === 'kbasket') {
+        controls.target.set(-2.2, 3.0, 2.8);
+        camera.position.set(-9.2, 6.2, 7.0);
+      } else {
+        controls.target.set(-1.4, 2.2, 1.8);
+        camera.position.set(-6.0, 4.5, 4.8);
+      }
+    }
+    controls.update();
+  }
+
   // Expose globally for instant button bindings
   (window as any).switchMachineMode = switchMachineMode;
+  (window as any).toggleCameraView = toggleCameraView;
+
+  document.getElementById('toggle-camera-btn')?.addEventListener('click', () => {
+    toggleCameraView();
+  });
 
   document.getElementById('power-saver-btn')?.addEventListener('click', () => {
     (window as any).togglePowerSaver();
