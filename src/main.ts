@@ -672,28 +672,79 @@ function setupUIEventListeners() {
     applyDIPSettings();
   }
 
-  let currentMachineMode: string = 'standard';
+  let currentMachineMode: string = 'medium';
 
   function switchMachineMode(mode: string) {
+    // Normalize aliases
+    if (mode === 'sanrio') mode = 'small';
+    if (mode === 'standard') mode = 'medium';
+    if (mode === 'anime') mode = 'large';
+
     currentMachineMode = mode;
     const modeSelect = document.getElementById('setting-machinemode') as HTMLSelectElement | null;
     if (modeSelect) modeSelect.value = mode;
 
     const btnLabel = document.querySelector('#switch-machine-btn .nav-btn-label');
     if (btnLabel) {
-      if (mode === 'kbasket') btnLabel.textContent = '切換機台 (#02 K-霸家電大爪)';
-      else if (mode === 'sanrio') btnLabel.textContent = '切換機台 (#03 三麗鷗水壺)';
-      else if (mode === 'anime') btnLabel.textContent = '切換機台 (#04 動漫模型)';
-      else btnLabel.textContent = '切換機台 (#01 經典娃娃機)';
+      if (mode === 'small') btnLabel.textContent = '切換機台 (#01 🌸 小型機台)';
+      else if (mode === 'medium') btnLabel.textContent = '切換機台 (#02 👑 中型機台)';
+      else if (mode === 'large') btnLabel.textContent = '切換機台 (#03 ⚡ 中大機台)';
+      else if (mode === 'kbasket') btnLabel.textContent = '切換機台 (#04 🥊 K霸機台)';
     }
 
     // Clear all existing prizes completely first!
     prizesManager.clearPrizes();
     if (cabinet) cabinet.setTheme(mode);
 
-    if (mode === 'kbasket') {
-      // ⚡ K-霸 巨型家電玩具機台 (100% exact matching parameters from user screenshot)
-      claw.setClawScale(1.3);
+    if (mode === 'small') {
+      // 🌸 小型機台 (精巧小爪 + 特寫視角 + 精緻小夾物水壺)
+      claw.setClawScale(0.80);
+
+      syncDIPPanelUI({
+        strong: '88',
+        height: '50',
+        weak: '48',
+        tophit: '18',
+        speed: '4.5',
+        length: '6.5',
+        baffle: '0.4',
+        dolls: '50',
+        antiswing: 'disabled',
+        prizetype: 'sanrio_bottle'
+      });
+
+      prizesManager.spawnPrizes(50, 'sanrio_bottle');
+
+      // Close-up intimate camera angle for mini/small cabinet
+      controls.target.set(0, 2.8, 0);
+      camera.position.set(0, 4.8, 7.8);
+      controls.update();
+    } else if (mode === 'large') {
+      // ⚡ 中大機台 (加大強爪 + 寬闊公仔展示空間 + 動漫模型大賞)
+      claw.setClawScale(1.12);
+
+      syncDIPPanelUI({
+        strong: '95',
+        height: '70',
+        weak: '32',
+        tophit: '35',
+        speed: '4.2',
+        length: '7.5',
+        baffle: '0.6',
+        dolls: '35',
+        antiswing: 'disabled',
+        prizetype: 'anime'
+      });
+
+      prizesManager.spawnPrizes(35, 'anime');
+
+      // Wide elevated perspective for medium-large cabinet
+      controls.target.set(0, 3.2, 0);
+      camera.position.set(0, 5.8, 9.8);
+      controls.update();
+    } else if (mode === 'kbasket') {
+      // 🥊 K-霸機台 (1.35x 霸王巨爪 + 遠景震撼大空間 + 巨型家電大盒)
+      claw.setClawScale(1.35);
 
       syncDIPPanelUI({
         strong: '79',
@@ -710,55 +761,12 @@ function setupUIEventListeners() {
 
       prizesManager.spawnPrizes(20, 'giant_appliances');
 
+      // Broad panoramic perspective for mega appliance K-Pa cabinet
       controls.target.set(0, 3.2, 0);
-      camera.position.set(0, 5.6, 9.2);
-      controls.update();
-    } else if (mode === 'sanrio') {
-      // ✨ 三麗鷗精品水壺機台 (可愛水壺)
-      claw.setClawScale(0.95);
-
-      syncDIPPanelUI({
-        strong: '88',
-        height: '50',
-        weak: '48',
-        tophit: '18',
-        speed: '4.5',
-        length: '6.5',
-        baffle: '0.6',
-        dolls: '50',
-        antiswing: 'disabled',
-        prizetype: 'sanrio_bottle'
-      });
-
-      prizesManager.spawnPrizes(50, 'sanrio_bottle');
-
-      controls.target.set(0, 3.2, 0);
-      camera.position.set(0, 5.6, 9.2);
-      controls.update();
-    } else if (mode === 'anime') {
-      // ⚡ 動漫模型大賞機台 (七龍珠/航海王盒裝模型)
-      claw.setClawScale(1.05);
-
-      syncDIPPanelUI({
-        strong: '95',
-        height: '70',
-        weak: '32',
-        tophit: '35',
-        speed: '4.2',
-        length: '7.5',
-        baffle: '0.5',
-        dolls: '35',
-        antiswing: 'disabled',
-        prizetype: 'anime'
-      });
-
-      prizesManager.spawnPrizes(35, 'anime');
-
-      controls.target.set(0, 3.2, 0);
-      camera.position.set(0, 5.6, 9.2);
+      camera.position.set(0, 6.3, 10.6);
       controls.update();
     } else {
-      // 👑 經典黃色 TOY STORY 娃娃機
+      // 👑 中型機台 (1.0x 標準爪 + 標準經典黃色 TOY STORY 娃娃機)
       claw.setClawScale(1.0);
 
       syncDIPPanelUI({
@@ -776,6 +784,7 @@ function setupUIEventListeners() {
 
       prizesManager.spawnPrizes(80, 'mixed');
 
+      // Standard classic arcade perspective
       controls.target.set(0, 3.2, 0);
       camera.position.set(0, 5.6, 9.2);
       controls.update();
@@ -790,8 +799,13 @@ function setupUIEventListeners() {
   });
 
   document.getElementById('switch-machine-btn')?.addEventListener('click', () => {
-    const modes = ['standard', 'kbasket', 'sanrio', 'anime'];
-    const nextIdx = (modes.indexOf(currentMachineMode) + 1) % modes.length;
+    const modes = ['small', 'medium', 'large', 'kbasket'];
+    let curKey = currentMachineMode;
+    if (curKey === 'sanrio') curKey = 'small';
+    if (curKey === 'standard') curKey = 'medium';
+    if (curKey === 'anime') curKey = 'large';
+
+    const nextIdx = (modes.indexOf(curKey) + 1) % modes.length;
     switchMachineMode(modes[nextIdx]);
   });
 

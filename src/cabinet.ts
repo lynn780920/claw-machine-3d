@@ -460,7 +460,7 @@ export class Cabinet {
     this.joystickGroup.rotation.x = tiltZ * maxTilt;
   }
 
-  public updateMarqueeText(text: string, textColor: string, shadowColor: string, bgHex: string) {
+  public updateMarqueeText(mainTitle: string, subTitle: string, textColor: string, shadowColor: string, bgHex: string) {
     if (!this.marqueeCanvas) return;
     const mctx = this.marqueeCanvas.getContext('2d');
     if (!mctx) return;
@@ -468,58 +468,72 @@ export class Cabinet {
     mctx.fillStyle = bgHex;
     mctx.fillRect(0, 0, 1024, 256);
 
+    // Neon borders top & bottom
     mctx.fillStyle = shadowColor;
-    mctx.fillRect(0, 0, 1024, 20);
-    mctx.fillRect(0, 236, 1024, 20);
+    mctx.fillRect(0, 0, 1024, 18);
+    mctx.fillRect(0, 238, 1024, 18);
 
-    mctx.shadowColor = shadowColor;
-    mctx.shadowBlur = 12;
-    mctx.fillStyle = textColor;
-    mctx.font = '900 110px "Arial Black", sans-serif';
+    // Subtitle capsule badge
+    mctx.fillStyle = shadowColor;
+    mctx.beginPath();
+    mctx.roundRect(280, 20, 464, 40, 8);
+    mctx.fill();
+
+    mctx.fillStyle = '#ffffff';
+    mctx.font = 'bold 22px sans-serif';
     mctx.textAlign = 'center';
-    mctx.fillText(text, 512, 170);
+    mctx.fillText(subTitle, 512, 48);
+
+    // Main big title
+    mctx.shadowColor = shadowColor;
+    mctx.shadowBlur = 14;
+    mctx.fillStyle = textColor;
+    mctx.font = '900 102px "Arial Black", sans-serif';
+    mctx.textAlign = 'center';
+    mctx.fillText(mainTitle, 512, 178);
+    mctx.shadowBlur = 0;
 
     if (this.marqueeTex) this.marqueeTex.needsUpdate = true;
   }
 
-  // Dynamic Theme Switching (Standard Yellow, K-霸 Gaming Black, Sanrio Dreamy Pink, Anime Gold)
+  // Dynamic Theme Switching for 4 Machine Types (小型機台, 中型機台, 中大機台, K霸機台)
   public setTheme(theme: string) {
     if (theme === 'kbasket') {
-      // 🎮 酷炫極致電競黑紅主題 (沉穩曜石黑機殼 + 熾熱烈焰紅飾條)
+      // 🥊 K-霸機台 (酷炫極致電競黑紅 + 霸王巨爪)
       this.bodyMat.color.setHex(0x111116);
       this.bodyDarkMat.color.setHex(0x22222d);
       this.accentMat.color.setHex(0xff0033);
       this.baffleMat.color.setHex(0xff0033);
       this.neonBorderMat.color.setHex(0xff0033);
       this.neonBorderMat.emissive.setHex(0xff0033);
-      this.updateMarqueeText('K-霸 GAME', '#ffffff', '#ff0033', '#111116');
-    } else if (theme === 'sanrio') {
-      // ✨ 三麗鷗夢幻粉紫主題
+      this.updateMarqueeText('MEGA CLAW', '🥊 K-霸機台 · 巨無霸家電霸王爪', '#ffffff', '#ff0033', '#111116');
+    } else if (theme === 'sanrio' || theme === 'small') {
+      // 🌸 小型機台 (三麗鷗夢幻粉紫 + 精巧爪)
       this.bodyMat.color.setHex(0xf472b6);
       this.bodyDarkMat.color.setHex(0xdb2777);
       this.accentMat.color.setHex(0xa855f7);
       this.baffleMat.color.setHex(0xf472b6);
       this.neonBorderMat.color.setHex(0xc084fc);
       this.neonBorderMat.emissive.setHex(0xc084fc);
-      this.updateMarqueeText('SANRIO 水壺', '#ffffff', '#a855f7', '#f472b6');
-    } else if (theme === 'anime') {
-      // ⚡ 動漫模型黑金尊爵主題
+      this.updateMarqueeText('MINI CLAW', '🌸 小型機台 · 精品小夾物', '#ffffff', '#a855f7', '#f472b6');
+    } else if (theme === 'anime' || theme === 'large') {
+      // ⚡ 中大機台 (動漫模型黑金尊爵 + 加大強爪)
       this.bodyMat.color.setHex(0x1a1625);
       this.bodyDarkMat.color.setHex(0x2d2438);
       this.accentMat.color.setHex(0xf59e0b);
       this.baffleMat.color.setHex(0xf59e0b);
       this.neonBorderMat.color.setHex(0xfcb316);
       this.neonBorderMat.emissive.setHex(0xfcb316);
-      this.updateMarqueeText('ANIME 模型', '#ffffff', '#f59e0b', '#1a1625');
+      this.updateMarqueeText('BIG PRIZE', '⚡ 中大機台 · 動漫模型大賞', '#ffffff', '#f59e0b', '#1a1625');
     } else {
-      // 👑 經典黃色 TOY STORY 娃娃機
+      // 👑 中型機台 (經典黃色 TOY STORY 娃娃機)
       this.bodyMat.color.setHex(0xffcc00);
       this.bodyDarkMat.color.setHex(0xe6b800);
       this.accentMat.color.setHex(0xdc2626);
       this.baffleMat.color.setHex(0x00f0ff);
       this.neonBorderMat.color.setHex(0x00f0ff);
       this.neonBorderMat.emissive.setHex(0x00f0ff);
-      this.updateMarqueeText('TOY STORY', '#dc2626', '#ffe600', '#ffcc00');
+      this.updateMarqueeText('TOY STORY', '👑 中型機台 · 經典標準街機', '#dc2626', '#ffe600', '#ffcc00');
     }
   }
 }
