@@ -114,6 +114,79 @@ export class SoundEngine {
 
     noise.start();
   }
+
+  // 🪙 Metallic Coin Drop Clink SFX (清脆金屬投幣落幣聲)
+  public playCoinDropSFX() {
+    this.initCtx();
+    if (!this.ctx || this.isMuted) return;
+
+    const t = this.ctx.currentTime;
+    // Two quick high metallic pings (coin slot entry + internal chute bounce)
+    [
+      { freq: 2800, delay: 0.0,  duration: 0.12, vol: 0.22 },
+      { freq: 3600, delay: 0.08, duration: 0.18, vol: 0.28 }
+    ].forEach(p => {
+      const osc = this.ctx!.createOscillator();
+      const gain = this.ctx!.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(p.freq, t + p.delay);
+
+      gain.gain.setValueAtTime(p.vol, t + p.delay);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + p.delay + p.duration);
+
+      osc.connect(gain);
+      gain.connect(this.ctx!.destination);
+      osc.start(t + p.delay);
+      osc.stop(t + p.delay + p.duration);
+    });
+  }
+
+  // 🕹️ Claw Solenoid Snap / "二收" 合爪機械扣合音效
+  public playClawCloseSFX() {
+    this.initCtx();
+    if (!this.ctx || this.isMuted) return;
+
+    const t = this.ctx.currentTime;
+    // Low mechanical click
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(320, t);
+    osc.frequency.exponentialRampToValueAtTime(80, t + 0.06);
+
+    gain.gain.setValueAtTime(0.25, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.06);
+
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start(t);
+    osc.stop(t + 0.065);
+  }
+
+  // 🚗 Carriage Servo Motor Movement Pulse (天車移動伺服馬達嗡鳴)
+  private lastMotorSFXTime = 0;
+  public playMotorStepSFX() {
+    this.initCtx();
+    if (!this.ctx || this.isMuted) return;
+    const now = performance.now();
+    if (now - this.lastMotorSFXTime < 120) return; // Throttle sound pulses
+    this.lastMotorSFXTime = now;
+
+    const t = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(140, t);
+    osc.frequency.linearRampToValueAtTime(180, t + 0.05);
+
+    gain.gain.setValueAtTime(0.04, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
+
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start(t);
+    osc.stop(t + 0.055);
+  }
 }
 
 export const soundEngine = new SoundEngine();

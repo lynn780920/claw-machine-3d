@@ -66,17 +66,20 @@ export class PrizesManager {
       const types = [
         'chiikawa', 'capybara', 'kirby', 'my_cat',
         'blindbox', 'snack_pack',
-        'dragonball', 'onepiece', 'mug_box', 'sanrio_bottle', 'cookie_box'
+        'dragonball', 'onepiece', 'mug_box', 'sanrio_bottle', 'cookie_box',
+        'ssr_golden_capybara', 'ssr_glowing_labubu'
       ];
       prizeType = types[Math.floor(Math.random() * types.length)];
     } else if (typeFilter === 'giant_appliances') {
       const types = ['ps5', 'switch', 'dyson', 'marshall', 'lego', 'giant_bear'];
       prizeType = types[Math.floor(Math.random() * types.length)];
     } else if (typeFilter === 'anime') {
-      const types = ['dragonball', 'onepiece', 'blindbox'];
+      const types = ['dragonball', 'onepiece', 'blindbox', 'ssr_glowing_labubu'];
       prizeType = types[Math.floor(Math.random() * types.length)];
     }
     switch (prizeType) {
+      case 'ssr_golden_capybara': this.spawnGoldenCapybara(x, y, z); break;
+      case 'ssr_glowing_labubu':  this.spawnGlowingBlindBox(x, y, z); break;
       case 'chiikawa':      this.spawnChiikawa(x, y, z); break;
       case 'capybara':      this.spawnCapybara(x, y, z); break;
       case 'kirby':         this.spawnKirby(x, y, z); break;
@@ -1717,6 +1720,190 @@ export class PrizesManager {
 
       this.physics.registerBody(phyBody, group);
       this.bodies.push(phyBody);
+    }
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  //  🏆  SSR 24K GOLDEN LUCKY CAPYBARA (純金招財水豚君 · 稀有大獎)
+  //  Pure polished mirror gold finish, golden orange, red talisman
+  // ══════════════════════════════════════════════════════════════
+  private spawnGoldenCapybara(x: number, y: number, z: number) {
+    const group = new THREE.Group();
+    group.position.set(x, y, z);
+    group.rotation.y = Math.random() * Math.PI * 2;
+    group.scale.set(1.30, 1.30, 1.30);
+
+    const goldMat = new THREE.MeshStandardMaterial({
+      color: 0xffd700,
+      metalness: 0.94,
+      roughness: 0.16,
+      emissive: 0xffaa00,
+      emissiveIntensity: 0.28
+    });
+    const snoutGoldMat = new THREE.MeshStandardMaterial({
+      color: 0xe6b800,
+      metalness: 0.90,
+      roughness: 0.22
+    });
+    const goldOrangeMat = new THREE.MeshStandardMaterial({
+      color: 0xffa500,
+      metalness: 0.88,
+      roughness: 0.18,
+      emissive: 0xff6600,
+      emissiveIntensity: 0.35
+    });
+    const redCollarMat = new THREE.MeshStandardMaterial({
+      color: 0xdc2626,
+      roughness: 0.3
+    });
+    const eyeMat = new THREE.MeshBasicMaterial({ color: 0x111111 });
+
+    // Loaf Body
+    const bodyMesh = new THREE.Mesh(new THREE.CapsuleGeometry(0.36, 0.48, 8, 16), goldMat);
+    bodyMesh.rotation.x = Math.PI / 2;
+    bodyMesh.scale.set(1.05, 0.95, 0.95);
+    bodyMesh.castShadow = true;
+    group.add(bodyMesh);
+
+    // Chunky Snout & Head
+    const headMesh = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.44, 0.42), snoutGoldMat);
+    headMesh.position.set(0, 0.16, 0.38);
+    headMesh.castShadow = true;
+    group.add(headMesh);
+
+    const muzzle = new THREE.Mesh(new THREE.SphereGeometry(0.24, 12, 12), snoutGoldMat);
+    muzzle.position.set(0, 0.14, 0.54);
+    muzzle.scale.set(1.0, 0.85, 0.65);
+    group.add(muzzle);
+
+    // Eyes
+    const eyeGeo = new THREE.CapsuleGeometry(0.02, 0.06, 4, 6);
+    const le = new THREE.Mesh(eyeGeo, eyeMat);
+    le.position.set(-0.25, 0.22, 0.36); le.rotation.z = Math.PI / 2; le.rotation.y = -0.3;
+    const re = new THREE.Mesh(eyeGeo, eyeMat);
+    re.position.set(0.25, 0.22, 0.36); re.rotation.z = Math.PI / 2; re.rotation.y = 0.3;
+    group.add(le, re);
+
+    // Golden Mandarin Orange on Head
+    const orange = new THREE.Mesh(new THREE.SphereGeometry(0.13, 14, 14), goldOrangeMat);
+    orange.position.set(0, 0.46, 0.32);
+    orange.scale.set(1.15, 0.92, 1.15);
+    group.add(orange);
+
+    // Red Lucky Talisman Ribbon / Collar around neck
+    const collar = new THREE.Mesh(new THREE.TorusGeometry(0.36, 0.045, 8, 20), redCollarMat);
+    collar.position.set(0, 0.02, 0.22);
+    collar.rotation.x = Math.PI / 2.5;
+    group.add(collar);
+
+    // Lucky Gold Coin Tag hanging from collar
+    const coinPendant = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.025, 16), goldMat);
+    coinPendant.position.set(0, -0.18, 0.45);
+    coinPendant.rotation.x = Math.PI / 2;
+    group.add(coinPendant);
+
+    // Warm golden ambient point light
+    const glowLight = new THREE.PointLight(0xffd700, 1.5, 3.2);
+    glowLight.position.set(0, 0.3, 0.2);
+    group.add(glowLight);
+
+    // 4 legs
+    const legGeo = new THREE.CylinderGeometry(0.11, 0.09, 0.28, 8);
+    const fl = new THREE.Mesh(legGeo, goldMat); fl.position.set(-0.22, -0.34, 0.26);
+    const fr = new THREE.Mesh(legGeo, goldMat); fr.position.set(0.22, -0.34, 0.26);
+    const bl = new THREE.Mesh(legGeo, goldMat); bl.position.set(-0.22, -0.34, -0.26);
+    const br = new THREE.Mesh(legGeo, goldMat); br.position.set(0.22, -0.34, -0.26);
+    group.add(fl, fr, bl, br);
+
+    this.scene.add(group);
+    this.prizes.push(group);
+
+    if (this.physics.world) {
+      const phyBody = this.makeDynBody(x, y, z);
+      this.physics.world.createCollider(
+        RAPIER.ColliderDesc.capsule(0.32, 0.38).setRotation(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1,0,0), Math.PI / 2)).setMass(0.40).setFriction(0.68).setRestitution(0.04), phyBody);
+      this.physics.world.createCollider(
+        RAPIER.ColliderDesc.cuboid(0.24, 0.22, 0.25).setTranslation(0, 0.16, 0.40).setFriction(0.68), phyBody);
+      this.physics.world.createCollider(
+        RAPIER.ColliderDesc.ball(0.13).setTranslation(0, 0.48, 0.32).setFriction(0.68), phyBody);
+      this.physics.registerBody(phyBody, group);
+      this.bodies.push(phyBody);
+    }
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  //  ✨  SSR GLOWING CYBERPUNK LABUBU (夜光霓虹 潮玩盲盒)
+  //  Dynamic glowing box with neon cyan light and emissive runes
+  // ══════════════════════════════════════════════════════════════
+  private spawnGlowingBlindBox(x: number, y: number, z: number) {
+    const W = 0.72, H = 1.02, D = 0.62;
+    const group = new THREE.Group();
+    group.position.set(x, y, z);
+    group.rotation.y = Math.random() * Math.PI * 2;
+
+    const frontTex = this.makeCanvasTex(320, 480, ctx => {
+      ctx.fillStyle = '#05050f'; ctx.fillRect(0, 0, 320, 480);
+
+      // Neon Cyan & Pink Cyberpunk Frame
+      ctx.strokeStyle = '#00f0ff'; ctx.lineWidth = 12; ctx.shadowColor = '#00f0ff'; ctx.shadowBlur = 18;
+      ctx.strokeRect(12, 12, 296, 456);
+
+      // SSR Glowing Badge
+      ctx.fillStyle = '#ff0075'; ctx.fillRect(20, 20, 120, 36);
+      ctx.fillStyle = '#ffffff'; ctx.font = '900 18px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText('SSR NIGHT', 80, 45);
+
+      // Title
+      ctx.shadowColor = '#00f0ff'; ctx.shadowBlur = 15;
+      ctx.fillStyle = '#ffffff'; ctx.font = '900 32px sans-serif';
+      ctx.fillText('LABUBU', 160, 115);
+      ctx.font = 'bold 16px sans-serif'; ctx.fillStyle = '#00f0ff';
+      ctx.fillText('GLOW EDITION', 160, 142);
+
+      // Glowing Rune Circle
+      ctx.strokeStyle = '#ff0075'; ctx.lineWidth = 6; ctx.shadowColor = '#ff0075'; ctx.shadowBlur = 16;
+      ctx.beginPath(); ctx.arc(160, 255, 80, 0, Math.PI * 2); ctx.stroke();
+
+      ctx.fillStyle = '#00f0ff'; ctx.font = '900 60px sans-serif';
+      ctx.fillText('⚡', 160, 275);
+
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = '#ffffff'; ctx.font = 'bold 13px sans-serif';
+      ctx.fillText('★ 100% GLOW IN THE DARK ★', 160, 440);
+    });
+
+    const boxMat = new THREE.MeshStandardMaterial({
+      map: frontTex,
+      roughness: 0.20,
+      metalness: 0.35,
+      emissive: 0x00f0ff,
+      emissiveIntensity: 0.45
+    });
+
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(W, H, D), boxMat);
+    mesh.castShadow = true;
+    group.add(mesh);
+
+    // Glowing Neon Aura Light
+    const neonLight = new THREE.PointLight(0x00f0ff, 1.8, 3.5);
+    neonLight.position.set(0, 0.1, 0.35);
+    group.add(neonLight);
+
+    // Hang Tab on top
+    const hangTab = this.createBoxHangTab(W, H);
+    group.add(hangTab);
+
+    this.scene.add(group);
+    this.prizes.push(group);
+
+    if (this.physics.world) {
+      const body = this.makeDynBody(x, y, z);
+      this.physics.world.createCollider(
+        RAPIER.ColliderDesc.cuboid(W / 2, H / 2, D / 2).setMass(0.38).setFriction(0.42).setRestitution(0.08),
+        body
+      );
+      this.physics.registerBody(body, group);
+      this.bodies.push(body);
     }
   }
 

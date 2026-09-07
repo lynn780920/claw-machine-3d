@@ -225,9 +225,78 @@ function checkWinCondition() {
 
 let winToastTimer: number | null = null;
 
+// 🎉 Celebratory Confetti Cannon Particle Explosion
+function launchConfetti() {
+  const canvas = document.createElement('canvas');
+  canvas.style.position = 'fixed';
+  canvas.style.inset = '0';
+  canvas.style.width = '100vw';
+  canvas.style.height = '100vh';
+  canvas.style.pointerEvents = 'none';
+  canvas.style.zIndex = '99999';
+  document.body.appendChild(canvas);
+
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+
+  const colors = ['#f43f5e', '#38bdf8', '#fbbf24', '#34d399', '#a855f7', '#fb923c', '#ffd700'];
+  const particles: Array<{
+    x: number; y: number; vx: number; vy: number;
+    w: number; h: number; color: string;
+    rot: number; vrot: number;
+  }> = [];
+
+  for (let i = 0; i < 110; i++) {
+    particles.push({
+      x: canvas.width / 2 + (Math.random() - 0.5) * 200,
+      y: canvas.height * 0.45 + (Math.random() - 0.5) * 80,
+      vx: (Math.random() - 0.5) * 22,
+      vy: -Math.random() * 18 - 5,
+      w: Math.random() * 14 + 7,
+      h: Math.random() * 8 + 4,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      rot: Math.random() * Math.PI,
+      vrot: (Math.random() - 0.5) * 0.22
+    });
+  }
+
+  let frame = 0;
+  function step() {
+    ctx!.clearRect(0, 0, canvas.width, canvas.height);
+    let alive = false;
+    for (const p of particles) {
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vy += 0.42; // gravity
+      p.vx *= 0.985;
+      p.rot += p.vrot;
+
+      if (p.y < canvas.height + 60) alive = true;
+
+      ctx!.save();
+      ctx!.translate(p.x, p.y);
+      ctx!.rotate(p.rot);
+      ctx!.fillStyle = p.color;
+      ctx!.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+      ctx!.restore();
+    }
+
+    frame++;
+    if (alive && frame < 200) {
+      requestAnimationFrame(step);
+    } else {
+      canvas.remove();
+    }
+  }
+  step();
+}
+
 function showWinAlert() {
   soundEngine.playWinSFX();
   scratchcardManager.addChance(1);
+  launchConfetti();
 
   const toast = document.getElementById('win-toast');
   if (toast) {
@@ -268,6 +337,7 @@ function handleKeyboardMove(dt: number) {
   if (vx !== 0 || vz !== 0) {
     claw.moveCarriage(vx, vz, dt);
     cabinet.setJoystickTilt(vx, vz);
+    soundEngine.playMotorStepSFX();
   } else if (!isMouseDraggingJoystick) {
     cabinet.setJoystickTilt(0, 0);
   }
@@ -378,9 +448,15 @@ function triggerActionButtonAction() {
   if (claw.state === 'IDLE') {
     plays++;
     updateStatsUI();
+    soundEngine.playCoinDropSFX();
     claw.actionButtonPressed();
-  } else if (claw.state === 'DESCENDING' || claw.state === 'ASCENDING') {
-    // Triggers "二收" or "二拍強退"
+  } else if (claw.state === 'DESCENDING') {
+    // Triggers "二收"
+    soundEngine.playClawCloseSFX();
+    claw.actionButtonPressed();
+  } else if (claw.state === 'ASCENDING') {
+    // Triggers "二拍強退"
+    soundEngine.playClawCloseSFX();
     claw.actionButtonPressed();
   }
 }
@@ -466,6 +542,7 @@ function setupUIEventListeners() {
       if (claw.state === 'IDLE') {
         claw.moveCarriage(vx, vz, 0.016);
         cabinet.setJoystickTilt(vx, vz);
+        soundEngine.playMotorStepSFX();
       }
     };
 
@@ -600,6 +677,39 @@ function setupUIEventListeners() {
     document.getElementById('val-dolls')!.textContent = '100';
     const prizeType = (document.getElementById('setting-prizetype') as HTMLSelectElement)?.value || 'mixed';
     prizesManager.spawnPrizes(100, prizeType);
+  });
+
+  // 🟢 佛心天使台 (100% 強爪、85% 爬升維持、65% 弱爪、0 撞頂、0.3m 擋板)
+  document.getElementById('preset-angel-btn')?.addEventListener('click', () => {
+    (document.getElementById('setting-strong') as HTMLInputElement).value = '100';
+    (document.getElementById('setting-height') as HTMLInputElement).value = '85';
+    (document.getElementById('setting-weak') as HTMLInputElement).value = '65';
+    (document.getElementById('setting-tophit') as HTMLInputElement).value = '0';
+    (document.getElementById('setting-baffle') as HTMLInputElement).value = '0.3';
+    applyDIPSettings();
+    soundEngine.playCoinDropSFX();
+  });
+
+  // 🟡 街機技術台 (標準強爪 92%、55% 爬升、35% 弱爪、20% 撞頂、0.5m 擋板)
+  document.getElementById('preset-arcade-btn')?.addEventListener('click', () => {
+    (document.getElementById('setting-strong') as HTMLInputElement).value = '92';
+    (document.getElementById('setting-height') as HTMLInputElement).value = '55';
+    (document.getElementById('setting-weak') as HTMLInputElement).value = '35';
+    (document.getElementById('setting-tophit') as HTMLInputElement).value = '20';
+    (document.getElementById('setting-baffle') as HTMLInputElement).value = '0.5';
+    applyDIPSettings();
+    soundEngine.playCoinDropSFX();
+  });
+
+  // 🔴 西門町黑心台 (摸摸爪 20%、10% 弱爪、100% 撞頂震落、1.2m 超高擋板)
+  document.getElementById('preset-devil-btn')?.addEventListener('click', () => {
+    (document.getElementById('setting-strong') as HTMLInputElement).value = '20';
+    (document.getElementById('setting-height') as HTMLInputElement).value = '30';
+    (document.getElementById('setting-weak') as HTMLInputElement).value = '10';
+    (document.getElementById('setting-tophit') as HTMLInputElement).value = '100';
+    (document.getElementById('setting-baffle') as HTMLInputElement).value = '1.2';
+    applyDIPSettings();
+    soundEngine.playCoinDropSFX();
   });
 
   // Live update sliders mapping
