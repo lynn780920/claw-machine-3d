@@ -727,9 +727,9 @@ function setupUIEventListeners() {
     };
 
     if (mode === 'small') {
-      // 🌸 小型機台 (7.6m 寬深高, 精巧小爪 0.82x + Kujiflip特寫視角 + POP MART 潮玩盲盒精品台)
-      claw.setClawScale(0.82);
-      claw.setMachineBounds(chuteHomeX, chuteHomeZ, 3.1);
+      // 🌸 小型機台 (真實標準街機比例 寬6.0m x 櫥窗高6.0m x 高底座5.0m, POP MART 6盒精準擺台)
+      claw.setClawScale(0.85);
+      claw.setMachineBounds(chuteHomeX, chuteHomeZ, 2.35);
 
       syncDIPPanelUI({
         strong: '92',
@@ -739,24 +739,24 @@ function setupUIEventListeners() {
         speed: '4.2',
         length: '6.5',
         baffle: '0.45',
-        dolls: '36',
+        dolls: '6',
         antiswing: 'disabled',
         prizetype: 'blindbox'
       });
 
-      prizesManager.spawnPrizes(36, 'blindbox', 3.4, chuteBounds);
+      prizesManager.spawnPrizes(6, 'blindbox', 2.5, chuteBounds);
 
-      // Close-up intimate camera angle matching Kujiflip
+      // Natural eye-level front camera looking at the tall upright machine (手動隨意拖拽視角)
       cameraViewMode = 'front';
       const camBtnLabel = document.querySelector('#toggle-camera-btn .nav-btn-label');
       if (camBtnLabel) camBtnLabel.textContent = '視角: 正面';
-      controls.target.set(0.3, 1.8, 0.1);
-      camera.position.set(0.3, 4.0, 7.0);
+      controls.target.set(0, 1.8, 0.2);
+      camera.position.set(0, 3.8, 9.2);
       controls.update();
     } else if (mode === 'large') {
-      // ⚡ 中大機台 (12.0m 寬深高, 加大強爪 1.12x + 寬闊公仔展示空間 + 動漫模型大賞)
-      claw.setClawScale(1.12);
-      claw.setMachineBounds(chuteHomeX, chuteHomeZ, 5.1);
+      // ⚡ 中大機台 (寬闊修長大型機台 + 25盒動漫大賞)
+      claw.setClawScale(1.15);
+      claw.setMachineBounds(chuteHomeX, chuteHomeZ, 3.7);
 
       syncDIPPanelUI({
         strong: '95',
@@ -766,21 +766,20 @@ function setupUIEventListeners() {
         speed: '4.2',
         length: '7.5',
         baffle: '0.6',
-        dolls: '45',
+        dolls: '25',
         antiswing: 'disabled',
         prizetype: 'anime'
       });
 
-      prizesManager.spawnPrizes(45, 'anime', 6.4, chuteBounds);
+      prizesManager.spawnPrizes(25, 'anime', 4.8, chuteBounds);
 
-      // Wide elevated perspective for medium-large cabinet
-      controls.target.set(0, 3.4, 0);
-      camera.position.set(0, 6.2, 11.2);
+      controls.target.set(0, 2.5, 0.2);
+      camera.position.set(0, 5.0, 12.2);
       controls.update();
     } else if (mode === 'kbasket') {
-      // 🥊 K-霸機台 (14.6m 寬深高 超巨無霸！1.35x 霸王巨爪 + 遠景震撼大空間 + 巨型家電大盒)
+      // 🥊 K-霸機台 (超巨無霸直立機台！1.35x 霸王巨爪 + 12大盒巨型家電)
       claw.setClawScale(1.35);
-      claw.setMachineBounds(chuteHomeX, chuteHomeZ, 6.3);
+      claw.setMachineBounds(chuteHomeX, chuteHomeZ, 4.8);
 
       syncDIPPanelUI({
         strong: '79',
@@ -790,21 +789,20 @@ function setupUIEventListeners() {
         speed: '3.5',
         length: '4.5',
         baffle: '1.1',
-        dolls: '20',
+        dolls: '12',
         antiswing: 'disabled',
         prizetype: 'giant_appliances'
       });
 
-      prizesManager.spawnPrizes(20, 'giant_appliances', 8.0, chuteBounds);
+      prizesManager.spawnPrizes(12, 'giant_appliances', 6.0, chuteBounds);
 
-      // Broad panoramic perspective for mega appliance K-Pa cabinet
-      controls.target.set(0, 3.8, 0);
-      camera.position.set(0, 7.5, 13.8);
+      controls.target.set(0, 2.8, 0.2);
+      camera.position.set(0, 5.6, 14.5);
       controls.update();
     } else {
-      // 👑 中型機台 (10.0m 寬深高 標準街機, 1.0x 標準爪 + 經典黃色 TOY STORY 娃娃機)
+      // 👑 中型機台 (標準街機黃金比例, 1.0x 標準爪 + 40隻繽紛娃娃)
       claw.setClawScale(1.0);
-      claw.setMachineBounds(chuteHomeX, chuteHomeZ, 4.2);
+      claw.setMachineBounds(chuteHomeX, chuteHomeZ, 3.0);
 
       syncDIPPanelUI({
         strong: '100',
@@ -814,16 +812,15 @@ function setupUIEventListeners() {
         speed: '4.0',
         length: '7.0',
         baffle: '0.5',
-        dolls: '80',
+        dolls: '40',
         antiswing: 'disabled',
         prizetype: 'mixed'
       });
 
-      prizesManager.spawnPrizes(80, 'mixed', 5.0, chuteBounds);
+      prizesManager.spawnPrizes(40, 'mixed', 3.8, chuteBounds);
 
-      // Standard classic arcade perspective
-      controls.target.set(0, 3.2, 0);
-      camera.position.set(0, 5.6, 9.2);
+      controls.target.set(0, 2.2, 0.2);
+      camera.position.set(0, 4.4, 10.5);
       controls.update();
     }
   }
@@ -838,32 +835,32 @@ function setupUIEventListeners() {
 
     if (cameraViewMode === 'front') {
       if (currentMachineMode === 'small') {
-        controls.target.set(0.3, 1.8, 0.1);
-        camera.position.set(0.3, 4.0, 7.0);
+        controls.target.set(0, 1.8, 0.2);
+        camera.position.set(0, 3.8, 9.2);
       } else if (currentMachineMode === 'large') {
-        controls.target.set(0, 3.4, 0);
-        camera.position.set(0, 6.2, 11.2);
+        controls.target.set(0, 2.5, 0.2);
+        camera.position.set(0, 5.0, 12.2);
       } else if (currentMachineMode === 'kbasket') {
-        controls.target.set(0, 3.8, 0);
-        camera.position.set(0, 7.5, 13.8);
+        controls.target.set(0, 2.8, 0.2);
+        camera.position.set(0, 5.6, 14.5);
       } else {
-        controls.target.set(0, 3.2, 0);
-        camera.position.set(0, 5.6, 9.2);
+        controls.target.set(0, 2.2, 0.2);
+        camera.position.set(0, 4.4, 10.5);
       }
     } else {
       // Side view looking directly through the transparent side window into chute battle line!
       if (currentMachineMode === 'small') {
-        controls.target.set(-0.9, 1.6, 1.4);
+        controls.target.set(-0.9, 1.6, 1.2);
         camera.position.set(-4.6, 3.6, 3.6);
       } else if (currentMachineMode === 'large') {
-        controls.target.set(-1.8, 2.5, 2.2);
-        camera.position.set(-7.5, 5.2, 5.8);
+        controls.target.set(-1.4, 2.0, 1.8);
+        camera.position.set(-6.5, 4.8, 4.8);
       } else if (currentMachineMode === 'kbasket') {
-        controls.target.set(-2.2, 3.0, 2.8);
-        camera.position.set(-9.2, 6.2, 7.0);
+        controls.target.set(-1.8, 2.4, 2.4);
+        camera.position.set(-8.2, 5.5, 5.8);
       } else {
-        controls.target.set(-1.4, 2.2, 1.8);
-        camera.position.set(-6.0, 4.5, 4.8);
+        controls.target.set(-1.1, 1.8, 1.5);
+        camera.position.set(-5.4, 4.2, 4.2);
       }
     }
     controls.update();

@@ -150,68 +150,100 @@ export class Cabinet {
     return tex;
   }
 
-  // ── Arcade Sunburst Radiant Backdrop (Matching Kujiflip rM()) ──
+  // ── Arcade Japanese Prize Machine Backdrop (Matching Kujiflip 1:1) ──
   public updateBackdrop(theme: string) {
     if (!this.backdropCanvas) return;
     const ctx = this.backdropCanvas.getContext('2d');
     if (!ctx) return;
 
-    let cTop = '#0b1424', cMid = '#14253d', cBottom = '#070d18', accentHex = '#00f0ff', labelText = 'TOY STORY ARCADE';
-    if (theme === 'small' || theme === 'sanrio') {
-      cTop = '#2a1138'; cMid = '#451a5c'; cBottom = '#170820'; accentHex = '#f472b6'; labelText = '★ POP MART 潮玩盲盒旗艦店 ★';
-    } else if (theme === 'large' || theme === 'anime') {
-      cTop = '#1c152a'; cMid = '#2e2145'; cBottom = '#0f0b17'; accentHex = '#f59e0b'; labelText = '⚡ ANIME FIGURE 動漫一番賞 ⚡';
+    let mainTitle = '賞 翻 天';
+    let subTitle = '景品コーナー';
+    let enTitle = 'PRIZE MACHINE';
+    let accentHex = '#f59e0b';
+    let bgTop = '#141c2b';
+    let bgBot = '#0c111a';
+
+    if (theme === 'large' || theme === 'anime') {
+      mainTitle = '一番賞';
+      subTitle = 'フィギュアコーナー';
+      enTitle = 'ANIME MASTERPIECE';
+      accentHex = '#fbbf24';
     } else if (theme === 'kbasket') {
-      cTop = '#1a080c'; cMid = '#331018'; cBottom = '#0d0406'; accentHex = '#ff0033'; labelText = '🥊 MEGA CLAW 霸王家電展 🥊';
+      mainTitle = 'K - 霸';
+      subTitle = '超巨大景品專區';
+      enTitle = 'MEGA CLAW MACHINE';
+      accentHex = '#ef4444';
+      bgTop = '#1c0d12';
+      bgBot = '#0f0508';
+    } else if (theme === 'medium') {
+      mainTitle = '賞 翻 天';
+      subTitle = '景品コーナー';
+      enTitle = 'TOY STORY ARCADE';
+      accentHex = '#f59e0b';
     }
 
-    const grad = ctx.createLinearGradient(0, 0, 0, 1024);
-    grad.addColorStop(0, cTop);
-    grad.addColorStop(0.55, cMid);
-    grad.addColorStop(1, cBottom);
-    ctx.fillStyle = grad;
+    // Deep slate navy background
+    const bgGrad = ctx.createLinearGradient(0, 0, 0, 1024);
+    bgGrad.addColorStop(0, bgTop);
+    bgGrad.addColorStop(1, bgBot);
+    ctx.fillStyle = bgGrad;
     ctx.fillRect(0, 0, 1024, 1024);
 
-    // Radiant arcade sunburst rays from center
-    ctx.save();
-    ctx.translate(512, 420);
-    for (let i = 0; i < 28; i++) {
-      ctx.rotate((Math.PI * 2) / 28);
-      ctx.fillStyle = (i % 2 === 0) ? 'rgba(255, 255, 255, 0.035)' : 'rgba(0, 0, 0, 0.04)';
-      ctx.beginPath();
-      ctx.moveTo(0, 0);
-      ctx.lineTo(-70, -700);
-      ctx.lineTo(70, -700);
-      ctx.closePath();
-      ctx.fill();
-    }
-    ctx.restore();
+    // Subtle dark radial vignette
+    const vig = ctx.createRadialGradient(512, 480, 50, 512, 480, 480);
+    vig.addColorStop(0, 'rgba(255, 255, 255, 0.05)');
+    vig.addColorStop(1, 'rgba(0, 0, 0, 0.4)');
+    ctx.fillStyle = vig;
+    ctx.fillRect(0, 0, 1024, 1024);
 
-    // Center circular radiant glow badge
-    const rg = ctx.createRadialGradient(512, 420, 20, 512, 420, 280);
-    rg.addColorStop(0, 'rgba(255, 255, 255, 0.12)');
-    rg.addColorStop(0.5, 'rgba(255, 255, 255, 0.03)');
-    rg.addColorStop(1, 'rgba(0, 0, 0, 0)');
-    ctx.fillStyle = rg;
-    ctx.beginPath();
-    ctx.arc(512, 420, 280, 0, Math.PI * 2);
-    ctx.fill();
+    // Outer Framed Box (Gold double-border)
+    const fx = 100, fy = 120, fw = 824, fh = 640;
+    ctx.fillStyle = 'rgba(10, 15, 24, 0.65)';
+    ctx.fillRect(fx, fy, fw, fh);
 
-    // Backdrop Emblem Frame
+    // Outer gold rim
+    ctx.strokeStyle = '#d97706';
+    ctx.lineWidth = 6;
+    ctx.strokeRect(fx, fy, fw, fh);
+
+    // Inner gold fine line
     ctx.strokeStyle = accentHex;
-    ctx.lineWidth = 4;
-    ctx.strokeRect(120, 720, 784, 120);
+    ctx.lineWidth = 2.5;
+    ctx.strokeRect(fx + 12, fy + 12, fw - 24, fh - 24);
 
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-    ctx.fillRect(124, 724, 776, 112);
-
-    ctx.fillStyle = '#ffffff';
-    ctx.font = '900 36px "Arial Black", sans-serif';
-    ctx.textAlign = 'center';
+    // Main Gold Title: 賞 翻 天
     ctx.shadowColor = accentHex;
     ctx.shadowBlur = 18;
-    ctx.fillText(labelText, 512, 796);
+    ctx.fillStyle = '#fef08a';
+    ctx.font = '900 92px "Hiragino Kaku Gothic Pro", "Microsoft JhengHei", "Noto Sans TC", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(mainTitle, 512, fy + 240);
+
+    // Japanese Subtitle: 景品コーナー
+    ctx.shadowColor = accentHex;
+    ctx.shadowBlur = 10;
+    ctx.fillStyle = accentHex;
+    ctx.font = 'bold 44px "Hiragino Kaku Gothic Pro", "Microsoft JhengHei", sans-serif';
+    ctx.fillText(subTitle, 512, fy + 340);
+
+    // English Subtitle: PRIZE MACHINE
     ctx.shadowBlur = 0;
+    ctx.fillStyle = '#fde68a';
+    ctx.font = 'bold 28px "Arial Black", sans-serif';
+    ctx.fillText(enTitle, 512, fy + 410);
+
+    // Decorative divider line with diamond
+    ctx.strokeStyle = accentHex;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(fx + 180, fy + 460);
+    ctx.lineTo(fx + fw - 180, fy + 460);
+    ctx.stroke();
+
+    ctx.fillStyle = accentHex;
+    ctx.beginPath();
+    ctx.arc(512, fy + 460, 6, 0, Math.PI * 2);
+    ctx.fill();
 
     if (this.backdropTex) this.backdropTex.needsUpdate = true;
   }
@@ -250,40 +282,43 @@ export class Cabinet {
       this.joystickGroup.remove(this.joystickGroup.children[0]);
     }
 
-    // 3. Set machine dimensions
+    // 3. Set machine dimensions (Authentic Taiwanese Street Claw Machine Aspect Ratios)
     if (mode === 'sanrio' || mode === 'small') {
-      this.width = 7.6;
-      this.depth = 7.6;
-      this.height = 7.6;
-      this.chuteMinX = -3.5;
-      this.chuteMaxX = -1.1;
-      this.chuteMinZ = 1.1;
-      this.chuteMaxZ = 3.5;
+      // 🌸 小型機台 (真實標準街機比例 寬6.0m x 深5.2m x 櫥窗高6.0m, 底座高5.0m)
+      this.width = 6.0;
+      this.depth = 5.2;
+      this.height = 6.0;
+      this.chuteMinX = -2.70;
+      this.chuteMaxX = -0.90;
+      this.chuteMinZ = 0.65;
+      this.chuteMaxZ = 2.25;
     } else if (mode === 'anime' || mode === 'large') {
-      this.width = 12.0;
-      this.depth = 12.0;
-      this.height = 9.2;
-      this.chuteMinX = -5.5;
-      this.chuteMaxX = -1.9;
-      this.chuteMinZ = 1.9;
-      this.chuteMaxZ = 5.5;
+      // ⚡ 中大機台 (寬闊修長大型機台)
+      this.width = 8.8;
+      this.depth = 7.6;
+      this.height = 7.4;
+      this.chuteMinX = -4.00;
+      this.chuteMaxX = -1.35;
+      this.chuteMinZ = 1.10;
+      this.chuteMaxZ = 3.45;
     } else if (mode === 'kbasket') {
-      this.width = 14.6;
-      this.depth = 14.6;
-      this.height = 10.5;
-      this.chuteMinX = -6.7;
-      this.chuteMaxX = -2.3;
-      this.chuteMinZ = 2.3;
-      this.chuteMaxZ = 6.7;
+      // 🥊 K-霸機台 (超巨無霸直立機台)
+      this.width = 11.2;
+      this.depth = 9.8;
+      this.height = 8.4;
+      this.chuteMinX = -5.10;
+      this.chuteMaxX = -1.70;
+      this.chuteMinZ = 1.45;
+      this.chuteMaxZ = 4.45;
     } else {
-      // Standard medium
-      this.width = 10.0;
-      this.depth = 10.0;
-      this.height = 8.5;
-      this.chuteMinX = -4.5;
-      this.chuteMaxX = -1.5;
-      this.chuteMinZ = 1.5;
-      this.chuteMaxZ = 4.5;
+      // 👑 Standard medium (標準街機黃金比例)
+      this.width = 7.4;
+      this.depth = 6.4;
+      this.height = 6.6;
+      this.chuteMinX = -3.30;
+      this.chuteMaxX = -1.10;
+      this.chuteMinZ = 0.85;
+      this.chuteMaxZ = 2.85;
     }
 
     // 4. Update theme materials & backdrop
@@ -402,16 +437,17 @@ export class Cabinet {
     this.mesh.add(rimMesh);
 
     // ── 4. Frame Pillars (Matching theme color & scaled bounds) ──
-    const colSize = 0.38;
+    // ── 4. Frame Pillars (Matching theme color & scaled bounds) ──
+    const colSize = 0.35;
     const addColumn = (x: number, z: number) => {
       const geo = new THREE.BoxGeometry(colSize, this.height, colSize);
       const m = new THREE.Mesh(geo, this.bodyMat);
-      m.position.set(x, this.height / 2 - floorThickness, z);
+      m.position.set(x, this.height / 2, z);
       m.castShadow = true;
       this.mesh.add(m);
 
       if (physics && physics.world) {
-        const bodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(x, this.height / 2 - floorThickness, z);
+        const bodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(x, this.height / 2, z);
         const body = physics.world.createRigidBody(bodyDesc);
         const colDesc = RAPIER.ColliderDesc.cuboid(colSize / 2, this.height / 2, colSize / 2);
         physics.world.createCollider(colDesc, body);
@@ -425,13 +461,13 @@ export class Cabinet {
     addColumn(halfW, halfD);
 
     // Front Pillars Vertical Neon LED Glow Bars (立柱全彩氛圍燈條)
-    const neonBarGeo = new THREE.BoxGeometry(0.08, this.height - 1.8, 0.08);
+    const neonBarGeo = new THREE.BoxGeometry(0.08, this.height - 0.4, 0.08);
     const leftNeon = new THREE.Mesh(neonBarGeo, this.neonBorderMat);
-    leftNeon.position.set(-halfW + 0.24, (this.height - 1.8) / 2, halfD - 0.24);
+    leftNeon.position.set(-halfW + 0.22, this.height / 2, halfD - 0.22);
     this.mesh.add(leftNeon);
 
     const rightNeon = new THREE.Mesh(neonBarGeo, this.neonBorderMat);
-    rightNeon.position.set(halfW - 0.24, (this.height - 1.8) / 2, halfD - 0.24);
+    rightNeon.position.set(halfW - 0.22, this.height / 2, halfD - 0.22);
     this.mesh.add(rightNeon);
 
     // ── 5. Transparent Side Glass Windows ──
@@ -444,16 +480,16 @@ export class Cabinet {
       side: THREE.DoubleSide
     });
 
-    const sideWallGeo = new THREE.BoxGeometry(0.1, this.height - 1.5, this.depth - 0.4);
+    const sideWallGeo = new THREE.BoxGeometry(0.08, this.height, this.depth - 0.1);
     const addSideWall = (x: number) => {
       const wall = new THREE.Mesh(sideWallGeo, sideGlassMat);
-      wall.position.set(x, (this.height - 1.5) / 2, 0);
+      wall.position.set(x, this.height / 2, 0);
       this.mesh.add(wall);
 
       if (physics && physics.world) {
-        const bodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(x, (this.height - 1.5) / 2, 0);
+        const bodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(x, this.height / 2, 0);
         const body = physics.world.createRigidBody(bodyDesc);
-        const colDesc = RAPIER.ColliderDesc.cuboid(0.5 / 2, (this.height - 1.5) / 2, this.depth / 2)
+        const colDesc = RAPIER.ColliderDesc.cuboid(0.5 / 2, this.height / 2, this.depth / 2)
           .setFriction(0.1)
           .setRestitution(0.2);
         physics.world.createCollider(colDesc, body);
@@ -464,30 +500,31 @@ export class Cabinet {
     addSideWall(-halfW);
     addSideWall(halfW);
 
-    // Lower Base Cabinet Box
-    const baseCabinetGeo = new THREE.BoxGeometry(this.width + 0.6, 2.5, this.depth + 0.6);
+    // ── 5B. Real Street Arcade Tall Base Cabinet (約佔總機身高 42%~45%) ──
+    const baseHeight = Math.max(4.8, this.height * 0.82);
+    const baseCabinetGeo = new THREE.BoxGeometry(this.width + 0.35, baseHeight, this.depth + 0.35);
     const baseCabinetMesh = new THREE.Mesh(baseCabinetGeo, this.bodyMat);
-    baseCabinetMesh.position.set(0, -1.5, 0);
+    baseCabinetMesh.position.set(0, -baseHeight / 2, 0);
     this.mesh.add(baseCabinetMesh);
 
     // 4 Base Swivel Wheels at Bottom Corners
-    const wheelGeo = new THREE.CylinderGeometry(0.25, 0.25, 0.2, 16);
+    const wheelGeo = new THREE.CylinderGeometry(0.26, 0.26, 0.20, 16);
     const wheelMat = new THREE.MeshStandardMaterial({ color: 0x111827, roughness: 0.8 });
     const addWheel = (wx: number, wz: number) => {
       const wheel = new THREE.Mesh(wheelGeo, wheelMat);
       wheel.rotation.z = Math.PI / 2;
-      wheel.position.set(wx, -2.85, wz);
+      wheel.position.set(wx, -baseHeight - 0.25, wz);
       this.mesh.add(wheel);
     };
-    const wheelDistX = halfW - 0.5;
-    const wheelDistZ = halfD - 0.5;
+    const wheelDistX = halfW - 0.4;
+    const wheelDistZ = halfD - 0.4;
     addWheel(-wheelDistX, -wheelDistZ);
     addWheel(wheelDistX, -wheelDistZ);
     addWheel(-wheelDistX, wheelDistZ);
     addWheel(wheelDistX, wheelDistZ);
 
     // ── 6. Outer Glass Panes (Front & Back) ──
-    const wallThick = 0.1;
+    const wallThick = 0.08;
     const physThick = 0.5;
     const addGlassPane = (visualW: number, visualH: number, visualD: number, x: number, y: number, z: number, physW = visualW, physD = visualD) => {
       const geo = new THREE.BoxGeometry(visualW, visualH, visualD);
@@ -507,37 +544,46 @@ export class Cabinet {
     };
 
     // Back glass pane
-    addGlassPane(this.width, this.height - 1.5, wallThick, 0, (this.height - 1.5) / 2, -halfD, this.width, physThick);
+    addGlassPane(this.width - 0.1, this.height, wallThick, 0, this.height / 2, -halfD, this.width, physThick);
     // Front glass pane
-    addGlassPane(this.width, this.height - 2.5, wallThick, 0, (this.height + 0.5) / 2, halfD, this.width, physThick);
+    addGlassPane(this.width - 0.1, this.height, wallThick, 0, this.height / 2, halfD, this.width, physThick);
 
-    // High-End Radiant Arcade Backdrop Inside Cabinet (Matching Kujiflip rM())
+    // Japanese Arcade Prize Machine Backdrop Inside Cabinet
     const backWallPlane = new THREE.Mesh(
-      new THREE.PlaneGeometry(this.width - 0.2, this.height - 1.0),
+      new THREE.PlaneGeometry(this.width - 0.2, this.height - 0.1),
       new THREE.MeshStandardMaterial({
         map: this.backdropTex,
         roughness: 0.25,
         metalness: 0.35
       })
     );
-    backWallPlane.position.set(0, (this.height - 1.0) / 2, -halfD + 0.1);
+    backWallPlane.position.set(0, this.height / 2, -halfD + 0.08);
     this.mesh.add(backWallPlane);
 
-    // ── 7. Top Marquee Banner ──
-    const marqueeGeo = new THREE.BoxGeometry(this.width + 0.6, 1.8, 0.4);
+    // ── 7. Freestanding Top Marquee (Matching Kujiflip Rounded Neon Signboard) ──
+    const marqueeW = Math.min(4.5, this.width * 0.72);
+    const marqueeH = 1.30;
+    const marqueeD = 0.32;
+    const marqueeGeo = new THREE.BoxGeometry(marqueeW, marqueeH, marqueeD);
     const marqueeMat = new THREE.MeshStandardMaterial({ map: this.marqueeTex, roughness: 0.2 });
     const marqueeMesh = new THREE.Mesh(marqueeGeo, marqueeMat);
-    marqueeMesh.position.set(0, this.height + 0.2, halfD + 0.1);
+    marqueeMesh.position.set(0, this.height + 0.85, 0);
     this.mesh.add(marqueeMesh);
 
+    // Marquee Glowing Neon Outer Rim
+    const marqueeRimGeo = new THREE.BoxGeometry(marqueeW + 0.12, marqueeH + 0.12, marqueeD - 0.05);
+    const marqueeRimMesh = new THREE.Mesh(marqueeRimGeo, this.neonBorderMat);
+    marqueeRimMesh.position.set(0, this.height + 0.85, 0);
+    this.mesh.add(marqueeRimMesh);
+
     // Roof Top Cap
-    const roofGeo = new THREE.BoxGeometry(this.width + 0.8, 0.5, this.depth + 0.8);
+    const roofGeo = new THREE.BoxGeometry(this.width + 0.6, 0.35, this.depth + 0.6);
     const roofMesh = new THREE.Mesh(roofGeo, this.bodyDarkMat);
-    roofMesh.position.set(0, this.height + 0.8, 0);
+    roofMesh.position.set(0, this.height + 0.18, 0);
     this.mesh.add(roofMesh);
 
     // Warm Golden LED Ceiling Light Grille
-    const ceilingLightGeo = new THREE.BoxGeometry(this.width - 0.8, 0.2, this.depth - 0.8);
+    const ceilingLightGeo = new THREE.BoxGeometry(this.width - 0.6, 0.15, this.depth - 0.6);
     const ceilingLightMat = new THREE.MeshStandardMaterial({
       color: 0xffb703,
       emissive: 0xff9f1c,
@@ -545,69 +591,108 @@ export class Cabinet {
       roughness: 0.2
     });
     const ceilingLightMesh = new THREE.Mesh(ceilingLightGeo, ceilingLightMat);
-    ceilingLightMesh.position.set(0, this.height - 0.2, 0);
+    ceilingLightMesh.position.set(0, this.height - 0.15, 0);
     this.mesh.add(ceilingLightMesh);
 
-    // ── 8. Arcade Console Board & Coin Slot Box ──
-    const consoleW = Math.min(5.2, this.width * 0.52);
-    const consoleGeo = new THREE.BoxGeometry(consoleW, 1.4, 2.0);
-    const consoleMesh = new THREE.Mesh(consoleGeo, this.bodyMat);
-    consoleMesh.position.set(halfW * 0.3, 1.1, halfD + 0.8);
+    // ── 8. Front Protruding Control Console Deck (Matching Kujiflip 1:1) ──
+    const consoleW = Math.min(3.4, this.width * 0.55);
+    const consoleD = 1.35;
+    const consoleH = 0.36;
+    const consoleZ = halfD + consoleD / 2 - 0.12;
+
+    // Beveled Console Shelf Base
+    const consoleMesh = new THREE.Mesh(new THREE.BoxGeometry(consoleW, consoleH, consoleD), this.bodyMat);
+    consoleMesh.position.set(0, 0.12, consoleZ);
+    consoleMesh.castShadow = true;
     this.mesh.add(consoleMesh);
 
-    // Protruding Coin Slot Insert Box
-    const coinBoxGeo = new THREE.BoxGeometry(2.4, 1.2, 0.3);
-    const coinBoxMesh = new THREE.Mesh(coinBoxGeo, this.bodyDarkMat);
-    coinBoxMesh.position.set(0, 0.3, halfD + 1.9);
-    this.mesh.add(coinBoxMesh);
-
-    const coinBorder = new THREE.Mesh(new THREE.BoxGeometry(2.6, 1.4, 0.1), this.accentMat);
-    coinBorder.position.set(0, 0.3, halfD + 1.8);
-    this.mesh.add(coinBorder);
-
-    // Coin Entry Slots & Lock Detail
-    const lockMesh = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.18, 0.18, 0.08, 16),
-      chromeMat
+    // Console Dark Inset Plate
+    const consolePlate = new THREE.Mesh(
+      new THREE.BoxGeometry(consoleW - 0.2, 0.04, consoleD - 0.2),
+      new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.6, roughness: 0.3 })
     );
-    lockMesh.rotation.x = Math.PI / 2;
-    lockMesh.position.set(0, 0.3, halfD + 2.08);
-    this.mesh.add(lockMesh);
+    consolePlate.position.set(0, 0.31, consoleZ);
+    this.mesh.add(consolePlate);
 
-    // Interactive Joystick Group
-    this.joystickGroup.position.set(halfW * 0.04, 1.8, halfD + 0.8);
+    // Protruding Coin Slot Unit (Right of Lower Cabinet at Waist Height)
+    const coinPlate = new THREE.Mesh(
+      new THREE.BoxGeometry(1.2, 1.4, 0.1),
+      new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.8, roughness: 0.2 })
+    );
+    coinPlate.position.set(0.65, -baseHeight * 0.25, halfD + 0.05);
+    this.mesh.add(coinPlate);
 
-    const stickBaseMat = new THREE.MeshStandardMaterial({ color: 0xffcc00, metalness: 0.5, roughness: 0.2 });
-    const stickBase = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.28, 0.08, 24), stickBaseMat);
+    // Chrome Coin Insertion Slot & Return Button
+    const coinSlotMesh = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.45, 0.06), chromeMat);
+    coinSlotMesh.position.set(0.65, -baseHeight * 0.22, halfD + 0.11);
+    this.mesh.add(coinSlotMesh);
+
+    const coinBtnMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.06, 16), chromeMat);
+    coinBtnMesh.rotation.x = Math.PI / 2;
+    coinBtnMesh.position.set(0.65, -baseHeight * 0.33, halfD + 0.11);
+    this.mesh.add(coinBtnMesh);
+
+    // Prize Retrieval Door with Vibrant Orange Door Flap (Left of Lower Cabinet near Knees)
+    const doorFrame = new THREE.Mesh(
+      new THREE.BoxGeometry(1.9, 1.9, 0.08),
+      new THREE.MeshStandardMaterial({ color: 0x475569, metalness: 0.5, roughness: 0.4 })
+    );
+    doorFrame.position.set(-1.45, -baseHeight * 0.65, halfD + 0.04);
+    this.mesh.add(doorFrame);
+
+    const doorFlap = new THREE.Mesh(
+      new THREE.BoxGeometry(1.6, 1.6, 0.06),
+      new THREE.MeshStandardMaterial({ color: 0xea580c, metalness: 0.15, roughness: 0.35 })
+    );
+    doorFlap.position.set(-1.45, -baseHeight * 0.65, halfD + 0.07);
+    this.mesh.add(doorFlap);
+
+    // 🕹️ Interactive Joystick Group (Left Side of Console Deck)
+    this.joystickGroup.position.set(-0.65, 0.32, consoleZ);
+
+    const stickBaseMat = new THREE.MeshStandardMaterial({ color: 0x111827, metalness: 0.3, roughness: 0.5 });
+    const stickBase = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.28, 0.08, 24), stickBaseMat);
     stickBase.position.y = 0.04;
     this.joystickGroup.add(stickBase);
 
-    const stickGeo = new THREE.CylinderGeometry(0.045, 0.045, 0.55, 16);
+    const stickGeo = new THREE.CylinderGeometry(0.045, 0.045, 0.46, 16);
     const stick = new THREE.Mesh(stickGeo, chromeMat);
-    stick.position.y = 0.3;
+    stick.position.y = 0.28;
     stick.castShadow = true;
     this.joystickGroup.add(stick);
 
-    // Red Ball Top Joystick
-    const ballGeo = new THREE.SphereGeometry(0.22, 24, 24);
+    // Red Ball Top Knob
+    const ballGeo = new THREE.SphereGeometry(0.20, 24, 24);
     const ballMat = new THREE.MeshStandardMaterial({
       color: 0xdc2626,
       emissive: 0xdc2626,
-      emissiveIntensity: 0.2,
+      emissiveIntensity: 0.25,
       metalness: 0.2,
       roughness: 0.1
     });
     this.joystickBall = new THREE.Mesh(ballGeo, ballMat);
-    this.joystickBall.position.y = 0.58;
+    this.joystickBall.position.y = 0.52;
     this.joystickBall.castShadow = true;
     this.joystickBall.name = 'joystickBall';
     this.joystickGroup.add(this.joystickBall);
 
-    // Glowing Green Action Button
-    const btnGeo = new THREE.CylinderGeometry(0.32, 0.32, 0.12, 24);
-    const btnMat = new THREE.MeshStandardMaterial({ color: 0x16a34a, emissive: 0x16a34a, emissiveIntensity: 0.5 });
+    // 🔴 Big Red Arcade Action Push Button (Right Side of Console Deck)
+    const btnBaseGeo = new THREE.CylinderGeometry(0.32, 0.36, 0.08, 24);
+    const btnBaseMat = new THREE.MeshStandardMaterial({ color: 0x111827, roughness: 0.6 });
+    const btnBaseMesh = new THREE.Mesh(btnBaseGeo, btnBaseMat);
+    btnBaseMesh.position.set(0.65, 0.34, consoleZ);
+    this.mesh.add(btnBaseMesh);
+
+    const btnGeo = new THREE.CylinderGeometry(0.24, 0.26, 0.12, 24);
+    const btnMat = new THREE.MeshStandardMaterial({
+      color: 0xdc2626,
+      emissive: 0xdc2626,
+      emissiveIntensity: 0.35,
+      metalness: 0.15,
+      roughness: 0.15
+    });
     this.actionButtonMesh = new THREE.Mesh(btnGeo, btnMat);
-    this.actionButtonMesh.position.set(halfW * 0.44, 1.8, halfD + 0.8);
+    this.actionButtonMesh.position.set(0.65, 0.40, consoleZ);
     this.actionButtonMesh.name = 'actionButton';
     this.mesh.add(this.actionButtonMesh);
 
@@ -726,29 +811,24 @@ export class Cabinet {
     mctx.fillStyle = bgHex;
     mctx.fillRect(0, 0, 1024, 256);
 
-    // Neon borders top & bottom
-    mctx.fillStyle = shadowColor;
-    mctx.fillRect(0, 0, 1024, 18);
-    mctx.fillRect(0, 238, 1024, 18);
-
-    // Subtitle capsule badge
-    mctx.fillStyle = shadowColor;
-    mctx.beginPath();
-    mctx.roundRect(260, 20, 504, 40, 8);
-    mctx.fill();
-
-    mctx.fillStyle = '#ffffff';
-    mctx.font = 'bold 22px sans-serif';
-    mctx.textAlign = 'center';
-    mctx.fillText(subTitle, 512, 48);
-
-    // Main big title
+    // Glowing Neon Rounded Border
+    mctx.strokeStyle = shadowColor;
+    mctx.lineWidth = 14;
     mctx.shadowColor = shadowColor;
-    mctx.shadowBlur = 14;
+    mctx.shadowBlur = 18;
+    mctx.beginPath();
+    mctx.roundRect(24, 24, 976, 208, 36);
+    mctx.stroke();
+    mctx.shadowBlur = 0;
+
+    // Golden Main Big Title: 賞 翻 天
     mctx.fillStyle = textColor;
-    mctx.font = '900 96px "Arial Black", sans-serif';
+    mctx.font = '900 116px "Hiragino Kaku Gothic Pro", "Microsoft JhengHei", "Noto Sans TC", sans-serif';
     mctx.textAlign = 'center';
-    mctx.fillText(mainTitle, 512, 178);
+    mctx.textBaseline = 'middle';
+    mctx.shadowColor = shadowColor;
+    mctx.shadowBlur = 18;
+    mctx.fillText(mainTitle, 512, 128);
     mctx.shadowBlur = 0;
 
     if (this.marqueeTex) this.marqueeTex.needsUpdate = true;
@@ -764,16 +844,18 @@ export class Cabinet {
       this.baffleMat.color.setHex(0xff0033);
       this.neonBorderMat.color.setHex(0xff0033);
       this.neonBorderMat.emissive.setHex(0xff0033);
-      this.updateMarqueeText('MEGA CLAW', '🥊 K-霸機台 · 巨無霸家電霸王爪', '#ffffff', '#ff0033', '#111116');
+      this.updateMarqueeText('K - 霸', '', '#ffffff', '#ff0033', '#111116');
     } else if (theme === 'sanrio' || theme === 'small') {
-      // 🌸 小型機台 (POP MART 潮玩盲盒精品台 · 夢幻粉紫)
-      this.bodyMat.color.setHex(0xf472b6);
-      this.bodyDarkMat.color.setHex(0xdb2777);
-      this.accentMat.color.setHex(0xa855f7);
-      this.baffleMat.color.setHex(0x38bdf8);
-      this.neonBorderMat.color.setHex(0xec4899);
-      this.neonBorderMat.emissive.setHex(0xec4899);
-      this.updateMarqueeText('POP MART', '🌸 小型機台 · POP MART 潮玩盲盒大賞', '#ffffff', '#ec4899', '#831843');
+      // 🌸 小型機台 (1:1 還原 Kujiflip 經典象牙白日系街機 + 金色霓虹招牌)
+      this.bodyMat.color.setHex(0xf8fafc);
+      this.bodyDarkMat.color.setHex(0xe2e8f0);
+      this.accentMat.color.setHex(0xf59e0b);
+      this.baffleMat.color.setHex(0xffffff);
+      this.baffleMat.opacity = 0.22;
+      this.baffleMat.transparent = true;
+      this.neonBorderMat.color.setHex(0xf59e0b);
+      this.neonBorderMat.emissive.setHex(0xf59e0b);
+      this.updateMarqueeText('賞 翻 天', '', '#fef08a', '#f59e0b', '#101014');
     } else if (theme === 'anime' || theme === 'large') {
       // ⚡ 中大機台 (動漫模型黑金尊爵 + 加大強爪)
       this.bodyMat.color.setHex(0x1a1625);

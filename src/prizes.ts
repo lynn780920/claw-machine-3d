@@ -2002,70 +2002,43 @@ export class PrizesManager {
     }
   }
 
-  // ── Taiwanese Claw Machine Realistic Staged Blind Box Arrangement (排山倒海 + 槍位攻防) ──
+  // ── Taiwanese Claw Machine Realistic Staged Blind Box Arrangement (Matching Kujiflip 1:1) ──
   private spawnStagedBlindBoxes(
     chuteBounds?: { minX: number; maxX: number; minZ: number; maxZ: number },
-    targetCount = 36
+    targetCount = 6
   ) {
-    const cx = chuteBounds ? chuteBounds.maxX : -1.1;
-    const cz = chuteBounds ? chuteBounds.minZ : 1.1;
+    const cx = chuteBounds ? chuteBounds.maxX : -0.95;
+    const cz = chuteBounds ? chuteBounds.minZ : 0.75;
 
     let boxIdx = 0;
 
-    // ── 1. 槍位攻防組 (Chute Battle Line / 槍位封口盒) ──
-    // A: 大槍位 (Corner tip flip box - right at acrylic baffle post corner)
-    this.spawnSingleBlindBoxWithRotation(cx + 0.38, 0.52, cz + 0.10, 0, 0.12, 0, boxIdx++);
-    // B: 洞口後緣封口盒 (Resting horizontally along back baffle)
-    this.spawnSingleBlindBoxWithRotation(cx - 0.25, 0.32, cz - 0.45, Math.PI / 2, 0, 0, boxIdx++);
-    // C: 右側擋板攻防盒 (Leaning on side along right baffle)
-    this.spawnSingleBlindBoxWithRotation(cx + 0.35, 0.32, cz + 0.95, 0, 0, Math.PI / 2, boxIdx++);
-    // D: 前方右角封門盒
-    this.spawnSingleBlindBoxWithRotation(cx + 0.38, 0.52, cz + 1.85, 0, -0.08, 0, boxIdx++);
-    // E: 後方延伸第二擋位
-    this.spawnSingleBlindBoxWithRotation(cx - 1.10, 0.52, cz - 0.45, 0, 0.05, 0, boxIdx++);
-    // F: 橋位懸空誘惑盒 (Perched dynamically over corner of boxes A & B)
-    this.spawnSingleBlindBoxWithRotation(cx + 0.10, 1.05, cz - 0.18, 0.12, 0.35, 0.08, boxIdx++);
-    // G: 洞口轉角外側墊腳盒
-    this.spawnSingleBlindBoxWithRotation(cx + 1.15, 0.52, cz + 0.10, 0, -0.15, 0, boxIdx++);
-    // H: 右側第二排護衛盒
-    this.spawnSingleBlindBoxWithRotation(cx + 1.15, 0.52, cz + 0.95, 0, 0.08, 0, boxIdx++);
+    // 1. 大槍位盒 (Corner Tip Flip Box - Right at Acrylic Baffle Corner)
+    this.spawnSingleBlindBoxWithRotation(cx + 0.28, 0.52, cz + 0.15, 0, 0.18, 0, boxIdx++);
 
-    // ── 2. 排山倒海主貨堆 (Tiered Mountain Display Grid) ──
-    // Tier 1: Ground Display Grid (4 columns x 4 rows = 16 boxes)
-    const colXs = [0.4, 1.25, 2.1, 2.95];
-    const rowZs = [-2.1, -1.15, -0.2, 0.75];
+    // 2. 側擋攻防盒 (Chute Side Guard - Lying along the right baffle)
+    this.spawnSingleBlindBoxWithRotation(cx + 0.28, 0.32, cz + 0.95, 0, 0, Math.PI / 2, boxIdx++);
 
-    for (let c = 0; c < colXs.length; c++) {
-      for (let r = 0; r < rowZs.length; r++) {
-        if (boxIdx >= targetCount - 10) break;
-        const x = colXs[c] + (Math.random() - 0.5) * 0.08;
-        const z = rowZs[r] + (Math.random() - 0.5) * 0.08;
-        const ry = (c * 0.06 - r * 0.04) + (Math.random() - 0.5) * 0.06;
-        this.spawnSingleBlindBoxWithRotation(x, 0.51, z, 0, ry, 0, boxIdx++);
+    // 3. 前排迎賓盒 (Center Front Feature Box - Standing upright facing player)
+    this.spawnSingleBlindBoxWithRotation(0.40, 0.52, 1.05, 0, 0, 0, boxIdx++);
+
+    // 4. 後排左展位盒 (Back-Left Showcase Box)
+    this.spawnSingleBlindBoxWithRotation(-0.35, 0.52, -0.65, 0, 0.05, 0, boxIdx++);
+
+    // 5. 後排中展位盒 (Back-Center Showcase Box)
+    this.spawnSingleBlindBoxWithRotation(0.40, 0.52, -0.75, 0, 0, 0, boxIdx++);
+
+    // 6. 後排右展位盒 (Back-Right Showcase Box)
+    this.spawnSingleBlindBoxWithRotation(1.25, 0.52, -0.55, 0, -0.15, 0, boxIdx++);
+
+    // If higher count requested in DIP settings, add subtle rear fillers
+    if (targetCount > 6) {
+      const extraCount = Math.min(targetCount - 6, 8);
+      for (let i = 0; i < extraCount; i++) {
+        const ex = -0.5 + (i % 4) * 0.75;
+        const ez = -1.45 - Math.floor(i / 4) * 0.75;
+        this.spawnSingleBlindBoxWithRotation(ex, 0.52, ez, 0, (Math.random() - 0.5) * 0.1, 0, boxIdx++);
       }
     }
-
-    // Tier 2: Mid-Elevation Stacking Layer (8-10 boxes resting on Tier 1)
-    const midCols = [0.8, 1.65, 2.5];
-    const midRows = [-1.6, -0.65, 0.3];
-    for (let c = 0; c < midCols.length; c++) {
-      for (let r = 0; r < midRows.length; r++) {
-        if (boxIdx >= targetCount - 3) break;
-        const x = midCols[c] + (Math.random() - 0.5) * 0.06;
-        const z = midRows[r] + (Math.random() - 0.5) * 0.06;
-        const isFlat = (c + r) % 2 === 0;
-        if (isFlat) {
-          this.spawnSingleBlindBoxWithRotation(x, 1.28, z, Math.PI / 2, 0, 0, boxIdx++);
-        } else {
-          this.spawnSingleBlindBoxWithRotation(x, 1.50, z, 0, (Math.random() - 0.5) * 0.1, 0, boxIdx++);
-        }
-      }
-    }
-
-    // Tier 3: Summit Peak (3 attractive showstopper boxes at the apex)
-    this.spawnSingleBlindBoxWithRotation(1.2, 1.98, -0.7, 0.08, 0.25, 0.05, boxIdx++);
-    this.spawnSingleBlindBoxWithRotation(2.0, 1.98, -0.5, -0.05, -0.20, 0.08, boxIdx++);
-    this.spawnSingleBlindBoxWithRotation(1.6, 2.05, -1.2, 0.12, 0, -0.10, boxIdx++);
   }
 
   // ══════════════════════════════════════════════════════════════
