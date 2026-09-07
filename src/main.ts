@@ -86,7 +86,7 @@ async function init() {
     });
     const btn = document.getElementById('power-saver-btn');
     if (btn) {
-      btn.textContent = powerSaverMode ? '⚡ 手機極速省電 (已開啟)' : '🚀 高畫質流暢模式';
+      btn.textContent = powerSaverMode ? '極速省電 (已開啟)' : '高畫質流暢模式';
       btn.style.background = powerSaverMode ? '#10b981' : '#6366f1';
     }
   };
@@ -302,7 +302,7 @@ function showWinAlert() {
   if (toast) {
     const textEl = toast.querySelector('.win-toast-text');
     if (textEl) {
-      textEl.textContent = '恭喜中獎！成功夾出娃娃！獲得 1 次刮刮樂！🏆';
+      textEl.textContent = '恭喜中獎！成功夾出娃娃！獲得 1 次刮刮樂！';
     }
     toast.classList.remove('hidden');
     if (winToastTimer !== null) clearTimeout(winToastTimer);
@@ -562,7 +562,7 @@ function setupUIEventListeners() {
   if (bgmBtn) {
     bgmBtn.addEventListener('click', () => {
       const isMuted = soundEngine.toggleMute();
-      bgmBtn.innerHTML = `🎵 <span class="nav-btn-label">${isMuted ? '背景音樂 (關)' : '背景音樂 (開)'}</span>`;
+      bgmBtn.innerHTML = `<span class="nav-btn-label">${isMuted ? '音樂 (關)' : '音樂 (開)'}</span>`;
     });
   }
 
@@ -813,10 +813,10 @@ function setupUIEventListeners() {
 
     const btnLabel = document.querySelector('#switch-machine-btn .nav-btn-label');
     if (btnLabel) {
-      if (mode === 'small') btnLabel.textContent = '切換機台 (#01 🌸 小型機台 · 潮玩盲盒)';
-      else if (mode === 'medium') btnLabel.textContent = '切換機台 (#02 👑 中型機台)';
-      else if (mode === 'large') btnLabel.textContent = '切換機台 (#03 ⚡ 中大機台)';
-      else if (mode === 'kbasket') btnLabel.textContent = '切換機台 (#04 🥊 K霸機台)';
+      if (mode === 'small') btnLabel.textContent = '切換機台 (#01 小型機台 · 潮玩盲盒)';
+      else if (mode === 'medium') btnLabel.textContent = '切換機台 (#02 中型機台)';
+      else if (mode === 'large') btnLabel.textContent = '切換機台 (#03 中大機台)';
+      else if (mode === 'kbasket') btnLabel.textContent = '切換機台 (#04 K霸機台)';
     }
 
     // 1. Clear all existing prizes completely first!

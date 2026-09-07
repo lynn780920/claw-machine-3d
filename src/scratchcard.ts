@@ -25,9 +25,9 @@ export class ScratchcardManager {
       }
     }
 
-    this.prizeGrid[indices[0]] = '🏆 A 獎 (特獎)';
-    this.prizeGrid[indices[1]] = '🥇 B 獎 (頭獎)';
-    this.prizeGrid[indices[2]] = '🥈 C 獎 (二獎)';
+    this.prizeGrid[indices[0]] = 'A 獎 (特獎)';
+    this.prizeGrid[indices[1]] = 'B 獎 (頭獎)';
+    this.prizeGrid[indices[2]] = 'C 獎 (二獎)';
   }
 
   public addChance(amount = 1) {
@@ -97,8 +97,8 @@ export class ScratchcardManager {
 
         <!-- Footer Action Buttons: Large Primary Close Button -->
         <div class="scratch-footer">
-          <button class="close-scratch-footer-btn" id="close-scratch-footer-btn">✖ 關閉刮刮樂視窗</button>
-          <button class="reset-scratch-btn" id="reset-scratch-btn">🔄 重置 50 刮盤面</button>
+          <button class="close-scratch-footer-btn" id="close-scratch-footer-btn">關閉刮刮樂視窗</button>
+          <button class="reset-scratch-btn" id="reset-scratch-btn">重置 50 刮盤面</button>
         </div>
       </div>
     `;
@@ -177,7 +177,7 @@ export class ScratchcardManager {
           const now = Date.now();
           if (now - lastNoChanceTime > 2500) {
             lastNoChanceTime = now;
-            showScratchToast('🎟️ 刮刮卡次數已用完！請繼續夾娃娃獲得資格！');
+            showScratchToast('刮刮卡次數已用完，請繼續夾娃娃獲得資格');
           }
           return;
         }
@@ -201,7 +201,7 @@ export class ScratchcardManager {
 
           if (prizeVal.includes('獎')) {
             soundEngine.playWinSFX();
-            showScratchToast(`🎉 恭喜刮中【${prizeVal}】大獎！大吉大利！🏆`);
+            showScratchToast(`恭喜刮中【${prizeVal}】大獎！`);
           }
         }
       };

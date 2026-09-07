@@ -23,6 +23,7 @@ body {
   font-family: 'Rajdhani', sans-serif;
   overflow: hidden;
   height: 100vh;
+  height: 100dvh;
   display: flex;
   flex-direction: column;
 }
@@ -31,6 +32,7 @@ body {
   display: flex;
   width: 100vw;
   height: 100vh;
+  height: 100dvh;
   position: relative;
   background: radial-gradient(circle at center, #f4f6fc 0%, #e2e5f0 100%);
 }
@@ -82,7 +84,7 @@ body {
 /* ── Unified Floating Top Nav Bar (Responsive Header, Never Overlaps) ── */
 .top-nav-bar {
   position: fixed;
-  top: 12px;
+  top: max(12px, env(safe-area-inset-top, 12px));
   left: 50%;
   transform: translateX(-50%);
   z-index: 100;
@@ -139,7 +141,7 @@ body {
 
 @media (max-width: 500px) {
   .top-nav-bar {
-    top: 6px;
+    top: max(6px, env(safe-area-inset-top, 6px));
     gap: 4px;
     padding: 4px 6px;
     max-width: 98vw;
@@ -402,7 +404,7 @@ body {
 /* Mobile Touch UI Controls */
 .mobile-touch-ui {
   position: absolute;
-  bottom: 20px;
+  bottom: max(20px, env(safe-area-inset-bottom, 20px));
   left: 0;
   width: 100vw;
   height: 160px;
@@ -411,7 +413,8 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0 25px;
+  padding-left: max(25px, env(safe-area-inset-left, 25px));
+  padding-right: max(25px, env(safe-area-inset-right, 25px));
   box-sizing: border-box;
 }
 

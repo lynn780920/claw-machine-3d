@@ -874,7 +874,7 @@ export class Cabinet {
       this.baffleMat.color.setHex(0xf59e0b);
       this.neonBorderMat.color.setHex(0xfcb316);
       this.neonBorderMat.emissive.setHex(0xfcb316);
-      this.updateMarqueeText('BIG PRIZE', '⚡ 中大機台 · 動漫模型大賞', '#ffffff', '#f59e0b', '#1a1625');
+      this.updateMarqueeText('BIG PRIZE', '中大機台 · 動漫模型大賞', '#ffffff', '#f59e0b', '#1a1625');
     } else {
       // 👑 中型機台 (經典黃色街機)
       this.bodyMat.color.setHex(0xffcc00);
