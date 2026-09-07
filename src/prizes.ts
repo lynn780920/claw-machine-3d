@@ -47,29 +47,37 @@ export class PrizesManager {
   private spawnPrizeByType(x: number, y: number, z: number, typeFilter: string) {
     let prizeType = typeFilter;
     if (typeFilter === 'mixed') {
-      const types = ['chiikawa', 'dragonball', 'onepiece', 'mug_box', 'sanrio_bottle', 'cookie_box', 'my_cat', 'chiikawa', 'my_cat'];
+      const types = [
+        'chiikawa', 'capybara', 'kirby', 'my_cat',
+        'blindbox', 'snack_pack',
+        'dragonball', 'onepiece', 'mug_box', 'sanrio_bottle', 'cookie_box'
+      ];
       prizeType = types[Math.floor(Math.random() * types.length)];
     } else if (typeFilter === 'giant_appliances') {
       const types = ['ps5', 'switch', 'dyson', 'marshall', 'lego', 'giant_bear'];
       prizeType = types[Math.floor(Math.random() * types.length)];
     } else if (typeFilter === 'anime') {
-      const types = ['dragonball', 'onepiece'];
+      const types = ['dragonball', 'onepiece', 'blindbox'];
       prizeType = types[Math.floor(Math.random() * types.length)];
     }
     switch (prizeType) {
-      case 'chiikawa':    this.spawnChiikawa(x, y, z); break;
-      case 'dragonball':  this.spawnDragonBallBox(x, y, z); break;
-      case 'onepiece':    this.spawnOnePieceBox(x, y, z); break;
-      case 'mug_box':     this.spawnMugBox(x, y, z); break;
+      case 'chiikawa':      this.spawnChiikawa(x, y, z); break;
+      case 'capybara':      this.spawnCapybara(x, y, z); break;
+      case 'kirby':         this.spawnKirby(x, y, z); break;
+      case 'blindbox':      this.spawnBlindBox(x, y, z); break;
+      case 'snack_pack':    this.spawnSnackPack(x, y, z); break;
+      case 'dragonball':    this.spawnDragonBallBox(x, y, z); break;
+      case 'onepiece':      this.spawnOnePieceBox(x, y, z); break;
+      case 'mug_box':       this.spawnMugBox(x, y, z); break;
       case 'sanrio_bottle': this.spawnSanrioBottle(x, y, z); break;
-      case 'cookie_box':  this.spawnCookieBox(x, y, z); break;
-      case 'my_cat':      this.spawnCalicoCat(x, y, z); break;
-      case 'ps5':         this.spawnPS5Box(x, y, z); break;
-      case 'switch':      this.spawnSwitchBox(x, y, z); break;
-      case 'dyson':       this.spawnDysonVacuumBox(x, y, z); break;
-      case 'marshall':    this.spawnMarshallSpeaker(x, y, z); break;
-      case 'lego':        this.spawnGiantLegoBox(x, y, z); break;
-      case 'giant_bear':  this.spawnGiantTeddyBear(x, y, z); break;
+      case 'cookie_box':    this.spawnCookieBox(x, y, z); break;
+      case 'my_cat':        this.spawnCalicoCat(x, y, z); break;
+      case 'ps5':           this.spawnPS5Box(x, y, z); break;
+      case 'switch':        this.spawnSwitchBox(x, y, z); break;
+      case 'dyson':         this.spawnDysonVacuumBox(x, y, z); break;
+      case 'marshall':      this.spawnMarshallSpeaker(x, y, z); break;
+      case 'lego':          this.spawnGiantLegoBox(x, y, z); break;
+      case 'giant_bear':    this.spawnGiantTeddyBear(x, y, z); break;
       // legacy
       case 'bear': case 'cat': this.spawnChiikawa(x, y, z); break;
       case 'block': this.spawnDragonBallBox(x, y, z); break;
@@ -95,6 +103,121 @@ export class PrizesManager {
     return new THREE.CanvasTexture(c);
   }
 
+  // ── Helper: fabric weave bump texture for realistic plushies ──
+  private makeFabricBumpTex(): THREE.CanvasTexture {
+    const c = document.createElement('canvas');
+    c.width = 128; c.height = 128;
+    const ctx = c.getContext('2d')!;
+    ctx.fillStyle = '#808080'; ctx.fillRect(0, 0, 128, 128);
+    ctx.fillStyle = '#999999';
+    for (let y = 0; y < 128; y += 4) {
+      for (let x = 0; x < 128; x += 4) {
+        if ((x + y) % 8 === 0) ctx.fillRect(x, y, 2, 2);
+      }
+    }
+    const tex = new THREE.CanvasTexture(c);
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.wrapT = THREE.RepeatWrapping;
+    tex.repeat.set(6, 6);
+    return tex;
+  }
+
+  // ── Helper: Realistic Hanging Paper Tag (夾娃娃機必備雷射吊牌) ──
+  private createHangTag(brandText: string, colorHex: string = '#ec4899', isHolo: boolean = true): THREE.Group {
+    const tagGroup = new THREE.Group();
+    // String (thin cord)
+    const cordGeo = new THREE.CylinderGeometry(0.003, 0.003, 0.18, 4);
+    const cordMat = new THREE.MeshBasicMaterial({ color: 0xeeeeee });
+    const cord = new THREE.Mesh(cordGeo, cordMat);
+    cord.position.y = -0.09;
+    tagGroup.add(cord);
+
+    // Card tag texture
+    const tagTex = this.makeCanvasTex(128, 192, ctx => {
+      ctx.fillStyle = colorHex;
+      ctx.fillRect(0, 0, 128, 192);
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 4;
+      ctx.strokeRect(6, 6, 116, 180);
+      if (isHolo) {
+        const hg = ctx.createLinearGradient(0, 0, 128, 192);
+        hg.addColorStop(0, 'rgba(255,0,128,0.25)');
+        hg.addColorStop(0.3, 'rgba(0,255,255,0.3)');
+        hg.addColorStop(0.6, 'rgba(255,255,0,0.3)');
+        hg.addColorStop(1, 'rgba(128,0,255,0.25)');
+        ctx.fillStyle = hg;
+        ctx.fillRect(8, 8, 112, 176);
+      }
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath(); ctx.arc(64, 22, 6, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#111827';
+      ctx.beginPath(); ctx.arc(64, 22, 3, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 18px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(brandText, 64, 75);
+      ctx.font = 'bold 12px sans-serif';
+      ctx.fillText('PRIZE ONLY', 64, 105);
+      ctx.font = '9px sans-serif';
+      ctx.fillText('★ NOT FOR SALE ★', 64, 125);
+      ctx.fillStyle = '#ffffff';
+      for (let bx = 20; bx < 110; bx += 6) {
+        ctx.fillRect(bx, 145, 3, 22);
+      }
+    });
+
+    const tagMat = new THREE.MeshStandardMaterial({
+      map: tagTex,
+      roughness: 0.35,
+      metalness: isHolo ? 0.4 : 0.05,
+      side: THREE.DoubleSide
+    });
+    const tagMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.18, 0.27), tagMat);
+    tagMesh.position.set(0, -0.26, 0);
+    tagMesh.rotation.y = 0.1;
+    tagMesh.rotation.z = 0.15;
+    tagGroup.add(tagMesh);
+    return tagGroup;
+  }
+
+  // ── Helper: Side Woven Fabric Tag (側面布質水洗標) ──
+  private createFabricSideTag(): THREE.Mesh {
+    const fTex = this.makeCanvasTex(128, 64, ctx => {
+      ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, 128, 64);
+      ctx.fillStyle = '#ef4444'; ctx.fillRect(0, 0, 14, 64);
+      ctx.fillStyle = '#1f2937'; ctx.font = 'bold 13px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText('MADE IN JAPAN', 68, 30);
+      ctx.font = '9px sans-serif'; ctx.fillText('© ORIGINAL PLUSH', 68, 48);
+    });
+    const fMat = new THREE.MeshStandardMaterial({ map: fTex, roughness: 0.9, side: THREE.DoubleSide });
+    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(0.12, 0.06), fMat);
+    return mesh;
+  }
+
+  // ── Helper: Figure Box Clear Plastic Hang Tab (盒頂掛勾透明吊把) ──
+  private createBoxHangTab(boxWidth: number, boxHeight: number): THREE.Mesh {
+    const tabTex = this.makeCanvasTex(128, 128, ctx => {
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+      ctx.fillRect(20, 20, 88, 88);
+      ctx.clearRect(44, 44, 40, 40);
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+      ctx.lineWidth = 6;
+      ctx.strokeRect(20, 20, 88, 88);
+      ctx.strokeRect(44, 44, 40, 40);
+    });
+    const tabMat = new THREE.MeshStandardMaterial({
+      map: tabTex,
+      transparent: true,
+      opacity: 0.65,
+      roughness: 0.1,
+      metalness: 0.1,
+      side: THREE.DoubleSide
+    });
+    const tab = new THREE.Mesh(new THREE.PlaneGeometry(0.24, 0.24), tabMat);
+    tab.position.set(0, boxHeight / 2 + 0.10, 0);
+    return tab;
+  }
+
   // ── Helper: create dynamic rigid body ──────────────────────────
   private makeDynBody(x: number, y: number, z: number) {
     return this.physics.world.createRigidBody(
@@ -118,7 +241,14 @@ export class PrizesManager {
     const bodyColor  = [0xf5f5f0, 0xe8eef8, 0xfff3b0][charIdx];
     const cheekColor = 0xffb3ba;
 
-    const bodyMat  = new THREE.MeshStandardMaterial({ color: bodyColor, roughness: 0.85, metalness: 0 });
+    const bumpMap = this.makeFabricBumpTex();
+    const bodyMat  = new THREE.MeshStandardMaterial({
+      color: bodyColor,
+      roughness: 0.88,
+      metalness: 0.02,
+      bumpMap: bumpMap,
+      bumpScale: 0.015
+    });
     const blackMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.4 });
     const whiteMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
     const cheekMat = new THREE.MeshStandardMaterial({ color: cheekColor, roughness: 0.9, transparent: true, opacity: 0.75 });
@@ -136,6 +266,28 @@ export class PrizesManager {
     head.castShadow = true;
     group.add(head);
 
+    // ── Authentic Arcade Paper Hang Tag (正版夾娃娃機雷射吊牌) ──
+    const tagBrand = ['CHIIKAWA', 'HACHIWARE', 'USAGI'][charIdx];
+    const tagColor = ['#f472b6', '#60a5fa', '#fbbf24'][charIdx];
+    const hangTag = this.createHangTag(tagBrand, tagColor, true);
+    hangTag.position.set(0.32, 0.75, -0.05);
+    hangTag.rotation.z = -0.35;
+    hangTag.rotation.y = 0.2;
+    group.add(hangTag);
+
+    // ── Side Fabric Woven Tag (側面布質水洗標) ──
+    const sideTag = this.createFabricSideTag();
+    sideTag.position.set(-0.44, -0.15, -0.05);
+    sideTag.rotation.y = Math.PI / 2;
+    sideTag.rotation.z = 0.2;
+    group.add(sideTag);
+
+    // ── Fluffy Round Tail (立體圓形小尾巴) ──
+    const tailMesh = new THREE.Mesh(new THREE.SphereGeometry(0.09, 12, 12), bodyMat);
+    tailMesh.position.set(0, -0.22, -0.42);
+    tailMesh.scale.set(1.1, 1, 0.9);
+    group.add(tailMesh);
+
     // ── Hachiware blue stripe on forehead ──
     if (charIdx === 1) {
       const stripeMat = new THREE.MeshStandardMaterial({ color: 0x6699cc, roughness: 0.8 });
@@ -152,7 +304,7 @@ export class PrizesManager {
     // ── Ears: Chiikawa/Hachiware=small round, Usagi=long rabbit ──
     if (charIdx === 2) {
       // Usagi long rabbit ears
-      const earMat = new THREE.MeshStandardMaterial({ color: bodyColor, roughness: 0.85 });
+      const earMat = new THREE.MeshStandardMaterial({ color: bodyColor, roughness: 0.85, bumpMap: bumpMap, bumpScale: 0.015 });
       const innerEarMat = new THREE.MeshStandardMaterial({ color: 0xffccd5, roughness: 0.9 });
       const le = new THREE.Mesh(new THREE.CapsuleGeometry(0.09, 0.38, 6, 10), earMat);
       le.position.set(-0.22, 1.08, 0); le.rotation.z = 0.15;
@@ -200,6 +352,13 @@ export class PrizesManager {
     const nose = new THREE.Mesh(new THREE.SphereGeometry(0.022, 8, 8), noseMat);
     nose.position.set(0, 0.605, 0.395); nose.scale.set(1.4, 1, 0.6);
     group.add(nose);
+
+    // ── Embroidered mouth (微笑弧線) ──
+    const mouthMat = new THREE.MeshBasicMaterial({ color: 0x4a4a4a });
+    const mouthMesh = new THREE.Mesh(new THREE.TorusGeometry(0.045, 0.007, 6, 12, Math.PI), mouthMat);
+    mouthMesh.position.set(0, 0.56, 0.388);
+    mouthMesh.rotation.x = Math.PI * 0.15;
+    group.add(mouthMesh);
 
     // ── Tiny arms (nubbins sticking out sides) ──
     const armG = new THREE.SphereGeometry(0.11, 10, 10);
@@ -333,6 +492,10 @@ export class PrizesManager {
     box.castShadow = true;
     group.add(box);
 
+    // Realistic Figure Box Plastic Hang Tab (盒頂日版吊把掛勾)
+    const hangTab = this.createBoxHangTab(W, H);
+    group.add(hangTab);
+
     this.scene.add(group);
     this.prizes.push(group);
 
@@ -427,6 +590,10 @@ export class PrizesManager {
     const box = new THREE.Mesh(new THREE.BoxGeometry(W, H, D), mats);
     box.castShadow = true;
     group.add(box);
+
+    // Realistic Figure Box Plastic Hang Tab (盒頂日版吊把掛勾)
+    const hangTab = this.createBoxHangTab(W, H);
+    group.add(hangTab);
 
     this.scene.add(group);
     this.prizes.push(group);
@@ -1043,6 +1210,17 @@ export class PrizesManager {
     tailTip.position.set(0.24, 0.12, -0.66);
     group.add(tailTip);
 
+    // ── Authentic Paper Hang Tag & Side Tag ──
+    const catHangTag = this.createHangTag('CALICO CAT', '#f97316', true);
+    catHangTag.position.set(0.30, 0.72, -0.05);
+    catHangTag.rotation.z = -0.3;
+    group.add(catHangTag);
+
+    const catSideTag = this.createFabricSideTag();
+    catSideTag.position.set(-0.42, -0.15, -0.05);
+    catSideTag.rotation.y = Math.PI / 2;
+    group.add(catSideTag);
+
     this.scene.add(group);
     this.prizes.push(group);
 
@@ -1335,6 +1513,13 @@ export class PrizesManager {
     bow.position.set(0, 0.35, 0.52);
     group.add(bow);
 
+    // Authentic Giant Bear Hang Tag
+    const bearTag = this.createHangTag('TEDDY BEAR', '#b45309', true);
+    bearTag.position.set(0.55, 1.05, 0.05);
+    bearTag.scale.set(1.4, 1.4, 1.4);
+    bearTag.rotation.z = -0.25;
+    group.add(bearTag);
+
     this.scene.add(group);
     this.prizes.push(group);
 
@@ -1358,6 +1543,481 @@ export class PrizesManager {
 
       this.physics.registerBody(phyBody, group);
       this.bodies.push(phyBody);
+    }
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  //  🦫  CAPYBARA PLUSH WITH YUZU ORANGE  (頂橘子水豚君娃娃)
+  //  Super popular in claw machines! Soft brown loaf body,
+  //  chill half-closed eyes, tiny nostrils, cute mandarin orange on head
+  // ══════════════════════════════════════════════════════════════
+  private spawnCapybara(x: number, y: number, z: number) {
+    const group = new THREE.Group();
+    group.position.set(x, y, z);
+    group.rotation.y = Math.random() * Math.PI * 2;
+    group.scale.set(1.25, 1.25, 1.25);
+
+    const bumpMap = this.makeFabricBumpTex();
+    const capyBrownMat = new THREE.MeshStandardMaterial({
+      color: 0x8b5a2b,
+      roughness: 0.88,
+      metalness: 0.02,
+      bumpMap: bumpMap,
+      bumpScale: 0.018
+    });
+    const snoutMat = new THREE.MeshStandardMaterial({
+      color: 0x5c3a1e,
+      roughness: 0.90,
+      bumpMap: bumpMap,
+      bumpScale: 0.015
+    });
+    const orangeMat = new THREE.MeshStandardMaterial({
+      color: 0xff7700,
+      roughness: 0.35
+    });
+    const leafMat = new THREE.MeshStandardMaterial({
+      color: 0x2e7d32,
+      roughness: 0.5
+    });
+    const eyeMat = new THREE.MeshBasicMaterial({ color: 0x1a1a1a });
+
+    // ── Loaf Body (Horizontal oblong capsule) ──
+    const bodyMesh = new THREE.Mesh(new THREE.CapsuleGeometry(0.36, 0.48, 8, 16), capyBrownMat);
+    bodyMesh.rotation.x = Math.PI / 2;
+    bodyMesh.scale.set(1.05, 0.95, 0.95);
+    bodyMesh.castShadow = true;
+    group.add(bodyMesh);
+
+    // ── Chunky Snout & Head ──
+    const headMesh = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.44, 0.42), snoutMat);
+    headMesh.position.set(0, 0.16, 0.38);
+    headMesh.castShadow = true;
+    group.add(headMesh);
+
+    // Round muzzle front
+    const muzzle = new THREE.Mesh(new THREE.SphereGeometry(0.24, 12, 12), snoutMat);
+    muzzle.position.set(0, 0.14, 0.54);
+    muzzle.scale.set(1.0, 0.85, 0.65);
+    group.add(muzzle);
+
+    // Chill sleepy eyes (thin horizontal slit/capsule)
+    const eyeGeo = new THREE.CapsuleGeometry(0.02, 0.06, 4, 6);
+    const le = new THREE.Mesh(eyeGeo, eyeMat);
+    le.position.set(-0.25, 0.22, 0.36);
+    le.rotation.z = Math.PI / 2;
+    le.rotation.y = -0.3;
+    const re = new THREE.Mesh(eyeGeo, eyeMat);
+    re.position.set(0.25, 0.22, 0.36);
+    re.rotation.z = Math.PI / 2;
+    re.rotation.y = 0.3;
+    group.add(le, re);
+
+    // Nostrils
+    const nostrilGeo = new THREE.SphereGeometry(0.022, 6, 6);
+    const ln = new THREE.Mesh(nostrilGeo, eyeMat);
+    ln.position.set(-0.07, 0.12, 0.68);
+    const rn = new THREE.Mesh(nostrilGeo, eyeMat);
+    rn.position.set(0.07, 0.12, 0.68);
+    group.add(ln, rn);
+
+    // Cute tiny round ears
+    const earGeo = new THREE.SphereGeometry(0.07, 8, 8);
+    const lear = new THREE.Mesh(earGeo, capyBrownMat);
+    lear.position.set(-0.24, 0.36, 0.20);
+    lear.scale.set(0.8, 1, 0.5);
+    const rear = new THREE.Mesh(earGeo, capyBrownMat);
+    rear.position.set(0.24, 0.36, 0.20);
+    rear.scale.set(0.8, 1, 0.5);
+    group.add(lear, rear);
+
+    // ── 🍊 Mandarin Orange / Yuzu on Head ──
+    const orangeMesh = new THREE.Mesh(new THREE.SphereGeometry(0.12, 12, 12), orangeMat);
+    orangeMesh.position.set(0, 0.48, 0.32);
+    orangeMesh.scale.set(1.05, 0.88, 1.05);
+    group.add(orangeMesh);
+
+    // Green leaf & stem
+    const leaf = new THREE.Mesh(new THREE.ConeGeometry(0.04, 0.08, 4), leafMat);
+    leaf.position.set(0.04, 0.58, 0.33);
+    leaf.rotation.z = -0.8;
+    group.add(leaf);
+
+    // ── 4 Tiny Stubby Legs ──
+    const legGeo = new THREE.CylinderGeometry(0.08, 0.09, 0.18, 8);
+    const legPositions = [
+      [-0.22, -0.32, 0.26],
+      [0.22, -0.32, 0.26],
+      [-0.22, -0.32, -0.26],
+      [0.22, -0.32, -0.26]
+    ];
+    legPositions.forEach(([lx, ly, lz]) => {
+      const leg = new THREE.Mesh(legGeo, snoutMat);
+      leg.position.set(lx, ly, lz);
+      group.add(leg);
+    });
+
+    // ── Authentic Arcade Hang Tag & Fabric Tag ──
+    const capyTag = this.createHangTag('CAPYBARA', '#b45309', true);
+    capyTag.position.set(0.28, 0.30, -0.15);
+    capyTag.rotation.z = -0.25;
+    group.add(capyTag);
+
+    const capySideTag = this.createFabricSideTag();
+    capySideTag.position.set(-0.35, -0.10, -0.25);
+    capySideTag.rotation.y = Math.PI / 2;
+    group.add(capySideTag);
+
+    this.scene.add(group);
+    this.prizes.push(group);
+
+    if (this.physics.world) {
+      const phyBody = this.makeDynBody(x, y, z);
+      // Main loaf body capsule
+      this.physics.world.createCollider(
+        RAPIER.ColliderDesc.capsule(0.32, 0.38).setRotation(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1,0,0), Math.PI / 2)).setMass(0.35).setFriction(0.65).setRestitution(0.04), phyBody);
+      // Head & Snout box
+      this.physics.world.createCollider(
+        RAPIER.ColliderDesc.cuboid(0.24, 0.22, 0.25).setTranslation(0, 0.16, 0.40).setFriction(0.65), phyBody);
+      // Top orange hook point
+      this.physics.world.createCollider(
+        RAPIER.ColliderDesc.ball(0.12).setTranslation(0, 0.48, 0.32).setFriction(0.65), phyBody);
+      // Legs
+      this.physics.world.createCollider(
+        RAPIER.ColliderDesc.ball(0.12).setTranslation(-0.22, -0.32, 0.26).setFriction(0.65), phyBody);
+      this.physics.world.createCollider(
+        RAPIER.ColliderDesc.ball(0.12).setTranslation(0.22, -0.32, 0.26).setFriction(0.65), phyBody);
+
+      this.physics.registerBody(phyBody, group);
+      this.bodies.push(phyBody);
+    }
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  //  🌟  KIRBY PLUSH DOLL  (星之卡比 絨毛玩偶)
+  //  Super round bright pink sphere, big vibrant anime eyes,
+  //  red oval shoes, energetic stubby arms, and arcade gold tag
+  // ══════════════════════════════════════════════════════════════
+  private spawnKirby(x: number, y: number, z: number) {
+    const group = new THREE.Group();
+    group.position.set(x, y, z);
+    group.rotation.y = Math.random() * Math.PI * 2;
+    group.scale.set(1.3, 1.3, 1.3);
+
+    const bumpMap = this.makeFabricBumpTex();
+    const pinkMat = new THREE.MeshStandardMaterial({
+      color: 0xff69b4,
+      roughness: 0.85,
+      metalness: 0.02,
+      bumpMap: bumpMap,
+      bumpScale: 0.015
+    });
+    const redShoeMat = new THREE.MeshStandardMaterial({
+      color: 0xd62828,
+      roughness: 0.80,
+      bumpMap: bumpMap,
+      bumpScale: 0.015
+    });
+
+    // Main round sphere body
+    const body = new THREE.Mesh(new THREE.SphereGeometry(0.48, 24, 24), pinkMat);
+    body.castShadow = true;
+    group.add(body);
+
+    // Kirby Eyes (Oval texture: black + blue bottom + white glint top)
+    const eyeTex = this.makeCanvasTex(128, 256, ctx => {
+      ctx.fillStyle = '#0f172a';
+      ctx.beginPath(); ctx.ellipse(64, 128, 48, 105, 0, 0, Math.PI * 2); ctx.fill();
+      // Blue bottom iris
+      ctx.fillStyle = '#0284c7';
+      ctx.beginPath(); ctx.ellipse(64, 175, 40, 52, 0, 0, Math.PI); ctx.fill();
+      // Big white glint
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath(); ctx.ellipse(64, 85, 24, 38, 0, 0, Math.PI * 2); ctx.fill();
+    });
+    const eyeMat = new THREE.MeshBasicMaterial({ map: eyeTex, transparent: true });
+
+    const leftEye = new THREE.Mesh(new THREE.PlaneGeometry(0.13, 0.27), eyeMat);
+    leftEye.position.set(-0.13, 0.08, 0.465);
+    leftEye.rotation.y = -0.15;
+    const rightEye = new THREE.Mesh(new THREE.PlaneGeometry(0.13, 0.27), eyeMat);
+    rightEye.position.set(0.13, 0.08, 0.465);
+    rightEye.rotation.y = 0.15;
+    group.add(leftEye, rightEye);
+
+    // Oval Pink Blush Cheeks
+    const cheekMat = new THREE.MeshStandardMaterial({ color: 0xff1493, roughness: 0.9, transparent: true, opacity: 0.65 });
+    const cheekGeo = new THREE.SphereGeometry(0.08, 10, 10);
+    const lc = new THREE.Mesh(cheekGeo, cheekMat);
+    lc.position.set(-0.27, -0.02, 0.41);
+    lc.scale.set(1.4, 0.7, 0.4);
+    const rc = new THREE.Mesh(cheekGeo, cheekMat);
+    rc.position.set(0.27, -0.02, 0.41);
+    rc.scale.set(1.4, 0.7, 0.4);
+    group.add(lc, rc);
+
+    // Open Happy Mouth
+    const mouthTex = this.makeCanvasTex(128, 128, ctx => {
+      ctx.fillStyle = '#7f1d1d';
+      ctx.beginPath(); ctx.ellipse(64, 64, 38, 48, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#f43f5e';
+      ctx.beginPath(); ctx.ellipse(64, 82, 30, 24, 0, 0, Math.PI * 2); ctx.fill();
+    });
+    const mouthMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.14, 0.16), new THREE.MeshBasicMaterial({ map: mouthTex, transparent: true }));
+    mouthMesh.position.set(0, -0.07, 0.48);
+    group.add(mouthMesh);
+
+    // Stubby Raised Arms
+    const armGeo = new THREE.SphereGeometry(0.14, 12, 12);
+    const la = new THREE.Mesh(armGeo, pinkMat);
+    la.position.set(-0.48, 0.18, 0.12);
+    la.scale.set(1.2, 0.9, 0.9);
+    const ra = new THREE.Mesh(armGeo, pinkMat);
+    ra.position.set(0.48, 0.18, 0.12);
+    ra.scale.set(1.2, 0.9, 0.9);
+    group.add(la, ra);
+
+    // Big Red Shoes (Feet)
+    const shoeGeo = new THREE.SphereGeometry(0.22, 14, 14);
+    const leftShoe = new THREE.Mesh(shoeGeo, redShoeMat);
+    leftShoe.position.set(-0.25, -0.42, 0.14);
+    leftShoe.scale.set(1.0, 0.65, 1.45);
+    leftShoe.rotation.y = -0.25;
+    const rightShoe = new THREE.Mesh(shoeGeo, redShoeMat);
+    rightShoe.position.set(0.25, -0.42, 0.14);
+    rightShoe.scale.set(1.0, 0.65, 1.45);
+    rightShoe.rotation.y = 0.25;
+    group.add(leftShoe, rightShoe);
+
+    // Authentic Nintendo Kirby Tag
+    const kirbyTag = this.createHangTag('KIRBY', '#ec4899', true);
+    kirbyTag.position.set(0.38, 0.42, 0);
+    kirbyTag.rotation.z = -0.3;
+    group.add(kirbyTag);
+
+    this.scene.add(group);
+    this.prizes.push(group);
+
+    if (this.physics.world) {
+      const phyBody = this.makeDynBody(x, y, z);
+      // Main Kirby body sphere
+      this.physics.world.createCollider(
+        RAPIER.ColliderDesc.ball(0.55).setMass(0.28).setFriction(0.62).setRestitution(0.06), phyBody);
+      // Raised arms colliders (Hooking target)
+      this.physics.world.createCollider(
+        RAPIER.ColliderDesc.ball(0.18).setTranslation(-0.55, 0.20, 0.14).setFriction(0.65), phyBody);
+      this.physics.world.createCollider(
+        RAPIER.ColliderDesc.ball(0.18).setTranslation(0.55, 0.20, 0.14).setFriction(0.65), phyBody);
+      // Shoes colliders
+      this.physics.world.createCollider(
+        RAPIER.ColliderDesc.cuboid(0.18, 0.12, 0.26).setTranslation(-0.28, -0.44, 0.16).setFriction(0.60), phyBody);
+      this.physics.world.createCollider(
+        RAPIER.ColliderDesc.cuboid(0.18, 0.12, 0.26).setTranslation(0.28, -0.44, 0.16).setFriction(0.60), phyBody);
+
+      this.physics.registerBody(phyBody, group);
+      this.bodies.push(phyBody);
+    }
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  //  📦  POP MART DESIGNER TOY BLIND BOX  (泡泡瑪特 潮玩盲盒)
+  //  Compact vertical collector box with holographic gloss trim,
+  //  perforated tear strip, barcode, series character lineup
+  // ══════════════════════════════════════════════════════════════
+  private spawnBlindBox(x: number, y: number, z: number) {
+    const W = 0.65, H = 0.95, D = 0.55;
+    const group = new THREE.Group();
+    group.position.set(x, y, z);
+    group.rotation.y = Math.random() * Math.PI * 2;
+
+    const series = [
+      { name: 'SKULLPANDA', sub: 'City of Night', bg: '#18181b', accent: '#a855f7', holo: '#e879f9' },
+      { name: 'LABUBU',     sub: 'The Monsters',  bg: '#1e1b4b', accent: '#38bdf8', holo: '#f43f5e' },
+      { name: 'DIMOO',      sub: 'Retro Series',  bg: '#14532d', accent: '#4ade80', holo: '#facc15' },
+      { name: 'MOLLY',      sub: 'Space V3',      bg: '#4c0519', accent: '#fb7185', holo: '#fbbf24' }
+    ];
+    const s = series[Math.floor(Math.random() * series.length)];
+
+    const frontTex = this.makeCanvasTex(320, 480, ctx => {
+      ctx.fillStyle = s.bg; ctx.fillRect(0, 0, 320, 480);
+
+      // Iridescent decorative gradient border
+      const hg = ctx.createLinearGradient(0, 0, 320, 480);
+      hg.addColorStop(0, s.accent); hg.addColorStop(0.5, s.holo); hg.addColorStop(1, '#ffffff');
+      ctx.strokeStyle = hg; ctx.lineWidth = 10; ctx.strokeRect(10, 10, 300, 460);
+
+      // POP MART Logo Box
+      ctx.fillStyle = '#e11d48'; ctx.fillRect(25, 25, 110, 34);
+      ctx.fillStyle = '#ffffff'; ctx.font = '900 16px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText('POPMART', 80, 48);
+
+      // BLIND BOX Badge
+      ctx.fillStyle = s.accent; ctx.fillRect(195, 25, 100, 34);
+      ctx.fillStyle = '#ffffff'; ctx.font = 'bold 13px sans-serif';
+      ctx.fillText('BLIND BOX', 245, 47);
+
+      // Series Title
+      ctx.fillStyle = '#ffffff'; ctx.font = '900 32px sans-serif';
+      ctx.shadowColor = s.holo; ctx.shadowBlur = 10;
+      ctx.fillText(s.name, 160, 110);
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = s.accent; ctx.font = 'bold 17px sans-serif';
+      ctx.fillText(s.sub, 160, 136);
+
+      // Center Character Silhouette Circle
+      const cx = 160, cy = 250, cr = 85;
+      const cg = ctx.createRadialGradient(cx, cy, 10, cx, cy, cr);
+      cg.addColorStop(0, '#ffffff'); cg.addColorStop(0.7, s.accent); cg.addColorStop(1, s.bg);
+      ctx.fillStyle = cg; ctx.beginPath(); ctx.arc(cx, cy, cr, 0, Math.PI * 2); ctx.fill();
+
+      // Mystery Question Mark
+      ctx.fillStyle = '#ffffff'; ctx.font = '900 85px sans-serif';
+      ctx.fillText('?', 160, 280);
+
+      // Tear strip perforation line
+      ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 3; ctx.setLineDash([8, 8]);
+      ctx.beginPath(); ctx.moveTo(25, 370); ctx.lineTo(295, 370); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = '#ffffff'; ctx.font = 'bold 11px sans-serif';
+      ctx.fillText('✂ PULL TO OPEN HERE ✂', 160, 362);
+
+      // Bottom Barcode & Info
+      ctx.fillStyle = '#ffffff';
+      for (let x = 35; x < 285; x += 5) {
+        const w = (x % 15 === 0) ? 3 : 2;
+        ctx.fillRect(x, 400, w, 35);
+      }
+      ctx.fillStyle = '#9ca3af'; ctx.font = '10px sans-serif';
+      ctx.fillText('1/12 CHANCE FOR SECRET ★ AGE 15+', 160, 455);
+    });
+
+    const sideTex = this.makeCanvasTex(240, 480, ctx => {
+      ctx.fillStyle = s.bg; ctx.fillRect(0, 0, 240, 480);
+      ctx.strokeStyle = s.accent; ctx.lineWidth = 6; ctx.strokeRect(6, 6, 228, 468);
+      ctx.fillStyle = s.accent; ctx.font = 'bold 20px sans-serif'; ctx.textAlign = 'center';
+      ctx.save(); ctx.translate(120, 240); ctx.rotate(-Math.PI / 2);
+      ctx.fillText('POPMART · ' + s.name, 0, 8); ctx.restore();
+    });
+
+    const topTex = this.makeCanvasTex(320, 240, ctx => {
+      ctx.fillStyle = s.bg; ctx.fillRect(0, 0, 320, 240);
+      ctx.fillStyle = s.accent; ctx.fillRect(20, 20, 280, 200);
+      ctx.fillStyle = '#ffffff'; ctx.font = '900 32px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText('★ 盲盒 ★', 160, 130);
+    });
+
+    const boxMat = new THREE.MeshStandardMaterial({ map: frontTex, roughness: 0.25, metalness: 0.2 });
+    const sideMat = new THREE.MeshStandardMaterial({ map: sideTex, roughness: 0.3, metalness: 0.15 });
+    const topMat = new THREE.MeshStandardMaterial({ map: topTex, roughness: 0.3 });
+    const darkMat = new THREE.MeshStandardMaterial({ color: 0x18181b, roughness: 0.5 });
+
+    const mats = [sideMat, sideMat, topMat, darkMat, boxMat, sideMat];
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(W, H, D), mats);
+    mesh.castShadow = true;
+    group.add(mesh);
+
+    // Box top clear hanging tab
+    const hangTab = this.createBoxHangTab(W, H);
+    group.add(hangTab);
+
+    this.scene.add(group);
+    this.prizes.push(group);
+
+    if (this.physics.world) {
+      const body = this.makeDynBody(x, y, z);
+      this.physics.world.createCollider(
+        RAPIER.ColliderDesc.cuboid(W / 2, H / 2, D / 2).setMass(0.30).setFriction(0.42).setRestitution(0.08), body);
+      this.physics.registerBody(body, group);
+      this.bodies.push(body);
+    }
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  //  🥔  JAPANESE CHIPS PILLOW SNACK PACK  (膨脹洋芋片抱枕/大零食包)
+  //  Claw machine classic! Puffed sealed bag with serrated foil ends,
+  //  vibrant crisp photos, calorie info and foil reflections
+  // ══════════════════════════════════════════════════════════════
+  private spawnSnackPack(x: number, y: number, z: number) {
+    const W = 0.82, H = 1.05, D = 0.42;
+    const group = new THREE.Group();
+    group.position.set(x, y, z);
+    group.rotation.y = Math.random() * Math.PI * 2;
+
+    const flavors = [
+      { name: 'CALBEE POTATO', flavor: 'HOT & SPICY',  bg: '#dc2626', chip: '#fbbf24' },
+      { name: 'LAY’S CLASSIC', flavor: 'SEA SALT',      bg: '#eab308', chip: '#fef08a' },
+      { name: 'PIZZA CRUNCH',  flavor: 'CHEESE BURST',  bg: '#ea580c', chip: '#fed7aa' },
+      { name: 'NORI SEAWEED',  flavor: 'WASABI SEAWEED',bg: '#15803d', chip: '#86efac' }
+    ];
+    const fl = flavors[Math.floor(Math.random() * flavors.length)];
+
+    const packTex = this.makeCanvasTex(320, 440, ctx => {
+      ctx.fillStyle = fl.bg; ctx.fillRect(0, 0, 320, 440);
+
+      // Foil serrated crimp bands at top & bottom
+      const silverGrad = ctx.createLinearGradient(0, 0, 320, 0);
+      silverGrad.addColorStop(0, '#9ca3af'); silverGrad.addColorStop(0.5, '#f3f4f6'); silverGrad.addColorStop(1, '#9ca3af');
+      ctx.fillStyle = silverGrad;
+      ctx.fillRect(0, 0, 320, 32);
+      ctx.fillRect(0, 408, 320, 32);
+
+      // Crimped lines
+      ctx.fillStyle = 'rgba(0,0,0,0.2)';
+      for (let cx = 0; cx < 320; cx += 8) {
+        ctx.fillRect(cx, 0, 4, 32);
+        ctx.fillRect(cx, 408, 4, 32);
+      }
+
+      // Brand Oval Badge
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath(); ctx.ellipse(160, 85, 120, 38, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = fl.bg; ctx.font = '900 24px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText(fl.name, 160, 92);
+
+      // Flavor Banner
+      ctx.fillStyle = '#111827'; ctx.fillRect(20, 135, 280, 42);
+      ctx.fillStyle = '#facc15'; ctx.font = 'bold 22px sans-serif';
+      ctx.fillText(fl.flavor, 160, 164);
+
+      // Golden crunchy chip drawing
+      const chX = 160, chY = 270;
+      ctx.fillStyle = fl.chip;
+      ctx.beginPath(); ctx.ellipse(chX, chY, 80, 52, 0.25, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#b45309'; ctx.lineWidth = 4; ctx.stroke();
+
+      // Net weight tag
+      ctx.fillStyle = '#ffffff'; ctx.font = 'bold 15px sans-serif';
+      ctx.fillText('NET WT 180g · BIG PACK', 160, 375);
+    });
+
+    const packMat = new THREE.MeshStandardMaterial({
+      map: packTex,
+      roughness: 0.25,
+      metalness: 0.35
+    });
+
+    // Puffed bag geometry (pillowed cylinder or rounded box)
+    const bagMesh = new THREE.Mesh(new THREE.BoxGeometry(W, H, D), packMat);
+    bagMesh.scale.set(1, 1, 0.85);
+    bagMesh.castShadow = true;
+    group.add(bagMesh);
+
+    // Sealed flat crimp extensions top and bottom
+    const crimpMat = new THREE.MeshStandardMaterial({ color: 0xcccccc, metalness: 0.7, roughness: 0.2 });
+    const topCrimp = new THREE.Mesh(new THREE.BoxGeometry(W + 0.04, 0.08, 0.02), crimpMat);
+    topCrimp.position.y = H / 2 + 0.02;
+    const botCrimp = new THREE.Mesh(new THREE.BoxGeometry(W + 0.04, 0.08, 0.02), crimpMat);
+    botCrimp.position.y = -H / 2 - 0.02;
+    group.add(topCrimp, botCrimp);
+
+    this.scene.add(group);
+    this.prizes.push(group);
+
+    if (this.physics.world) {
+      const body = this.makeDynBody(x, y, z);
+      this.physics.world.createCollider(
+        RAPIER.ColliderDesc.cuboid(W / 2, H / 2, D / 2).setMass(0.28).setFriction(0.48).setRestitution(0.12), body);
+      this.physics.registerBody(body, group);
+      this.bodies.push(body);
     }
   }
 }
