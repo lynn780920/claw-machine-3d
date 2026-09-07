@@ -13,12 +13,24 @@ export class PrizesManager {
     this.physics = physics;
   }
 
-  spawnPrizes(count = 80, typeFilter: string = 'mixed') {
+  spawnPrizes(
+    count = 80,
+    typeFilter: string = 'mixed',
+    spreadRadius: number = 5.2,
+    chuteBounds?: { minX: number; maxX: number; minZ: number; maxZ: number }
+  ) {
     this.clearPrizes();
     for (let i = 0; i < count; i++) {
-      let x = (Math.random() - 0.35) * 5.2;
-      let z = (Math.random() - 0.45) * 5.2;
-      if (x < -1.4 && z > 1.4) x += 2.8; // Clear exit chute area
+      let x = (Math.random() - 0.35) * spreadRadius;
+      let z = (Math.random() - 0.45) * spreadRadius;
+      if (chuteBounds) {
+        if (x >= chuteBounds.minX - 0.5 && x <= chuteBounds.maxX + 0.5 &&
+            z >= chuteBounds.minZ - 0.5 && z <= chuteBounds.maxZ + 0.5) {
+          x = chuteBounds.maxX + 0.6 + Math.random() * (spreadRadius * 0.35);
+        }
+      } else {
+        if (x < -1.4 && z > 1.4) x += 2.8; // Clear exit chute area
+      }
       const tier = Math.floor(i / 16);
       const heightOffset = Math.max(0, (z < 0 ? -z * 0.20 : 0));
       const y = 0.85 + tier * 0.70 + heightOffset + (Math.random() * 0.25);

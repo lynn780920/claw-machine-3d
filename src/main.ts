@@ -538,8 +538,10 @@ function setupUIEventListeners() {
     const targetPoint = new THREE.Vector3();
     if (raycaster.ray.intersectPlane(placePlane, targetPoint)) {
       // Clamp position inside machine cabinet boundaries
-      const clampedX = Math.max(-3.2, Math.min(3.2, targetPoint.x));
-      const clampedZ = Math.max(-3.2, Math.min(3.2, targetPoint.z));
+      const maxBoundX = (cabinet.width / 2) - 0.8;
+      const maxBoundZ = (cabinet.depth / 2) - 0.8;
+      const clampedX = Math.max(-maxBoundX, Math.min(maxBoundX, targetPoint.x));
+      const clampedZ = Math.max(-maxBoundZ, Math.min(maxBoundZ, targetPoint.z));
       const prizeType = (document.getElementById('setting-prizetype') as HTMLSelectElement).value;
 
       prizesManager.spawnSinglePrize(clampedX, 1.2, clampedZ, prizeType);
@@ -547,17 +549,30 @@ function setupUIEventListeners() {
     }
   });
 
-  // Reset toys
-  document.getElementById('reset-toys-btn')!.addEventListener('click', () => {
+  const respawnCurrentPrizes = () => {
     const dollCount = parseInt((document.getElementById('setting-dolls') as HTMLInputElement).value);
     const prizeType = (document.getElementById('setting-prizetype') as HTMLSelectElement).value;
-    prizesManager.spawnPrizes(dollCount, prizeType);
+    const chuteBounds = {
+      minX: cabinet.chuteMinX,
+      maxX: cabinet.chuteMaxX,
+      minZ: cabinet.chuteMinZ,
+      maxZ: cabinet.chuteMaxZ
+    };
+    let spreadRadius = 5.0;
+    if (currentMachineMode === 'small') spreadRadius = 3.4;
+    else if (currentMachineMode === 'large') spreadRadius = 6.4;
+    else if (currentMachineMode === 'kbasket') spreadRadius = 8.0;
+
+    prizesManager.spawnPrizes(dollCount, prizeType, spreadRadius, chuteBounds);
+  };
+
+  // Reset toys
+  document.getElementById('reset-toys-btn')!.addEventListener('click', () => {
+    respawnCurrentPrizes();
   });
 
   document.getElementById('setting-prizetype')!.addEventListener('change', () => {
-    const dollCount = parseInt((document.getElementById('setting-dolls') as HTMLInputElement).value);
-    const prizeType = (document.getElementById('setting-prizetype') as HTMLSelectElement).value;
-    prizesManager.spawnPrizes(dollCount, prizeType);
+    respawnCurrentPrizes();
   });
 
   // Clear stats
@@ -692,13 +707,28 @@ function setupUIEventListeners() {
       else if (mode === 'kbasket') btnLabel.textContent = '切換機台 (#04 🥊 K霸機台)';
     }
 
-    // Clear all existing prizes completely first!
+    // 1. Clear all existing prizes completely first!
     prizesManager.clearPrizes();
-    if (cabinet) cabinet.setTheme(mode);
+
+    // 2. Rebuild the single physical cabinet to target scale & theme
+    if (cabinet) {
+      cabinet.rebuildCabinet(mode, physics);
+    }
+
+    // 3. Dynamic chute & home positions
+    const chuteHomeX = (cabinet.chuteMinX + cabinet.chuteMaxX) / 2;
+    const chuteHomeZ = (cabinet.chuteMinZ + cabinet.chuteMaxZ) / 2;
+    const chuteBounds = {
+      minX: cabinet.chuteMinX,
+      maxX: cabinet.chuteMaxX,
+      minZ: cabinet.chuteMinZ,
+      maxZ: cabinet.chuteMaxZ
+    };
 
     if (mode === 'small') {
-      // 🌸 小型機台 (精巧小爪 + 特寫視角 + 精緻小夾物水壺)
+      // 🌸 小型機台 (7.6m 寬深高, 精巧小爪 0.8x + 特寫視角 + 精緻小夾物水壺)
       claw.setClawScale(0.80);
+      claw.setMachineBounds(chuteHomeX, chuteHomeZ, 3.1);
 
       syncDIPPanelUI({
         strong: '88',
@@ -713,15 +743,16 @@ function setupUIEventListeners() {
         prizetype: 'sanrio_bottle'
       });
 
-      prizesManager.spawnPrizes(50, 'sanrio_bottle');
+      prizesManager.spawnPrizes(50, 'sanrio_bottle', 3.4, chuteBounds);
 
       // Close-up intimate camera angle for mini/small cabinet
-      controls.target.set(0, 2.8, 0);
-      camera.position.set(0, 4.8, 7.8);
+      controls.target.set(0, 2.5, 0);
+      camera.position.set(0, 4.6, 7.5);
       controls.update();
     } else if (mode === 'large') {
-      // ⚡ 中大機台 (加大強爪 + 寬闊公仔展示空間 + 動漫模型大賞)
+      // ⚡ 中大機台 (12.0m 寬深高, 加大強爪 1.12x + 寬闊公仔展示空間 + 動漫模型大賞)
       claw.setClawScale(1.12);
+      claw.setMachineBounds(chuteHomeX, chuteHomeZ, 5.1);
 
       syncDIPPanelUI({
         strong: '95',
@@ -731,20 +762,21 @@ function setupUIEventListeners() {
         speed: '4.2',
         length: '7.5',
         baffle: '0.6',
-        dolls: '35',
+        dolls: '45',
         antiswing: 'disabled',
         prizetype: 'anime'
       });
 
-      prizesManager.spawnPrizes(35, 'anime');
+      prizesManager.spawnPrizes(45, 'anime', 6.4, chuteBounds);
 
       // Wide elevated perspective for medium-large cabinet
-      controls.target.set(0, 3.2, 0);
-      camera.position.set(0, 5.8, 9.8);
+      controls.target.set(0, 3.4, 0);
+      camera.position.set(0, 6.2, 11.2);
       controls.update();
     } else if (mode === 'kbasket') {
-      // 🥊 K-霸機台 (1.35x 霸王巨爪 + 遠景震撼大空間 + 巨型家電大盒)
+      // 🥊 K-霸機台 (14.6m 寬深高 超巨無霸！1.35x 霸王巨爪 + 遠景震撼大空間 + 巨型家電大盒)
       claw.setClawScale(1.35);
+      claw.setMachineBounds(chuteHomeX, chuteHomeZ, 6.3);
 
       syncDIPPanelUI({
         strong: '79',
@@ -759,15 +791,16 @@ function setupUIEventListeners() {
         prizetype: 'giant_appliances'
       });
 
-      prizesManager.spawnPrizes(20, 'giant_appliances');
+      prizesManager.spawnPrizes(20, 'giant_appliances', 8.0, chuteBounds);
 
       // Broad panoramic perspective for mega appliance K-Pa cabinet
-      controls.target.set(0, 3.2, 0);
-      camera.position.set(0, 6.3, 10.6);
+      controls.target.set(0, 3.8, 0);
+      camera.position.set(0, 7.5, 13.8);
       controls.update();
     } else {
-      // 👑 中型機台 (1.0x 標準爪 + 標準經典黃色 TOY STORY 娃娃機)
+      // 👑 中型機台 (10.0m 寬深高 標準街機, 1.0x 標準爪 + 經典黃色 TOY STORY 娃娃機)
       claw.setClawScale(1.0);
+      claw.setMachineBounds(chuteHomeX, chuteHomeZ, 4.2);
 
       syncDIPPanelUI({
         strong: '100',
@@ -782,7 +815,7 @@ function setupUIEventListeners() {
         prizetype: 'mixed'
       });
 
-      prizesManager.spawnPrizes(80, 'mixed');
+      prizesManager.spawnPrizes(80, 'mixed', 5.0, chuteBounds);
 
       // Standard classic arcade perspective
       controls.target.set(0, 3.2, 0);

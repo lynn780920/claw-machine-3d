@@ -3,16 +3,17 @@ import * as RAPIER from '@dimforge/rapier3d-compat';
 import { PhysicsSystem } from './physics';
 
 /**
- * 1:1 Replica of Taiwanese Classic "TOY STORY" Yellow Arcade Claw Machine (冠興黃色經典娃娃機)
- * - Bright Arcade Yellow Cabinet Body & Frame Pillars
- * - Yellow "TOY STORY" Header Marquee Banner
- * - Yellow Front Console & Coin Slot Box with Red Joystick Ball & Green/Red Buttons
- * - Cartoon Decal Side Panels & 4 Base Wheels
+ * 3D Arcade Claw Machine Cabinet
+ * Dynamically resizes to 4 physical scales:
+ * - 小型機台 (Small): 7.6m x 7.6m playfield
+ * - 中型機台 (Medium): 10.0m x 10.0m standard Taiwanese arcade playfield
+ * - 中大機台 (Large): 12.0m x 12.0m wide playfield
+ * - K霸機台 (K-Pa Giant): 14.6m x 14.6m massive giant playfield
  */
 export class Cabinet {
   public mesh: THREE.Group;
-  public width = 10;
-  public depth = 10;
+  public width = 10.0;
+  public depth = 10.0;
   public height = 8.5;
 
   public chuteMinX = -4.5;
@@ -31,11 +32,16 @@ export class Cabinet {
   public joystickBall!: THREE.Mesh;
   public actionButtonMesh!: THREE.Mesh;
 
-  private baffleGroup: THREE.Group;
+  public baffleGroup: THREE.Group;
   private baffleBodies: RAPIER.RigidBody[] = [];
+  public staticBodies: RAPIER.RigidBody[] = [];
+
   public bodyMat!: THREE.MeshStandardMaterial;
   public bodyDarkMat!: THREE.MeshStandardMaterial;
   public accentMat!: THREE.MeshStandardMaterial;
+  public baffleMat!: THREE.MeshStandardMaterial;
+  public neonBorderMat!: THREE.MeshStandardMaterial;
+
   public marqueeCanvas!: HTMLCanvasElement;
   public marqueeTex!: THREE.CanvasTexture;
 
@@ -44,7 +50,6 @@ export class Cabinet {
     this.dropIndicatorGroup = new THREE.Group();
     this.baffleGroup = new THREE.Group();
     this.joystickGroup = new THREE.Group();
-    this.mesh.add(this.baffleGroup);
 
     // Crystal Clear Acrylic Chute Baffle Material
     this.baffleMat = new THREE.MeshStandardMaterial({
@@ -80,25 +85,112 @@ export class Cabinet {
       roughness: 0.2
     });
 
+    // Marquee canvas initialized once
+    this.marqueeCanvas = document.createElement('canvas');
+    this.marqueeCanvas.width = 1024;
+    this.marqueeCanvas.height = 256;
+    this.marqueeTex = new THREE.CanvasTexture(this.marqueeCanvas);
+
+    // Initial Marquee draw
+    this.updateMarqueeText('TOY STORY', '👑 中型機台 · 經典標準街機', '#dc2626', '#ffe600', '#ffcc00');
+
     this.build(physics);
     scene.add(this.mesh);
   }
 
+  public rebuildCabinet(mode: string, physics: PhysicsSystem) {
+    // 1. Remove all static rigid bodies from physics world
+    this.staticBodies.forEach(b => {
+      if (physics && physics.world) {
+        physics.unregisterBody(b);
+        physics.world.removeRigidBody(b);
+      }
+    });
+    this.staticBodies = [];
+
+    this.baffleBodies.forEach(b => {
+      if (physics && physics.world) {
+        physics.unregisterBody(b);
+        physics.world.removeRigidBody(b);
+      }
+    });
+    this.baffleBodies = [];
+
+    // 2. Clear Three.js meshes
+    while (this.mesh.children.length > 0) {
+      this.mesh.remove(this.mesh.children[0]);
+    }
+    while (this.baffleGroup.children.length > 0) {
+      this.baffleGroup.remove(this.baffleGroup.children[0]);
+    }
+    while (this.dropIndicatorGroup.children.length > 0) {
+      this.dropIndicatorGroup.remove(this.dropIndicatorGroup.children[0]);
+    }
+    while (this.joystickGroup.children.length > 0) {
+      this.joystickGroup.remove(this.joystickGroup.children[0]);
+    }
+
+    // 3. Set machine dimensions
+    if (mode === 'sanrio' || mode === 'small') {
+      this.width = 7.6;
+      this.depth = 7.6;
+      this.height = 7.6;
+      this.chuteMinX = -3.5;
+      this.chuteMaxX = -1.1;
+      this.chuteMinZ = 1.1;
+      this.chuteMaxZ = 3.5;
+    } else if (mode === 'anime' || mode === 'large') {
+      this.width = 12.0;
+      this.depth = 12.0;
+      this.height = 9.2;
+      this.chuteMinX = -5.5;
+      this.chuteMaxX = -1.9;
+      this.chuteMinZ = 1.9;
+      this.chuteMaxZ = 5.5;
+    } else if (mode === 'kbasket') {
+      this.width = 14.6;
+      this.depth = 14.6;
+      this.height = 10.5;
+      this.chuteMinX = -6.7;
+      this.chuteMaxX = -2.3;
+      this.chuteMinZ = 2.3;
+      this.chuteMaxZ = 6.7;
+    } else {
+      // Standard medium
+      this.width = 10.0;
+      this.depth = 10.0;
+      this.height = 8.5;
+      this.chuteMinX = -4.5;
+      this.chuteMaxX = -1.5;
+      this.chuteMinZ = 1.5;
+      this.chuteMaxZ = 4.5;
+    }
+
+    // 4. Update theme materials
+    this.setTheme(mode);
+
+    // 5. Rebuild visual meshes & physics
+    this.build(physics);
+  }
+
   private build(physics: PhysicsSystem) {
     const floorThickness = 0.5;
+    const halfW = this.width / 2;
+    const halfD = this.depth / 2;
 
-    // ── 1. Machine Materials ──
+    // Attach sub-groups
+    this.mesh.add(this.baffleGroup);
+    this.mesh.add(this.dropIndicatorGroup);
+    this.mesh.add(this.joystickGroup);
+
+    // ── 1. Materials ──
     const glassMat = new THREE.MeshStandardMaterial({
       color: 0xe0f7fa,
-      opacity: 0.1,
+      opacity: 0.12,
       transparent: true,
       roughness: 0.0,
       metalness: 0.1
     });
-
-    const yellowBodyMat = this.bodyMat;
-    const yellowDarkMat = this.bodyDarkMat;
-    const redAccentMat = this.accentMat;
 
     const chromeMat = new THREE.MeshStandardMaterial({
       color: 0xe2e8f0,
@@ -114,10 +206,11 @@ export class Cabinet {
     const holeMat = new THREE.MeshStandardMaterial({ color: 0x09090b, roughness: 0.9, metalness: 0.1 });
     const holeRimMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.4 });
 
-    // ── 2. Cabinet Base Floor (with hole for prize chute) ──
+    // ── 2. Cabinet Base Floor (Parametric with hole for prize chute) ──
     const addFloorSection = (minX: number, maxX: number, minZ: number, maxZ: number) => {
       const w = maxX - minX;
       const d = maxZ - minZ;
+      if (w <= 0.01 || d <= 0.01) return;
       const x = minX + w / 2;
       const z = minZ + d / 2;
 
@@ -127,60 +220,67 @@ export class Cabinet {
       m.receiveShadow = true;
       this.mesh.add(m);
 
-      if (physics.world) {
+      if (physics && physics.world) {
         const bodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(x, -0.5, z);
         const body = physics.world.createRigidBody(bodyDesc);
         const colDesc = RAPIER.ColliderDesc.cuboid(w / 2, 0.5, d / 2)
           .setFriction(0.6)
           .setRestitution(0.02);
         physics.world.createCollider(colDesc, body);
+        this.staticBodies.push(body);
       }
     };
 
-    // Build floor around the exit hole
-    addFloorSection(-1.5, 5.0, -5.0, 5.0);
-    addFloorSection(-5.0, -1.5, -5.0, 1.5);
-    addFloorSection(-5.0, -4.5, 1.5, 5.0);
-    addFloorSection(-4.5, -1.5, 4.5, 5.0);
+    // 4 seamless non-overlapping sections around the chute opening
+    addFloorSection(this.chuteMaxX, halfW, -halfD, halfD);
+    addFloorSection(-halfW, this.chuteMaxX, -halfD, this.chuteMinZ);
+    addFloorSection(-halfW, this.chuteMinX, this.chuteMinZ, halfD);
+    addFloorSection(this.chuteMinX, this.chuteMaxX, this.chuteMaxZ, halfD);
 
     // ── 3. Chute Baffles ──
     this.rebuildBaffles(this.chuteWallHeight, physics);
 
-    // Chute Pit Hole Visual Dark Slate Box (出貨口黑洞口)
-    const holeGeo = new THREE.BoxGeometry(3.0, 0.6, 3.0);
+    const chuteW = this.chuteMaxX - this.chuteMinX;
+    const chuteD = this.chuteMaxZ - this.chuteMinZ;
+    const chuteCenterX = (this.chuteMinX + this.chuteMaxX) / 2;
+    const chuteCenterZ = (this.chuteMinZ + this.chuteMaxZ) / 2;
+
+    // Chute Pit Hole Visual Dark Box (出貨口黑洞)
+    const holeGeo = new THREE.BoxGeometry(chuteW, 0.6, chuteD);
     const holeMesh = new THREE.Mesh(holeGeo, holeMat);
-    holeMesh.position.set(-3.0, -0.55, 3.0);
+    holeMesh.position.set(chuteCenterX, -0.55, chuteCenterZ);
     this.mesh.add(holeMesh);
 
     // Dark Rim Frame around the chute hole
-    const rimGeo = new THREE.BoxGeometry(3.1, 0.05, 3.1);
+    const rimGeo = new THREE.BoxGeometry(chuteW + 0.1, 0.05, chuteD + 0.1);
     const rimMesh = new THREE.Mesh(rimGeo, holeRimMat);
-    rimMesh.position.set(-3.0, -0.01, 3.0);
+    rimMesh.position.set(chuteCenterX, -0.01, chuteCenterZ);
     this.mesh.add(rimMesh);
 
-    // ── 4. Bright Yellow Frame Pillars ──
+    // ── 4. Frame Pillars (Matching theme color & scaled bounds) ──
     const colSize = 0.38;
     const addColumn = (x: number, z: number) => {
       const geo = new THREE.BoxGeometry(colSize, this.height, colSize);
-      const m = new THREE.Mesh(geo, yellowBodyMat);
+      const m = new THREE.Mesh(geo, this.bodyMat);
       m.position.set(x, this.height / 2 - floorThickness, z);
       m.castShadow = true;
       this.mesh.add(m);
 
-      if (physics.world) {
+      if (physics && physics.world) {
         const bodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(x, this.height / 2 - floorThickness, z);
         const body = physics.world.createRigidBody(bodyDesc);
         const colDesc = RAPIER.ColliderDesc.cuboid(colSize / 2, this.height / 2, colSize / 2);
         physics.world.createCollider(colDesc, body);
+        this.staticBodies.push(body);
       }
     };
 
-    addColumn(-5, -5);
-    addColumn(5, -5);
-    addColumn(-5, 5);
-    addColumn(5, 5);
+    addColumn(-halfW, -halfD);
+    addColumn(halfW, -halfD);
+    addColumn(-halfW, halfD);
+    addColumn(halfW, halfD);
 
-    // ── 5. Crystal Clear Transparent Side Glass Windows (透明左右櫥窗) ──
+    // ── 5. Transparent Side Glass Windows ──
     const sideGlassMat = new THREE.MeshStandardMaterial({
       color: 0xe0f7fa,
       opacity: 0.15,
@@ -190,28 +290,29 @@ export class Cabinet {
       side: THREE.DoubleSide
     });
 
-    const sideWallGeo = new THREE.BoxGeometry(0.1, this.height - 1.5, 9.6);
+    const sideWallGeo = new THREE.BoxGeometry(0.1, this.height - 1.5, this.depth - 0.4);
     const addSideWall = (x: number) => {
       const wall = new THREE.Mesh(sideWallGeo, sideGlassMat);
       wall.position.set(x, (this.height - 1.5) / 2, 0);
       this.mesh.add(wall);
 
-      if (physics.world) {
+      if (physics && physics.world) {
         const bodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(x, (this.height - 1.5) / 2, 0);
         const body = physics.world.createRigidBody(bodyDesc);
-        const colDesc = RAPIER.ColliderDesc.cuboid(0.5 / 2, (this.height - 1.5) / 2, 10 / 2)
+        const colDesc = RAPIER.ColliderDesc.cuboid(0.5 / 2, (this.height - 1.5) / 2, this.depth / 2)
           .setFriction(0.1)
           .setRestitution(0.2);
         physics.world.createCollider(colDesc, body);
+        this.staticBodies.push(body);
       }
     };
 
-    addSideWall(-5.0);
-    addSideWall(5.0);
+    addSideWall(-halfW);
+    addSideWall(halfW);
 
-    // Lower Base Yellow Cabinet Box
-    const baseCabinetGeo = new THREE.BoxGeometry(10.6, 2.5, 10.6);
-    const baseCabinetMesh = new THREE.Mesh(baseCabinetGeo, yellowBodyMat);
+    // Lower Base Cabinet Box
+    const baseCabinetGeo = new THREE.BoxGeometry(this.width + 0.6, 2.5, this.depth + 0.6);
+    const baseCabinetMesh = new THREE.Mesh(baseCabinetGeo, this.bodyMat);
     baseCabinetMesh.position.set(0, -1.5, 0);
     this.mesh.add(baseCabinetMesh);
 
@@ -224,80 +325,61 @@ export class Cabinet {
       wheel.position.set(wx, -2.85, wz);
       this.mesh.add(wheel);
     };
-    addWheel(-4.5, -4.5);
-    addWheel(4.5, -4.5);
-    addWheel(-4.5, 4.5);
-    addWheel(4.5, 4.5);
+    const wheelDistX = halfW - 0.5;
+    const wheelDistZ = halfD - 0.5;
+    addWheel(-wheelDistX, -wheelDistZ);
+    addWheel(wheelDistX, -wheelDistZ);
+    addWheel(-wheelDistX, wheelDistZ);
+    addWheel(wheelDistX, wheelDistZ);
 
     // ── 6. Outer Glass Panes (Front & Back) ──
     const wallThick = 0.1;
+    const physThick = 0.5;
     const addGlassPane = (visualW: number, visualH: number, visualD: number, x: number, y: number, z: number, physW = visualW, physD = visualD) => {
       const geo = new THREE.BoxGeometry(visualW, visualH, visualD);
       const m = new THREE.Mesh(geo, glassMat);
       m.position.set(x, y, z);
       this.mesh.add(m);
 
-      if (physics.world) {
+      if (physics && physics.world) {
         const bodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(x, y, z);
         const body = physics.world.createRigidBody(bodyDesc);
         const colDesc = RAPIER.ColliderDesc.cuboid(physW / 2, visualH / 2, physD / 2)
           .setFriction(0.1)
           .setRestitution(0.2);
         physics.world.createCollider(colDesc, body);
+        this.staticBodies.push(body);
       }
     };
 
-    const physThick = 0.5;
-    addGlassPane(10, this.height - 1.5, wallThick, 0, (this.height - 1.5) / 2, -5, 10, physThick);
-    addGlassPane(10, this.height - 2.5, wallThick, 0, (this.height + 0.5) / 2, 5, 10, physThick);
+    // Back glass pane
+    addGlassPane(this.width, this.height - 1.5, wallThick, 0, (this.height - 1.5) / 2, -halfD, this.width, physThick);
+    // Front glass pane
+    addGlassPane(this.width, this.height - 2.5, wallThick, 0, (this.height + 0.5) / 2, halfD, this.width, physThick);
 
     // Soft Sky Blue Back Wall Panel Inside Cabinet
     const backWallPlane = new THREE.Mesh(
-      new THREE.PlaneGeometry(9.8, 7.5),
+      new THREE.PlaneGeometry(this.width - 0.2, this.height - 1.0),
       new THREE.MeshStandardMaterial({ color: 0x87ceeb, roughness: 0.3 })
     );
-    backWallPlane.position.set(0, 3.75, -4.9);
+    backWallPlane.position.set(0, (this.height - 1.0) / 2, -halfD + 0.1);
     this.mesh.add(backWallPlane);
 
-    // ── 7. Top "TOY STORY" Marquee Banner (Matching Reference Photo) ──
-    this.marqueeCanvas = document.createElement('canvas');
-    this.marqueeCanvas.width = 1024;
-    this.marqueeCanvas.height = 256;
-    const marqueeCanvas = this.marqueeCanvas;
-    const mctx = marqueeCanvas.getContext('2d')!;
-    
-    // Yellow Header Background with Red Decorative Borders
-    mctx.fillStyle = '#ffcc00';
-    mctx.fillRect(0, 0, 1024, 256);
-    mctx.fillStyle = '#dc2626';
-    mctx.fillRect(0, 0, 1024, 20);
-    mctx.fillRect(0, 236, 1024, 20);
-
-    // Red Cartoon Typography "TOY STORY"
-    mctx.shadowColor = '#ffe600';
-    mctx.shadowBlur = 10;
-    mctx.fillStyle = '#dc2626';
-    mctx.font = '900 110px "Arial Black", sans-serif';
-    mctx.textAlign = 'center';
-    mctx.fillText('TOY STORY', 512, 170);
-
-    this.marqueeTex = new THREE.CanvasTexture(marqueeCanvas);
-    const marqueeTex = this.marqueeTex;
-
-    const marqueeGeo = new THREE.BoxGeometry(10.6, 1.8, 0.4);
-    const marqueeMat = new THREE.MeshStandardMaterial({ map: marqueeTex, roughness: 0.2 });
+    // ── 7. Top Marquee Banner ──
+    const marqueeGeo = new THREE.BoxGeometry(this.width + 0.6, 1.8, 0.4);
+    const marqueeMat = new THREE.MeshStandardMaterial({ map: this.marqueeTex, roughness: 0.2 });
     const marqueeMesh = new THREE.Mesh(marqueeGeo, marqueeMat);
-    marqueeMesh.position.set(0, this.height + 0.2, 5.1);
+    marqueeMesh.position.set(0, this.height + 0.2, halfD + 0.1);
     this.mesh.add(marqueeMesh);
 
-    // Yellow Roof Top Cap
-    const roofGeo = new THREE.BoxGeometry(10.8, 0.5, 10.8);
-    const roofMesh = new THREE.Mesh(roofGeo, yellowDarkMat);
+    // Roof Top Cap
+    const roofGeo = new THREE.BoxGeometry(this.width + 0.8, 0.5, this.depth + 0.8);
+    const roofMesh = new THREE.Mesh(roofGeo, this.bodyDarkMat);
     roofMesh.position.set(0, this.height + 0.8, 0);
     this.mesh.add(roofMesh);
 
-    // Warm Golden LED Ceiling Light Grille (Matching Photo Inner Yellow Roof Light)
-    const ceilingLightGeo = new THREE.BoxGeometry(9.2, 0.2, 9.2);
+    // Warm Golden LED Ceiling Light Grille
+    const ceilingLightGeo = new THREE.BoxGeometry(this.width - 0.8, 0.2, this.depth - 0.8);
     const ceilingLightMat = new THREE.MeshStandardMaterial({
       color: 0xffb703,
       emissive: 0xff9f1c,
@@ -308,20 +390,21 @@ export class Cabinet {
     ceilingLightMesh.position.set(0, this.height - 0.2, 0);
     this.mesh.add(ceilingLightMesh);
 
-    // ── 8. Yellow Arcade Console Board & Coin Slot Box (Matching Reference Photo) ──
-    const consoleGeo = new THREE.BoxGeometry(5.2, 1.4, 2.0);
-    const consoleMesh = new THREE.Mesh(consoleGeo, yellowBodyMat);
-    consoleMesh.position.set(1.5, 1.1, 5.8);
+    // ── 8. Arcade Console Board & Coin Slot Box ──
+    const consoleW = Math.min(5.2, this.width * 0.52);
+    const consoleGeo = new THREE.BoxGeometry(consoleW, 1.4, 2.0);
+    const consoleMesh = new THREE.Mesh(consoleGeo, this.bodyMat);
+    consoleMesh.position.set(halfW * 0.3, 1.1, halfD + 0.8);
     this.mesh.add(consoleMesh);
 
-    // Protruding Yellow Coin Slot Insert Box
+    // Protruding Coin Slot Insert Box
     const coinBoxGeo = new THREE.BoxGeometry(2.4, 1.2, 0.3);
-    const coinBoxMesh = new THREE.Mesh(coinBoxGeo, yellowDarkMat);
-    coinBoxMesh.position.set(0, 0.3, 6.9);
+    const coinBoxMesh = new THREE.Mesh(coinBoxGeo, this.bodyDarkMat);
+    coinBoxMesh.position.set(0, 0.3, halfD + 1.9);
     this.mesh.add(coinBoxMesh);
 
-    const coinBorder = new THREE.Mesh(new THREE.BoxGeometry(2.6, 1.4, 0.1), redAccentMat);
-    coinBorder.position.set(0, 0.3, 6.8);
+    const coinBorder = new THREE.Mesh(new THREE.BoxGeometry(2.6, 1.4, 0.1), this.accentMat);
+    coinBorder.position.set(0, 0.3, halfD + 1.8);
     this.mesh.add(coinBorder);
 
     // Coin Entry Slots & Lock Detail
@@ -330,12 +413,11 @@ export class Cabinet {
       chromeMat
     );
     lockMesh.rotation.x = Math.PI / 2;
-    lockMesh.position.set(0, 0.3, 7.08);
+    lockMesh.position.set(0, 0.3, halfD + 2.08);
     this.mesh.add(lockMesh);
 
     // Interactive Joystick Group
-    this.joystickGroup.position.set(0.2, 1.8, 5.8);
-    this.mesh.add(this.joystickGroup);
+    this.joystickGroup.position.set(halfW * 0.04, 1.8, halfD + 0.8);
 
     const stickBaseMat = new THREE.MeshStandardMaterial({ color: 0xffcc00, metalness: 0.5, roughness: 0.2 });
     const stickBase = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.28, 0.08, 24), stickBaseMat);
@@ -343,13 +425,12 @@ export class Cabinet {
     this.joystickGroup.add(stickBase);
 
     const stickGeo = new THREE.CylinderGeometry(0.045, 0.045, 0.55, 16);
-    const stickMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, metalness: 0.95, roughness: 0.1 });
-    const stick = new THREE.Mesh(stickGeo, stickMat);
+    const stick = new THREE.Mesh(stickGeo, chromeMat);
     stick.position.y = 0.3;
     stick.castShadow = true;
     this.joystickGroup.add(stick);
 
-    // Red Ball Top Joystick (Matching Reference Photo)
+    // Red Ball Top Joystick
     const ballGeo = new THREE.SphereGeometry(0.22, 24, 24);
     const ballMat = new THREE.MeshStandardMaterial({
       color: 0xdc2626,
@@ -368,7 +449,7 @@ export class Cabinet {
     const btnGeo = new THREE.CylinderGeometry(0.32, 0.32, 0.12, 24);
     const btnMat = new THREE.MeshStandardMaterial({ color: 0x16a34a, emissive: 0x16a34a, emissiveIntensity: 0.5 });
     this.actionButtonMesh = new THREE.Mesh(btnGeo, btnMat);
-    this.actionButtonMesh.position.set(2.2, 1.8, 5.8);
+    this.actionButtonMesh.position.set(halfW * 0.44, 1.8, halfD + 0.8);
     this.actionButtonMesh.name = 'actionButton';
     this.mesh.add(this.actionButtonMesh);
 
@@ -396,7 +477,6 @@ export class Cabinet {
     this.dropIndicatorGroup.add(this.innerCircle);
 
     this.dropIndicatorGroup.position.set(0, 0.05, 0);
-    this.mesh.add(this.dropIndicatorGroup);
   }
 
   /* ── Dynamic Chute Baffle Height Update ── */
@@ -412,12 +492,18 @@ export class Cabinet {
       this.baffleGroup.remove(child);
     }
     this.baffleBodies.forEach(b => {
-      physics.unregisterBody(b);
-      physics.world.removeRigidBody(b);
+      if (physics && physics.world) {
+        physics.unregisterBody(b);
+        physics.world.removeRigidBody(b);
+      }
     });
     this.baffleBodies = [];
 
     const wallThick = 0.08;
+    const chuteW = this.chuteMaxX - this.chuteMinX;
+    const chuteD = this.chuteMaxZ - this.chuteMinZ;
+    const chuteCenterX = (this.chuteMinX + this.chuteMaxX) / 2;
+    const chuteCenterZ = (this.chuteMinZ + this.chuteMaxZ) / 2;
 
     const addBaffleWall = (w: number, d: number, x: number, z: number) => {
       const geo = new THREE.BoxGeometry(w, height, d);
@@ -431,7 +517,7 @@ export class Cabinet {
       borderMesh.position.set(x, height, z);
       this.baffleGroup.add(borderMesh);
 
-      if (physics.world) {
+      if (physics && physics.world) {
         const bodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(x, height / 2, z);
         const body = physics.world.createRigidBody(bodyDesc);
         const colDesc = RAPIER.ColliderDesc.cuboid(w / 2, height / 2, d / 2)
@@ -443,13 +529,13 @@ export class Cabinet {
     };
 
     // Right baffle wall of the chute
-    addBaffleWall(wallThick, 3.0, -1.5, 3.0);
+    addBaffleWall(wallThick, chuteD, this.chuteMaxX, chuteCenterZ);
     // Back baffle wall of the chute
-    addBaffleWall(3.0, wallThick, -3.0, 1.5);
+    addBaffleWall(chuteW, wallThick, chuteCenterX, this.chuteMinZ);
   }
 
   // Update target indicator position
-  public updateIndicator(x: number, z: number) {
+  public updateIndicator(x: number, z: number, y: number = 0.05) {
     this.dropIndicatorGroup.position.set(x, 0.05, z);
   }
 
@@ -496,7 +582,7 @@ export class Cabinet {
     if (this.marqueeTex) this.marqueeTex.needsUpdate = true;
   }
 
-  // Dynamic Theme Switching for 4 Machine Types (小型機台, 中型機台, 中大機台, K霸機台)
+  // Dynamic Theme Switching for 4 Machine Types
   public setTheme(theme: string) {
     if (theme === 'kbasket') {
       // 🥊 K-霸機台 (酷炫極致電競黑紅 + 霸王巨爪)

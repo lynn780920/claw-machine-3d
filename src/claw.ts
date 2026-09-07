@@ -95,6 +95,31 @@ export class Claw {
     this.build(scene, physics);
   }
 
+  public carriageLimit = 4.2;
+  public homeX = -3.0;
+  public homeZ = 3.0;
+
+  public setMachineBounds(homeX: number, homeZ: number, limit: number, resetPosition: boolean = true) {
+    this.homeX = homeX;
+    this.homeZ = homeZ;
+    this.carriageLimit = limit;
+    if (resetPosition && this.carriageBody) {
+      const pos = this.carriageBody.translation();
+      this.carriageBody.setNextKinematicTranslation({ x: homeX, y: pos.y, z: homeZ });
+      this.carriageMesh.position.set(homeX, pos.y, homeZ);
+      if (this.baseBody) {
+        this.baseBody.setNextKinematicTranslation({ x: homeX, y: pos.y - this.ropeLength, z: homeZ });
+      }
+      if (this.baseMesh) {
+        this.baseMesh.position.set(homeX, pos.y - this.ropeLength, homeZ);
+      }
+      this.swayAngleX = 0;
+      this.swayAngleZ = 0;
+      this.swayVelX = 0;
+      this.swayVelZ = 0;
+    }
+  }
+
   public setClawScale(scaleRatio: number) {
     if (this.baseMesh) {
       this.baseMesh.scale.set(scaleRatio, scaleRatio, scaleRatio);
@@ -390,11 +415,11 @@ export class Claw {
     const rawTargetY = carrPos.y - (this.ropeLength * dropFactor);
     const targetY = Math.max(minBaseY, rawTargetY);
 
-    // Enforce Glass Cabinet Interior Physical Collision Bounds (Cabinet Glass is at +/- 4.4)
-    const minClawX = -4.2;
-    const maxClawX = 4.2;
-    const minClawZ = -4.2;
-    const maxClawZ = 4.2;
+    // Enforce Glass Cabinet Interior Physical Collision Bounds
+    const minClawX = -this.carriageLimit;
+    const maxClawX = this.carriageLimit;
+    const minClawZ = -this.carriageLimit;
+    const maxClawZ = this.carriageLimit;
 
     let finalX = carrPos.x + swayOffsetX;
     let finalZ = carrPos.z + swayOffsetZ;
@@ -657,8 +682,8 @@ export class Claw {
         break;
 
       case 'RETURNING': {
-        const homeX = -3.0;
-        const homeZ = 3.0;
+        const homeX = this.homeX;
+        const homeZ = this.homeZ;
         const pos = this.carriageBody.translation();
         const dx = homeX - pos.x;
         const dz = homeZ - pos.z;
@@ -667,7 +692,7 @@ export class Claw {
         if (dist > 0.05) {
           const step = this.config.moveSpeed * deltaTime;
           const nx = pos.x + (dx / dist) * Math.min(dist, step);
-          const nz = pos.z + (dz / dz ? (dz / dist) * Math.min(dist, step) : 0);
+          const nz = pos.z + (dz / dist) * Math.min(dist, step);
           this.carriageBody.setNextKinematicTranslation({ x: nx, y: pos.y, z: nz });
           this.carriageMesh.position.set(nx, pos.y, nz);
         } else {
@@ -811,8 +836,8 @@ export class Claw {
     const pos = this.carriageBody.translation();
     let nx = pos.x + vx * this.config.moveSpeed * deltaTime;
     let nz = pos.z + vz * this.config.moveSpeed * deltaTime;
-    nx = Math.max(-4.2, Math.min(4.2, nx));
-    nz = Math.max(-4.2, Math.min(4.2, nz));
+    nx = Math.max(-this.carriageLimit, Math.min(this.carriageLimit, nx));
+    nz = Math.max(-this.carriageLimit, Math.min(this.carriageLimit, nz));
     this.carriageBody.setNextKinematicTranslation({ x: nx, y: pos.y, z: nz });
     this.carriageMesh.position.set(nx, pos.y, nz);
   }
