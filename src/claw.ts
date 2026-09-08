@@ -46,9 +46,9 @@ export class Claw {
   /* ── Configuration ── */
   /* ── Configuration ── */
   public config = {
-    moveSpeed: 4.0,
-    dropSpeed: 2.2,            // Realistic Taiwanese arcade descent speed (正二拍下探節奏 ~1.4s)
-    swayScale: 1.8,            // Authentic arcade swing amplitude scale (正二拍大甩幅倍率)
+    moveSpeed: 2.6,            // Steady Taiwanese arcade carriage speed (沉穩適中平移速度)
+    dropSpeed: 2.0,            // Steady 2-beat drop speed (沉穩正二拍下探速度)
+    swayScale: 1.35,           // Authentic balanced arcade swing scale (擬真沉穩甩幅)
     raiseSpeed: 3.2,
     maxRopeLength: 13.5,
     minRopeLength: 1.05,
@@ -391,31 +391,31 @@ export class Claw {
 
     const minBaseY = 1.1;
 
-    // Visual pendulum swing arm scaled by swayScale (預設 1.8x 大甩幅，水平擺幅可達 1.8m 以上)
-    const baseVisualArm = 1.35;
-    const visualSwingArm = baseVisualArm * (this.config.swayScale || 1.8);
+    // Visual pendulum swing arm scaled by swayScale (沉穩適中大甩幅)
+    const baseVisualArm = 1.25;
+    const visualSwingArm = baseVisualArm * (this.config.swayScale || 1.35);
 
     // Taiwanese arcade resonant pendulum frequency for authentic "正2拍" swing:
-    // In IDLE: T = 1.40s (so rocking joystick left/right at 0.70s per half-beat resonates in perfect 2-beat cadence)
-    // In DESCENDING: Synchronized mathematically with dropDuration so the claw completes EXACTLY 2 BEATS (外甩第1拍 + 回甩直插第2拍)!
+    // In IDLE: T = 2.15s (heavy solid metal claw pendulum cadence, calm and steady)
+    // In DESCENDING: Mathematically tuned to 1.45*PI / dropDuration so it strictly completes 2 BEATS (外甩第1拍 + 回甩直插第2拍) without generating a 3rd swing!
     let omegaSq: number;
     if (this.state === 'DESCENDING') {
       const dropDistance = Math.max(1.8, (this.carriageY - this.config.minRopeLength) - (minBaseY + 0.35));
       const dropDuration = dropDistance / Math.max(0.5, this.config.dropSpeed);
-      // Period T = dropDuration guarantees exactly 2 full beats from release to prize touchdown
-      const omega = (Math.PI * 2) / dropDuration;
+      // Exactly 2 beats over the descent duration (Swing 1 out, Swing 2 in, landing on 2nd beat arc):
+      const omega = (Math.PI * 1.45) / dropDuration;
       omegaSq = omega * omega;
     } else {
-      // IDLE arcade resonant frequency (1.40s period)
-      const omegaIdle = (Math.PI * 2) / 1.40;
+      // Calm, heavy arcade pendulum cadence (T = 2.15s)
+      const omegaIdle = (Math.PI * 2) / 2.15;
       omegaSq = omegaIdle * omegaIdle;
     }
 
-    // Operator carriage velocity impulse (direct responsiveness when flicking joystick / reversing direction / 頓甩)
+    // Operator carriage velocity impulse (gentle, steady arcade coupling without rapid twitching)
     if (this.state === 'IDLE') {
       const deltaVx = rawCarrVelX - this.lastCarrVelX;
       const deltaVz = rawCarrVelZ - this.lastCarrVelZ;
-      const impulseCoeff = 0.65;
+      const impulseCoeff = 0.35;
       this.swayVelX -= (deltaVx / Math.max(0.5, visualSwingArm)) * impulseCoeff;
       this.swayVelZ -= (deltaVz / Math.max(0.5, visualSwingArm)) * impulseCoeff;
     }
@@ -428,10 +428,10 @@ export class Claw {
     this.swayVelX += swayAccelX * deltaTime;
     this.swayVelZ += swayAccelZ * deltaTime;
 
-    // Air damping: long resonance in IDLE; zero momentum loss during descent
-    let dampingFactor = this.config.antiSwingEnabled ? 0.88 : 0.9982;
+    // Air damping: steady resonance in IDLE; smooth momentum retention during descent
+    let dampingFactor = this.config.antiSwingEnabled ? 0.88 : 0.9975;
     if (this.state === 'DESCENDING') {
-      dampingFactor = 0.9992; // Full momentum retention so 2 beats swing vigorously all the way to touchdown!
+      dampingFactor = 0.9990;
     }
     this.swayVelX *= dampingFactor;
     this.swayVelZ *= dampingFactor;
@@ -439,8 +439,8 @@ export class Claw {
     this.swayAngleX += this.swayVelX * deltaTime;
     this.swayAngleZ += this.swayVelZ * deltaTime;
 
-    // Authentic arcade max swing angle (~55 degrees / 0.96 rad for full street swing)
-    const maxAngle = 0.96;
+    // Authentic arcade max swing angle (~43 degrees / 0.75 rad for steady full swing)
+    const maxAngle = 0.75;
     this.swayAngleX = Math.max(-maxAngle, Math.min(maxAngle, this.swayAngleX));
     this.swayAngleZ = Math.max(-maxAngle, Math.min(maxAngle, this.swayAngleZ));
 
