@@ -396,9 +396,12 @@ export class Claw {
     const visualSwingArm = baseVisualArm * (this.config.swayScale || 1.35);
 
     // Taiwanese arcade resonant pendulum frequency for authentic "正2拍" swing:
-    // In IDLE: T = 2.15s (heavy solid metal claw pendulum cadence, calm and steady)
+    // In IDLE: T = 1.95s (heavy solid metal claw pendulum cadence, calm, steady and responsive)
     // In DESCENDING: Mathematically tuned to 1.45*PI / dropDuration so it strictly completes 2 BEATS (外甩第1拍 + 回甩直插第2拍) without generating a 3rd swing!
     let omegaSq: number;
+    let targetTrailAngleX = 0;
+    let targetTrailAngleZ = 0;
+
     if (this.state === 'DESCENDING') {
       const dropDistance = Math.max(1.8, (this.carriageY - this.config.minRopeLength) - (minBaseY + 0.35));
       const dropDuration = dropDistance / Math.max(0.5, this.config.dropSpeed);
@@ -406,24 +409,34 @@ export class Claw {
       const omega = (Math.PI * 1.45) / dropDuration;
       omegaSq = omega * omega;
     } else {
-      // Calm, heavy arcade pendulum cadence (T = 2.15s)
-      const omegaIdle = (Math.PI * 2) / 2.15;
+      // Calm, heavy arcade pendulum cadence (T = 1.95s)
+      const omegaIdle = (Math.PI * 2) / 1.95;
       omegaSq = omegaIdle * omegaIdle;
     }
 
-    // Operator carriage velocity impulse (gentle, steady arcade coupling without rapid twitching)
+    // Operator carriage movement coupling:
+    // When moving, the claw promptly trails behind the carriage with authentic dynamic lag;
+    // When reversing direction or stopping, momentum carries the claw across center into natural swing!
     if (this.state === 'IDLE') {
+      const maxSpeed = Math.max(0.1, this.config.moveSpeed);
+      const trailAngleMax = 0.36; // Dynamic trailing tilt angle (~20.6 degrees)
+      const normVx = Math.max(-1.0, Math.min(1.0, rawCarrVelX / maxSpeed));
+      const normVz = Math.max(-1.0, Math.min(1.0, rawCarrVelZ / maxSpeed));
+      targetTrailAngleX = -normVx * trailAngleMax;
+      targetTrailAngleZ = -normVz * trailAngleMax;
+
       const deltaVx = rawCarrVelX - this.lastCarrVelX;
       const deltaVz = rawCarrVelZ - this.lastCarrVelZ;
-      const impulseCoeff = 0.35;
+      const impulseCoeff = 0.38;
       this.swayVelX -= (deltaVx / Math.max(0.5, visualSwingArm)) * impulseCoeff;
       this.swayVelZ -= (deltaVz / Math.max(0.5, visualSwingArm)) * impulseCoeff;
     }
     this.lastCarrVelX = rawCarrVelX;
     this.lastCarrVelZ = rawCarrVelZ;
 
-    const swayAccelX = -omegaSq * Math.sin(this.swayAngleX);
-    const swayAccelZ = -omegaSq * Math.sin(this.swayAngleZ);
+    // Restoring acceleration pulls towards the dynamic trailing angle equilibrium
+    const swayAccelX = -omegaSq * Math.sin(this.swayAngleX - targetTrailAngleX);
+    const swayAccelZ = -omegaSq * Math.sin(this.swayAngleZ - targetTrailAngleZ);
 
     this.swayVelX += swayAccelX * deltaTime;
     this.swayVelZ += swayAccelZ * deltaTime;
