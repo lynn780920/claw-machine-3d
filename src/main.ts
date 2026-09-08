@@ -371,6 +371,7 @@ function applyDIPSettings() {
   const antiswing = getStr('setting-antiswing', 'disabled');
   const speed = getVal('setting-speed', 4.0);
   const dropSpeed = getVal('setting-dropspeed', 2.2);
+  const swayScale = getVal('setting-sway', 1.8);
   const length = getVal('setting-length', 13.5);
   const baffleHeight = getVal('setting-baffle', 0.5);
 
@@ -382,6 +383,7 @@ function applyDIPSettings() {
     claw.config.topHitProbability = tophitPercent / 100;
     claw.config.moveSpeed = speed;
     claw.config.dropSpeed = dropSpeed;
+    claw.config.swayScale = swayScale;
     claw.config.maxRopeLength = length;
     claw.config.antiSwingEnabled = (antiswing === 'enabled');
     claw.updateAntiSwingDamping();
@@ -402,6 +404,7 @@ function applyDIPSettings() {
   setTxt('val-tophit', tophitPercent + '%');
   setTxt('val-speed', speed.toFixed(1));
   setTxt('val-dropspeed', dropSpeed.toFixed(1));
+  setTxt('val-sway', swayScale.toFixed(1));
   setTxt('val-length', length.toFixed(1));
   setTxt('val-baffle', baffleHeight.toFixed(1));
 }
@@ -680,6 +683,7 @@ function setupUIEventListeners() {
     (document.getElementById('setting-tophit') as HTMLInputElement).value = '25';
     (document.getElementById('setting-speed') as HTMLInputElement).value = '4.0';
     (document.getElementById('setting-dropspeed') as HTMLInputElement).value = '2.2';
+    (document.getElementById('setting-sway') as HTMLInputElement).value = '1.8';
     (document.getElementById('setting-length') as HTMLInputElement).value = '13.5';
     (document.getElementById('setting-baffle') as HTMLInputElement).value = '0.5';
     (document.getElementById('setting-dolls') as HTMLInputElement).value = '100';
@@ -698,6 +702,7 @@ function setupUIEventListeners() {
     (document.getElementById('setting-weak') as HTMLInputElement).value = '65';
     (document.getElementById('setting-tophit') as HTMLInputElement).value = '0';
     (document.getElementById('setting-dropspeed') as HTMLInputElement).value = '2.2';
+    (document.getElementById('setting-sway') as HTMLInputElement).value = '1.8';
     (document.getElementById('setting-baffle') as HTMLInputElement).value = '0.3';
     applyDIPSettings();
     soundEngine.playCoinDropSFX();
@@ -710,6 +715,7 @@ function setupUIEventListeners() {
     (document.getElementById('setting-weak') as HTMLInputElement).value = '35';
     (document.getElementById('setting-tophit') as HTMLInputElement).value = '20';
     (document.getElementById('setting-dropspeed') as HTMLInputElement).value = '2.2';
+    (document.getElementById('setting-sway') as HTMLInputElement).value = '2.0';
     (document.getElementById('setting-baffle') as HTMLInputElement).value = '0.5';
     applyDIPSettings();
     soundEngine.playCoinDropSFX();
@@ -722,6 +728,7 @@ function setupUIEventListeners() {
     (document.getElementById('setting-weak') as HTMLInputElement).value = '10';
     (document.getElementById('setting-tophit') as HTMLInputElement).value = '100';
     (document.getElementById('setting-dropspeed') as HTMLInputElement).value = '2.2';
+    (document.getElementById('setting-sway') as HTMLInputElement).value = '1.8';
     (document.getElementById('setting-baffle') as HTMLInputElement).value = '1.2';
     applyDIPSettings();
     soundEngine.playCoinDropSFX();
@@ -735,6 +742,7 @@ function setupUIEventListeners() {
     'setting-tophit', 
     'setting-speed', 
     'setting-dropspeed',
+    'setting-sway',
     'setting-length',
     'setting-baffle'
   ];
@@ -752,6 +760,7 @@ function setupUIEventListeners() {
     tophit: string;
     speed: string;
     dropspeed?: string;
+    sway?: string;
     length: string;
     baffle: string;
     dolls: string;
@@ -764,6 +773,7 @@ function setupUIEventListeners() {
     const tophitEl = document.getElementById('setting-tophit') as HTMLInputElement | null;
     const speedEl = document.getElementById('setting-speed') as HTMLInputElement | null;
     const dropspeedEl = document.getElementById('setting-dropspeed') as HTMLInputElement | null;
+    const swayEl = document.getElementById('setting-sway') as HTMLInputElement | null;
     const lengthEl = document.getElementById('setting-length') as HTMLInputElement | null;
     const baffleEl = document.getElementById('setting-baffle') as HTMLInputElement | null;
     const dollsEl = document.getElementById('setting-dolls') as HTMLInputElement | null;
@@ -784,6 +794,7 @@ function setupUIEventListeners() {
     setInput(tophitEl, params.tophit);
     setInput(speedEl, params.speed);
     if (dropspeedEl) setInput(dropspeedEl, params.dropspeed || '2.2');
+    if (swayEl) setInput(swayEl, params.sway || '1.8');
     setInput(lengthEl, params.length);
     setInput(baffleEl, params.baffle);
     setInput(dollsEl, params.dolls);
@@ -803,12 +814,13 @@ function setupUIEventListeners() {
     setTxt('val-tophit', params.tophit + '%');
     setTxt('val-speed', parseFloat(params.speed).toFixed(1));
     setTxt('val-dropspeed', parseFloat(params.dropspeed || '2.2').toFixed(1));
+    setTxt('val-sway', parseFloat(params.sway || '1.8').toFixed(1));
     setTxt('val-length', parseFloat(params.length).toFixed(1));
     setTxt('val-baffle', parseFloat(params.baffle).toFixed(1));
     setTxt('val-dolls', params.dolls);
 
     // Dispatch DOM events so range slider thumbs re-render visually in all browsers
-    [strongEl, heightEl, weakEl, tophitEl, speedEl, dropspeedEl, lengthEl, baffleEl, dollsEl].forEach(el => {
+    [strongEl, heightEl, weakEl, tophitEl, speedEl, dropspeedEl, swayEl, lengthEl, baffleEl, dollsEl].forEach(el => {
       if (el) {
         el.dispatchEvent(new Event('input', { bubbles: true }));
         el.dispatchEvent(new Event('change', { bubbles: true }));
@@ -869,6 +881,7 @@ function setupUIEventListeners() {
         tophit: '18',
         speed: '4.2',
         dropspeed: '2.2',
+        sway: '1.8',
         length: '6.5',
         baffle: '0.45',
         dolls: '6',
@@ -897,6 +910,7 @@ function setupUIEventListeners() {
         tophit: '35',
         speed: '4.2',
         dropspeed: '2.2',
+        sway: '1.8',
         length: '7.5',
         baffle: '0.6',
         dolls: '25',
@@ -921,6 +935,7 @@ function setupUIEventListeners() {
         tophit: '29',
         speed: '3.5',
         dropspeed: '2.2',
+        sway: '1.8',
         length: '4.5',
         baffle: '1.1',
         dolls: '12',
@@ -945,6 +960,7 @@ function setupUIEventListeners() {
         tophit: '25',
         speed: '4.0',
         dropspeed: '2.2',
+        sway: '1.8',
         length: '7.0',
         baffle: '0.5',
         dolls: '40',

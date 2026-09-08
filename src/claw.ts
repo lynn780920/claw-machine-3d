@@ -48,6 +48,7 @@ export class Claw {
   public config = {
     moveSpeed: 4.0,
     dropSpeed: 2.2,            // Realistic Taiwanese arcade descent speed (正二拍下探節奏 ~1.4s)
+    swayScale: 1.8,            // Authentic arcade swing amplitude scale (正二拍大甩幅倍率)
     raiseSpeed: 3.2,
     maxRopeLength: 13.5,
     minRopeLength: 1.05,
@@ -387,26 +388,50 @@ export class Claw {
 
     this.lastCarrX = carrPos.x;
     this.lastCarrZ = carrPos.z;
+
+    const minBaseY = 1.1;
+
+    // Visual pendulum swing arm scaled by swayScale (預設 1.8x 大甩幅，水平擺幅可達 1.8m 以上)
+    const baseVisualArm = 1.35;
+    const visualSwingArm = baseVisualArm * (this.config.swayScale || 1.8);
+
+    // Taiwanese arcade resonant pendulum frequency for authentic "正2拍" swing:
+    // In IDLE: T = 1.40s (so rocking joystick left/right at 0.70s per half-beat resonates in perfect 2-beat cadence)
+    // In DESCENDING: Synchronized mathematically with dropDuration so the claw completes EXACTLY 2 BEATS (外甩第1拍 + 回甩直插第2拍)!
+    let omegaSq: number;
+    if (this.state === 'DESCENDING') {
+      const dropDistance = Math.max(1.8, (this.carriageY - this.config.minRopeLength) - (minBaseY + 0.35));
+      const dropDuration = dropDistance / Math.max(0.5, this.config.dropSpeed);
+      // Period T = dropDuration guarantees exactly 2 full beats from release to prize touchdown
+      const omega = (Math.PI * 2) / dropDuration;
+      omegaSq = omega * omega;
+    } else {
+      // IDLE arcade resonant frequency (1.40s period)
+      const omegaIdle = (Math.PI * 2) / 1.40;
+      omegaSq = omegaIdle * omegaIdle;
+    }
+
+    // Operator carriage velocity impulse (direct responsiveness when flicking joystick / reversing direction / 頓甩)
+    if (this.state === 'IDLE') {
+      const deltaVx = rawCarrVelX - this.lastCarrVelX;
+      const deltaVz = rawCarrVelZ - this.lastCarrVelZ;
+      const impulseCoeff = 0.65;
+      this.swayVelX -= (deltaVx / Math.max(0.5, visualSwingArm)) * impulseCoeff;
+      this.swayVelZ -= (deltaVz / Math.max(0.5, visualSwingArm)) * impulseCoeff;
+    }
     this.lastCarrVelX = rawCarrVelX;
     this.lastCarrVelZ = rawCarrVelZ;
 
-    // Taiwanese arcade resonant pendulum frequency for authentic "正2拍" swing:
-    // Natural resonant frequency tuned so rocking the joystick 2 beats achieves peak outward swing
-    const g = 11.0;
-    const swingL = (this.state === 'IDLE') ? this.ropeLength : Math.min(2.0, this.ropeLength);
-    const omegaSq = g / Math.max(0.6, swingL);
-
-    const swayAccelX = -omegaSq * Math.sin(this.swayAngleX) - (carrAccelX / swingL) * 0.48;
-    const swayAccelZ = -omegaSq * Math.sin(this.swayAngleZ) - (carrAccelZ / swingL) * 0.48;
+    const swayAccelX = -omegaSq * Math.sin(this.swayAngleX);
+    const swayAccelZ = -omegaSq * Math.sin(this.swayAngleZ);
 
     this.swayVelX += swayAccelX * deltaTime;
     this.swayVelZ += swayAccelZ * deltaTime;
 
-    // Smooth arcade damping: maintain slight air drag in IDLE so swing resonates cleanly;
-    // During descent, retain momentum so the claw plunges along the 2-beat swing trajectory!
-    let dampingFactor = this.config.antiSwingEnabled ? 0.82 : 0.992;
+    // Air damping: long resonance in IDLE; zero momentum loss during descent
+    let dampingFactor = this.config.antiSwingEnabled ? 0.88 : 0.9982;
     if (this.state === 'DESCENDING') {
-      dampingFactor = 0.996; // Preserve forward momentum on drop!
+      dampingFactor = 0.9992; // Full momentum retention so 2 beats swing vigorously all the way to touchdown!
     }
     this.swayVelX *= dampingFactor;
     this.swayVelZ *= dampingFactor;
@@ -414,8 +439,8 @@ export class Claw {
     this.swayAngleX += this.swayVelX * deltaTime;
     this.swayAngleZ += this.swayVelZ * deltaTime;
 
-    // Taiwanese street arcade max swing angle (~28 degrees / 0.49 rad for authentic full swing)
-    const maxAngle = 0.49;
+    // Authentic arcade max swing angle (~55 degrees / 0.96 rad for full street swing)
+    const maxAngle = 0.96;
     this.swayAngleX = Math.max(-maxAngle, Math.min(maxAngle, this.swayAngleX));
     this.swayAngleZ = Math.max(-maxAngle, Math.min(maxAngle, this.swayAngleZ));
 
@@ -431,13 +456,12 @@ export class Claw {
     }
 
     // Physical Pendulum Horizontal Offset
-    const maxOffset = this.carriageLimit;
-    const swayOffsetX = Math.max(-maxOffset, Math.min(maxOffset, swingL * Math.sin(this.swayAngleX)));
-    const swayOffsetZ = Math.max(-maxOffset, Math.min(maxOffset, swingL * Math.sin(this.swayAngleZ)));
+    const maxOffset = this.carriageLimit * 1.05;
+    const swayOffsetX = Math.max(-maxOffset, Math.min(maxOffset, visualSwingArm * Math.sin(this.swayAngleX)));
+    const swayOffsetZ = Math.max(-maxOffset, Math.min(maxOffset, visualSwingArm * Math.sin(this.swayAngleZ)));
 
     // Stable vertical height: cable tension holds height steady, eliminating vertical bobbing ("上下上")
     const verticalSwayDisplacement = (1.0 - Math.cos(this.swayAngleX) * Math.cos(this.swayAngleZ)) * 0.15;
-    const minBaseY = 1.1;
     const rawTargetY = carrPos.y - this.ropeLength + verticalSwayDisplacement;
     const targetY = Math.max(minBaseY, rawTargetY);
 
@@ -452,22 +476,26 @@ export class Claw {
 
     if (finalX < minClawX) {
       finalX = minClawX;
-      this.swayVelX = Math.abs(this.swayVelX) * 0.3; // Soft bounce off glass wall
+      this.swayVelX = Math.abs(this.swayVelX) * 0.35; // Soft bounce off glass wall
+      this.swayAngleX = (minClawX - carrPos.x) / visualSwingArm;
     } else if (finalX > maxClawX) {
       finalX = maxClawX;
-      this.swayVelX = -Math.abs(this.swayVelX) * 0.3;
+      this.swayVelX = -Math.abs(this.swayVelX) * 0.35;
+      this.swayAngleX = (maxClawX - carrPos.x) / visualSwingArm;
     }
 
     if (finalZ < minClawZ) {
       finalZ = minClawZ;
-      this.swayVelZ = Math.abs(this.swayVelZ) * 0.3; // Soft bounce off glass wall
+      this.swayVelZ = Math.abs(this.swayVelZ) * 0.35; // Soft bounce off glass wall
+      this.swayAngleZ = (minClawZ - carrPos.z) / visualSwingArm;
     } else if (finalZ > maxClawZ) {
       finalZ = maxClawZ;
-      this.swayVelZ = -Math.abs(this.swayVelZ) * 0.3;
+      this.swayVelZ = -Math.abs(this.swayVelZ) * 0.35;
+      this.swayAngleZ = (maxClawZ - carrPos.z) / visualSwingArm;
     }
 
     const swayQuat = new THREE.Quaternion().setFromEuler(
-      new THREE.Euler(-this.swayAngleZ, 0, this.swayAngleX, 'YXZ')
+      new THREE.Euler(-this.swayAngleZ * 0.70, 0, this.swayAngleX * 0.70, 'YXZ')
     );
 
     this.baseBody.setNextKinematicTranslation({ x: finalX, y: targetY, z: finalZ });
