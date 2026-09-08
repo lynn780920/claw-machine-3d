@@ -188,7 +188,8 @@ function checkWinCondition() {
   const minZ = cabinet.chuteMinZ;
   const maxZ = cabinet.chuteMaxZ;
 
-  prizesManager.bodies.forEach((body, idx) => {
+  for (let idx = prizesManager.bodies.length - 1; idx >= 0; idx--) {
+    const body = prizesManager.bodies[idx];
     const pos = body.translation();
     
     // If prize fell below floor level inside the chute footprint
@@ -220,77 +221,108 @@ function checkWinCondition() {
       updateStatsUI();
       showWinAlert();
     }
-  });
+  }
 }
 
 let winToastTimer: number | null = null;
 
-// 🎉 Celebratory Confetti Cannon Particle Explosion
-function launchConfetti() {
-  const canvas = document.createElement('canvas');
-  canvas.style.position = 'fixed';
-  canvas.style.inset = '0';
-  canvas.style.width = '100vw';
-  canvas.style.height = '100vh';
-  canvas.style.pointerEvents = 'none';
-  canvas.style.zIndex = '99999';
-  document.body.appendChild(canvas);
+// High-performance reusable Confetti Canvas (Zero lag, no DOM thrashing, no save/restore overhead)
+let confettiCanvas: HTMLCanvasElement | null = null;
+let confettiCtx: CanvasRenderingContext2D | null = null;
+const confettiParticles: Array<{
+  x: number; y: number; vx: number; vy: number;
+  w: number; h: number; color: string;
+  rot: number; vrot: number;
+}> = [];
+let confettiAnimId: number | null = null;
 
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return;
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
+function getConfettiCanvas() {
+  if (!confettiCanvas) {
+    confettiCanvas = document.createElement('canvas');
+    confettiCanvas.style.position = 'fixed';
+    confettiCanvas.style.inset = '0';
+    confettiCanvas.style.width = '100vw';
+    confettiCanvas.style.height = '100vh';
+    confettiCanvas.style.pointerEvents = 'none';
+    confettiCanvas.style.zIndex = '99999';
+    confettiCanvas.style.display = 'none';
+    document.body.appendChild(confettiCanvas);
+    confettiCtx = confettiCanvas.getContext('2d');
+  }
+  if (confettiCanvas.width !== window.innerWidth || confettiCanvas.height !== window.innerHeight) {
+    confettiCanvas.width = window.innerWidth;
+    confettiCanvas.height = window.innerHeight;
+  }
+  return { canvas: confettiCanvas, ctx: confettiCtx };
+}
+
+function launchConfetti() {
+  const { canvas, ctx } = getConfettiCanvas();
+  if (!canvas || !ctx) return;
+
+  canvas.style.display = 'block';
 
   const colors = ['#f43f5e', '#38bdf8', '#fbbf24', '#34d399', '#a855f7', '#fb923c', '#ffd700'];
-  const particles: Array<{
-    x: number; y: number; vx: number; vy: number;
-    w: number; h: number; color: string;
-    rot: number; vrot: number;
-  }> = [];
+  const centerX = canvas.width / 2;
+  const startY = canvas.height * 0.45;
 
-  for (let i = 0; i < 110; i++) {
-    particles.push({
-      x: canvas.width / 2 + (Math.random() - 0.5) * 200,
-      y: canvas.height * 0.45 + (Math.random() - 0.5) * 80,
-      vx: (Math.random() - 0.5) * 22,
-      vy: -Math.random() * 18 - 5,
-      w: Math.random() * 14 + 7,
-      h: Math.random() * 8 + 4,
+  // 55 vibrant particles provide rich celebration without lagging mobile/desktop GPU
+  for (let i = 0; i < 55; i++) {
+    confettiParticles.push({
+      x: centerX + (Math.random() - 0.5) * 160,
+      y: startY + (Math.random() - 0.5) * 60,
+      vx: (Math.random() - 0.5) * 18,
+      vy: -Math.random() * 15 - 5,
+      w: Math.random() * 12 + 6,
+      h: Math.random() * 7 + 4,
       color: colors[Math.floor(Math.random() * colors.length)],
       rot: Math.random() * Math.PI,
-      vrot: (Math.random() - 0.5) * 0.22
+      vrot: (Math.random() - 0.5) * 0.2
     });
   }
 
-  let frame = 0;
-  function step() {
-    ctx!.clearRect(0, 0, canvas.width, canvas.height);
-    let alive = false;
-    for (const p of particles) {
-      p.x += p.vx;
-      p.y += p.vy;
-      p.vy += 0.42; // gravity
-      p.vx *= 0.985;
-      p.rot += p.vrot;
+  if (confettiAnimId === null) {
+    let frame = 0;
+    const step = () => {
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      if (p.y < canvas.height + 60) alive = true;
+      let aliveCount = 0;
+      for (let i = confettiParticles.length - 1; i >= 0; i--) {
+        const p = confettiParticles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += 0.38; // gentle gravity
+        p.vx *= 0.985;
+        p.rot += p.vrot;
 
-      ctx!.save();
-      ctx!.translate(p.x, p.y);
-      ctx!.rotate(p.rot);
-      ctx!.fillStyle = p.color;
-      ctx!.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
-      ctx!.restore();
-    }
+        if (p.y < canvas.height + 60) {
+          aliveCount++;
+          // High-speed direct affine matrix transform - ZERO save/restore stack allocation!
+          const cos = Math.cos(p.rot);
+          const sin = Math.sin(p.rot);
+          ctx.setTransform(cos, sin, -sin, cos, p.x, p.y);
+          ctx.fillStyle = p.color;
+          ctx.fillRect(-p.w * 0.5, -p.h * 0.5, p.w, p.h);
+        } else {
+          // Remove fallen particles
+          confettiParticles.splice(i, 1);
+        }
+      }
 
-    frame++;
-    if (alive && frame < 200) {
-      requestAnimationFrame(step);
-    } else {
-      canvas.remove();
-    }
+      frame++;
+      if (aliveCount > 0 && frame < 150) {
+        confettiAnimId = requestAnimationFrame(step);
+      } else {
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        canvas.style.display = 'none';
+        confettiParticles.length = 0;
+        confettiAnimId = null;
+      }
+    };
+    confettiAnimId = requestAnimationFrame(step);
   }
-  step();
 }
 
 function showWinAlert() {
