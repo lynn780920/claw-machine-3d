@@ -47,7 +47,7 @@ export class Claw {
   /* ── Configuration ── */
   public config = {
     moveSpeed: 4.0,
-    dropSpeed: 5.0,            // Snappy arcade descent speed (~0.8s to bottom)
+    dropSpeed: 2.2,            // Realistic Taiwanese arcade descent speed (正二拍下探節奏 ~1.4s)
     raiseSpeed: 3.2,
     maxRopeLength: 13.5,
     minRopeLength: 1.05,
@@ -637,7 +637,7 @@ export class Claw {
           }
         }
 
-        if (touchedFloor || touchedPrize || this.stateTimer > 2.8) {
+        if (touchedFloor || touchedPrize || this.stateTimer > 4.5) {
           this.targetRopeLength = this.ropeLength;
           this.triggerGrab();
         }
