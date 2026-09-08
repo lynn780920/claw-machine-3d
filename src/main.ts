@@ -313,7 +313,11 @@ function showWinAlert() {
   }
 }
 
-// Process keyboard controls for carriage flat XZ movement and tilt 3D joystick
+let joystickTouchVx = 0;
+let joystickTouchVz = 0;
+let isTouchJoystickActive = false;
+
+// Process keyboard and touch virtual joystick controls for carriage flat XZ movement and tilt 3D joystick
 function handleKeyboardMove(dt: number) {
   if (claw.state !== 'IDLE') {
     cabinet.setJoystickTilt(0, 0);
@@ -323,15 +327,21 @@ function handleKeyboardMove(dt: number) {
   let vx = 0;
   let vz = 0;
 
-  if (keys.w || keys.ArrowUp) vz = -1;
-  if (keys.s || keys.ArrowDown) vz = 1;
-  if (keys.a || keys.ArrowLeft) vx = -1;
-  if (keys.d || keys.ArrowRight) vx = 1;
+  if (keys.w || keys.ArrowUp) vz -= 1;
+  if (keys.s || keys.ArrowDown) vz += 1;
+  if (keys.a || keys.ArrowLeft) vx -= 1;
+  if (keys.d || keys.ArrowRight) vx += 1;
 
   if (vx !== 0 && vz !== 0) {
     const len = Math.sqrt(vx * vx + vz * vz);
     vx /= len;
     vz /= len;
+  }
+
+  // Combine with touch virtual joystick on mobile devices
+  if (isTouchJoystickActive) {
+    vx = joystickTouchVx;
+    vz = joystickTouchVz;
   }
 
   if (vx !== 0 || vz !== 0) {
@@ -517,6 +527,9 @@ function setupUIEventListeners() {
       for (let i = 0; i < e.changedTouches.length; i++) {
         if (e.changedTouches[i].identifier === touchId) {
           touchId = null;
+          joystickTouchVx = 0;
+          joystickTouchVz = 0;
+          isTouchJoystickActive = false;
           joystickStick.style.transform = `translate(0px, 0px)`;
           cabinet.setJoystickTilt(0, 0);
           break;
@@ -536,14 +549,9 @@ function setupUIEventListeners() {
 
       joystickStick.style.transform = `translate(${dx}px, ${dy}px)`;
 
-      const vx = dx / maxRadius;
-      const vz = dy / maxRadius;
-
-      if (claw.state === 'IDLE') {
-        claw.moveCarriage(vx, vz, 0.016);
-        cabinet.setJoystickTilt(vx, vz);
-        soundEngine.playMotorStepSFX();
-      }
+      joystickTouchVx = dx / maxRadius;
+      joystickTouchVz = dy / maxRadius;
+      isTouchJoystickActive = (dist > 3);
     };
 
     joystickBase.addEventListener('touchstart', handleTouchStart, { passive: false });
@@ -838,9 +846,9 @@ function setupUIEventListeners() {
     };
 
     if (mode === 'small') {
-      // 🌸 小型機台 (真實標準街機比例 寬6.0m x 櫥窗高6.0m x 高底座5.0m, POP MART 6盒精準擺台)
+      // 小型機台 (真實標準街機比例 寬6.0m x 櫥窗高6.0m x 高底座5.0m, POP MART 6盒精準擺台)
       claw.setClawScale(0.85);
-      claw.setMachineBounds(chuteHomeX, chuteHomeZ, 2.35);
+      claw.setMachineBounds(chuteHomeX, chuteHomeZ, 2.35, cabinet.height);
 
       syncDIPPanelUI({
         strong: '92',
@@ -861,13 +869,13 @@ function setupUIEventListeners() {
       cameraViewMode = 'front';
       const camBtnLabel = document.querySelector('#toggle-camera-btn .nav-btn-label');
       if (camBtnLabel) camBtnLabel.textContent = '視角: 正面';
-      controls.target.set(0, 1.8, 0.2);
+      controls.target.set(0, 2.2, 0.2);
       camera.position.set(0, 3.8, 9.2);
       controls.update();
     } else if (mode === 'large') {
-      // ⚡ 中大機台 (寬闊修長大型機台 + 25盒動漫大賞)
+      // 中大機台 (寬闊修長大型機台 + 25盒動漫大賞)
       claw.setClawScale(1.15);
-      claw.setMachineBounds(chuteHomeX, chuteHomeZ, 3.7);
+      claw.setMachineBounds(chuteHomeX, chuteHomeZ, 3.7, cabinet.height);
 
       syncDIPPanelUI({
         strong: '95',
@@ -884,13 +892,13 @@ function setupUIEventListeners() {
 
       prizesManager.spawnPrizes(25, 'anime', 4.8, chuteBounds);
 
-      controls.target.set(0, 2.5, 0.2);
+      controls.target.set(0, 2.8, 0.2);
       camera.position.set(0, 5.0, 12.2);
       controls.update();
     } else if (mode === 'kbasket') {
-      // 🥊 K-霸機台 (超巨無霸直立機台！1.35x 霸王巨爪 + 12大盒巨型家電)
+      // K-霸機台 (超巨無霸直立機台！1.35x 霸王巨爪 + 12大盒巨型家電)
       claw.setClawScale(1.35);
-      claw.setMachineBounds(chuteHomeX, chuteHomeZ, 4.8);
+      claw.setMachineBounds(chuteHomeX, chuteHomeZ, 4.8, cabinet.height);
 
       syncDIPPanelUI({
         strong: '79',
@@ -907,13 +915,13 @@ function setupUIEventListeners() {
 
       prizesManager.spawnPrizes(12, 'giant_appliances', 6.0, chuteBounds);
 
-      controls.target.set(0, 2.8, 0.2);
+      controls.target.set(0, 3.2, 0.2);
       camera.position.set(0, 5.6, 14.5);
       controls.update();
     } else {
-      // 👑 中型機台 (標準街機黃金比例, 1.0x 標準爪 + 40隻繽紛娃娃)
+      // 中型機台 (標準街機黃金比例, 1.0x 標準爪 + 40隻繽紛娃娃)
       claw.setClawScale(1.0);
-      claw.setMachineBounds(chuteHomeX, chuteHomeZ, 3.0);
+      claw.setMachineBounds(chuteHomeX, chuteHomeZ, 3.0, cabinet.height);
 
       syncDIPPanelUI({
         strong: '100',
@@ -930,7 +938,7 @@ function setupUIEventListeners() {
 
       prizesManager.spawnPrizes(40, 'mixed', 3.8, chuteBounds);
 
-      controls.target.set(0, 2.2, 0.2);
+      controls.target.set(0, 2.5, 0.2);
       camera.position.set(0, 4.4, 10.5);
       controls.update();
     }
