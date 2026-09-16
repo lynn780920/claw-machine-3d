@@ -2192,7 +2192,7 @@ export class PrizesManager {
   // ── Taiwanese Claw Machine Realistic Staged Blind Box Arrangement (Matching Kujiflip 1:1) ──
   private spawnStagedBlindBoxes(
     chuteBounds?: { minX: number; maxX: number; minZ: number; maxZ: number },
-    targetCount = 6
+    targetCount = 5
   ) {
     const cx = chuteBounds ? chuteBounds.maxX : -0.95;
     const cz = chuteBounds ? chuteBounds.minZ : 0.75;
@@ -2206,23 +2206,20 @@ export class PrizesManager {
     this.spawnSingleBlindBoxWithRotation(cx + 0.28, 0.32, cz + 0.95, 0, 0, Math.PI / 2, boxIdx++);
 
     // 3. 前排迎賓盒 (Center Front Feature Box - Standing upright facing player)
-    this.spawnSingleBlindBoxWithRotation(0.40, 0.52, 1.05, 0, 0, 0, boxIdx++);
+    this.spawnSingleBlindBoxWithRotation(0.35, 0.52, 0.95, 0, 0, 0, boxIdx++);
 
     // 4. 後排左展位盒 (Back-Left Showcase Box)
-    this.spawnSingleBlindBoxWithRotation(-0.35, 0.52, -0.65, 0, 0.05, 0, boxIdx++);
+    this.spawnSingleBlindBoxWithRotation(-0.35, 0.52, -0.55, 0, 0.05, 0, boxIdx++);
 
-    // 5. 後排中展位盒 (Back-Center Showcase Box)
-    this.spawnSingleBlindBoxWithRotation(0.40, 0.52, -0.75, 0, 0, 0, boxIdx++);
+    // 5. 後排右展位盒 (Back-Right Showcase Box)
+    this.spawnSingleBlindBoxWithRotation(1.05, 0.52, -0.45, 0, -0.15, 0, boxIdx++);
 
-    // 6. 後排右展位盒 (Back-Right Showcase Box)
-    this.spawnSingleBlindBoxWithRotation(1.25, 0.52, -0.55, 0, -0.15, 0, boxIdx++);
-
-    // If higher count requested in DIP settings, add subtle rear fillers
-    if (targetCount > 6) {
-      const extraCount = Math.min(targetCount - 6, 8);
+    // If higher count requested in DIP settings, add extra rear fillers
+    if (targetCount > 5) {
+      const extraCount = Math.min(targetCount - 5, 8);
       for (let i = 0; i < extraCount; i++) {
         const ex = -0.5 + (i % 4) * 0.75;
-        const ez = -1.45 - Math.floor(i / 4) * 0.75;
+        const ez = -1.25 - Math.floor(i / 4) * 0.75;
         this.spawnSingleBlindBoxWithRotation(ex, 0.52, ez, 0, (Math.random() - 0.5) * 0.1, 0, boxIdx++);
       }
     }

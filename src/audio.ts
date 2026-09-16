@@ -187,6 +187,123 @@ export class SoundEngine {
     osc.start(t);
     osc.stop(t + 0.055);
   }
+
+  // 🏆 關卡突破音效 (Stage Clear Fanfare)
+  public playStageClearSFX() {
+    this.initCtx();
+    if (!this.ctx || this.isMuted) return;
+
+    // Victory fanfare: G4, C5, E5, G5, C6 (extended sparkling triumph)
+    const melody = [
+      { freq: 392.00, delay: 0.00, duration: 0.15 },
+      { freq: 523.25, delay: 0.14, duration: 0.15 },
+      { freq: 659.25, delay: 0.28, duration: 0.18 },
+      { freq: 783.99, delay: 0.44, duration: 0.22 },
+      { freq: 1046.50, delay: 0.65, duration: 0.60 },
+      { freq: 1318.51, delay: 0.68, duration: 0.60 },
+      { freq: 1567.98, delay: 0.72, duration: 0.80 },
+    ];
+
+    const t = this.ctx.currentTime;
+    melody.forEach(n => {
+      const osc = this.ctx!.createOscillator();
+      const gain = this.ctx!.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(n.freq, t + n.delay);
+
+      gain.gain.setValueAtTime(0.25, t + n.delay);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + n.delay + n.duration);
+
+      osc.connect(gain);
+      gain.connect(this.ctx!.destination);
+      osc.start(t + n.delay);
+      osc.stop(t + n.delay + n.duration);
+    });
+  }
+
+  // 💀 Game Over 時間耗盡失敗音效
+  public playGameOverSFX() {
+    this.initCtx();
+    if (!this.ctx || this.isMuted) return;
+
+    const t = this.ctx.currentTime;
+    // Sad falling slide: F4 -> Eb4 -> D4 -> C#3
+    const notes = [
+      { freq: 349.23, delay: 0.0, duration: 0.25 },
+      { freq: 311.13, delay: 0.22, duration: 0.25 },
+      { freq: 293.66, delay: 0.44, duration: 0.30 },
+      { freq: 138.59, delay: 0.72, duration: 0.70 }
+    ];
+
+    notes.forEach(n => {
+      const osc = this.ctx!.createOscillator();
+      const gain = this.ctx!.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(n.freq, t + n.delay);
+      osc.frequency.exponentialRampToValueAtTime(n.freq * 0.9, t + n.delay + n.duration);
+
+      gain.gain.setValueAtTime(0.2, t + n.delay);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + n.delay + n.duration);
+
+      osc.connect(gain);
+      gain.connect(this.ctx!.destination);
+      osc.start(t + n.delay);
+      osc.stop(t + n.delay + n.duration);
+    });
+  }
+
+  // ⏰ 倒數即將結束警示音效
+  public playTimeWarningSFX() {
+    this.initCtx();
+    if (!this.ctx || this.isMuted) return;
+
+    const t = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(880, t);
+    osc.frequency.setValueAtTime(1760, t + 0.06);
+
+    gain.gain.setValueAtTime(0.15, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start(t);
+    osc.stop(t + 0.12);
+  }
+
+  // 👑 全破大通關終極榮耀音效 (Grand Victory)
+  public playGameVictorySFX() {
+    this.initCtx();
+    if (!this.ctx || this.isMuted) return;
+
+    const t = this.ctx.currentTime;
+    const notes = [
+      { freq: 523.25, delay: 0.0, duration: 0.2 },
+      { freq: 659.25, delay: 0.18, duration: 0.2 },
+      { freq: 783.99, delay: 0.36, duration: 0.25 },
+      { freq: 1046.50, delay: 0.58, duration: 0.5 },
+      { freq: 1318.51, delay: 0.85, duration: 0.5 },
+      { freq: 1567.98, delay: 1.15, duration: 0.9 }
+    ];
+
+    notes.forEach(n => {
+      const osc = this.ctx!.createOscillator();
+      const gain = this.ctx!.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(n.freq, t + n.delay);
+
+      gain.gain.setValueAtTime(0.3, t + n.delay);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + n.delay + n.duration);
+
+      osc.connect(gain);
+      gain.connect(this.ctx!.destination);
+      osc.start(t + n.delay);
+      osc.stop(t + n.delay + n.duration);
+    });
+  }
 }
 
 export const soundEngine = new SoundEngine();
+

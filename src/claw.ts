@@ -96,6 +96,7 @@ export class Claw {
   // Arm animation angle
   private currentArmAngle = 0.85;
   private targetArmAngle = 0.85;
+  private grabbedContactAngle = -0.22;
 
   constructor(scene: THREE.Scene, physics: PhysicsSystem) {
     this.physicsRef = physics;
@@ -523,7 +524,11 @@ export class Claw {
     this.cableLine.geometry.setFromPoints([cableTop, cableBottom]);
 
     // ── D. Smooth Arm Angle Animation (Controlled solenoid closing speed 6.0) ──
-    this.currentArmAngle += (this.targetArmAngle - this.currentArmAngle) * 6.0 * deltaTime;
+    // When holding an object, clamp arm angle so the metal prongs hug the perimeter rather than piercing through like a skewer
+    const effectiveTargetAngle = (this.grabbedBody && this.state !== 'OPENING' && this.state !== 'IDLE' && this.state !== 'DESCENDING')
+      ? this.grabbedContactAngle
+      : this.targetArmAngle;
+    this.currentArmAngle += (effectiveTargetAngle - this.currentArmAngle) * 6.0 * deltaTime;
 
     for (let i = 0; i < 3; i++) {
       const pivot = this.armPivots[i];
@@ -871,8 +876,8 @@ export class Claw {
     let candidateBody: RAPIER.RigidBody | null = null;
     let bestScore = -Infinity;
 
-    // Scale-aware grab envelope
-    const maxDistXZ = 0.42 * clawScale;
+    // Scale-aware grab envelope (Generous envelope for reliable, natural arcade grabs)
+    const maxDistXZ = 0.48 * clawScale;
 
     if (prizesManager && prizesManager.bodies.length > 0) {
       for (const pBody of prizesManager.bodies) {
@@ -881,15 +886,14 @@ export class Claw {
         const dz = bPos.z - basePos.z;
         const distXZ = Math.sqrt(dx * dx + dz * dz);
 
-        // 核心幾何規則 1：水平位置必須真正落在三爪包圍的內部
+        // 核心幾何規則 1：水平位置落在三爪開闔覆蓋範圍內
         if (distXZ > maxDistXZ) continue;
 
-        // 核心幾何規則 2：爪尖必須低於或托住物體的重心/受力點（絕不允許爪尖在物體上方時穿模隔空硬抓！）
-        // 允許適當的容差（爪尖不高於物體中心 0.15m）
-        if (lowestTipY > bPos.y + 0.15 * clawScale) continue;
+        // 核心幾何規則 2：爪尖托住或包圍物體重心（留有適當寬容度）
+        if (lowestTipY > bPos.y + 0.22 * clawScale) continue;
 
-        // 核心幾何規則 3：物體不能已經在爪頂上方（避免穿透到電機筒內部）
-        if (bPos.y > basePos.y + 0.20 * clawScale) continue;
+        // 核心幾何規則 3：物體不能高於爪頂電機筒
+        if (bPos.y > basePos.y + 0.25 * clawScale) continue;
 
         // 評分：越接近爪心且爪尖越托住物體下方，評分越高
         const depthUnderCenter = (bPos.y - lowestTipY);
@@ -909,6 +913,11 @@ export class Claw {
       const localAnchorX = bPos.x - basePos.x;
       const localAnchorY = bPos.y - basePos.y;
       const localAnchorZ = bPos.z - basePos.z;
+
+      // Calculate dynamic contact angle so claw blades hug the perimeter instead of piercing through like a skewer
+      const distXZ = Math.sqrt(localAnchorX * localAnchorX + localAnchorZ * localAnchorZ);
+      this.grabbedContactAngle = Math.max(0.18, Math.min(0.38, 0.14 + distXZ * 0.45));
+      this.targetArmAngle = this.grabbedContactAngle;
 
       for (let i = 0; i < targetBody.numColliders(); i++) {
         const col = targetBody.collider(i);
@@ -943,6 +952,7 @@ export class Claw {
   }
 
   private releasePrize(physics: PhysicsSystem) {
+    this.grabbedContactAngle = this.config.clawCloseAngle;
     if (this.grabbedJoint) {
       try {
         physics.world.removeImpulseJoint(this.grabbedJoint, true);

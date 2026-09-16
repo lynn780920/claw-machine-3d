@@ -6,12 +6,15 @@ import { Cabinet } from './cabinet';
 import { Claw } from './claw';
 import { PrizesManager } from './prizes';
 import { soundEngine } from './audio';
-import { scratchcardManager } from './scratchcard';
+import { LevelSystem, LevelConfig, LEVEL_CONFIGS } from './levelSystem';
+import { LeaderboardManager } from './leaderboard';
 
 // Game Statistics
 let coins = 0;
 let plays = 0;
 let wins = 0;
+let levelSystem: LevelSystem;
+let leaderboardManager: LeaderboardManager;
 
 // Three.js Core
 let scene: THREE.Scene;
@@ -192,11 +195,11 @@ function checkWinCondition() {
     const body = prizesManager.bodies[idx];
     const pos = body.translation();
     
-    // If prize fell below floor level inside the chute footprint
-    if (pos.x >= minX && pos.x <= maxX && 
-        pos.z >= minZ && pos.z <= maxZ && 
-        pos.y < -0.3) {
-      
+    // Generous chute & slide ramp footprint detection (Never misses prizes falling into hole or down the delivery ramp)
+    const isEnteringChuteHole = (pos.x >= minX - 0.35 && pos.x <= maxX + 0.35 && pos.z >= minZ - 0.35 && pos.y < -0.15);
+    const isFallenBelowFloor = (pos.y < -0.45); // Any prize falling down the pit/void below the playfield
+
+    if (isEnteringChuteHole || isFallenBelowFloor) {
       const prizeMesh = prizesManager.prizes[idx];
       
       // Visual shrink-and-delete animation
@@ -219,6 +222,9 @@ function checkWinCondition() {
 
       wins++;
       updateStatsUI();
+      if (levelSystem) {
+        levelSystem.onItemWon(prizesManager.prizes.length);
+      }
       showWinAlert();
     }
   }
@@ -327,25 +333,29 @@ function launchConfetti() {
 
 function showWinAlert() {
   soundEngine.playWinSFX();
-  scratchcardManager.addChance(1);
   launchConfetti();
 
   const toast = document.getElementById('win-toast');
   if (toast) {
     const titleEl = toast.querySelector('.win-toast-title');
     if (titleEl) {
-      titleEl.textContent = '🎉 恭喜出貨！成功夾出娃娃！';
+      titleEl.textContent = '恭喜出貨！成功夾出娃娃！';
     }
     const descEl = toast.querySelector('.win-toast-desc');
-    if (descEl) {
-      descEl.innerHTML = '獲得 <span class="win-toast-highlight">1 次</span> 刮刮樂機會 🎟️';
+    if (descEl && levelSystem) {
+      const cfg = levelSystem.getCurrentConfig();
+      if (cfg.isClearAll) {
+        descEl.innerHTML = `本關極速清台：剩餘 <span class="win-toast-highlight">${prizesManager.prizes.length} 盒</span>`;
+      } else {
+        descEl.innerHTML = `本關目標進度：<span class="win-toast-highlight">${levelSystem.stageWins} / ${cfg.targetWins} 樣</span>`;
+      }
     }
     toast.classList.remove('hidden');
     if (winToastTimer !== null) clearTimeout(winToastTimer);
     winToastTimer = window.setTimeout(() => {
       toast.classList.add('hidden');
       winToastTimer = null;
-    }, 5000);
+    }, 4500);
   }
 }
 
@@ -413,7 +423,7 @@ function applyDIPSettings() {
 
   if (claw && claw.config) {
     claw.config.strongStiffness = (strongPercent / 100) * 250.0;
-    claw.config.weakStiffness = (weakPercent / 100) * 25.0;
+    claw.config.weakStiffness = (weakPercent / 100) * 250.0;
     claw.config.mediumStiffness = (claw.config.strongStiffness + claw.config.weakStiffness) / 2;
     claw.config.weakHeightThreshold = heightPercent / 100;
     claw.config.topHitProbability = tophitPercent / 100;
@@ -514,6 +524,170 @@ function triggerActionButtonAction() {
 }
 
 function setupUIEventListeners() {
+  // ── Leaderboard & Player Nickname Management ──
+  leaderboardManager = new LeaderboardManager();
+
+  const updateHudPlayerName = () => {
+    const hudPlayerEl = document.getElementById('hud-player-name');
+    if (hudPlayerEl) {
+      const name = leaderboardManager.getPlayerName();
+      hudPlayerEl.textContent = name || '設定暱稱';
+    }
+  };
+  updateHudPlayerName();
+
+  const nicknameModal = document.getElementById('nickname-modal');
+  const playerNicknameInput = document.getElementById('player-nickname-input') as HTMLInputElement | null;
+  const playerProfileBtn = document.getElementById('player-profile-btn');
+  const closeNicknameBtn = document.getElementById('close-nickname-btn');
+  const saveNicknameBtn = document.getElementById('save-nickname-btn');
+
+  // Auto prompt nickname on first visit if not yet configured
+  if (!localStorage.getItem('claw_player_nickname')) {
+    setTimeout(() => {
+      if (nicknameModal) {
+        nicknameModal.style.display = 'flex';
+        if (playerNicknameInput) playerNicknameInput.focus();
+      }
+    }, 450);
+  }
+
+  const handleSaveNickname = () => {
+    if (playerNicknameInput) {
+      const val = playerNicknameInput.value.trim();
+      if (val) {
+        leaderboardManager.setPlayerName(val);
+        updateHudPlayerName();
+      }
+    }
+    if (nicknameModal) nicknameModal.style.display = 'none';
+  };
+
+  playerProfileBtn?.addEventListener('click', () => {
+    if (nicknameModal) {
+      nicknameModal.style.display = 'flex';
+      if (playerNicknameInput) {
+        playerNicknameInput.value = leaderboardManager.getPlayerName();
+        playerNicknameInput.focus();
+      }
+    }
+  });
+
+  closeNicknameBtn?.addEventListener('click', () => {
+    if (nicknameModal) nicknameModal.style.display = 'none';
+  });
+
+  saveNicknameBtn?.addEventListener('click', () => {
+    handleSaveNickname();
+  });
+
+  playerNicknameInput?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      handleSaveNickname();
+    }
+  });
+
+  nicknameModal?.addEventListener('click', (e) => {
+    if (e.target === nicknameModal) nicknameModal.style.display = 'none';
+  });
+
+  // ── Live Record-Breaking Leaderboard & Google Sheets Sync ──
+  const leaderboardModal = document.getElementById('leaderboard-modal');
+  const openLeaderboardBtn = document.getElementById('open-leaderboard-btn');
+  const closeLeaderboardBtn = document.getElementById('close-leaderboard-btn');
+  const showGSheetGuideBtn = document.getElementById('show-gsheet-guide-btn');
+  const gsheetGuideContent = document.getElementById('gsheet-guide-content');
+  const gsheetUrlInput = document.getElementById('gsheet-url-input') as HTMLInputElement | null;
+  const saveGSheetUrlBtn = document.getElementById('save-gsheet-url-btn');
+
+  const renderLeaderboardUI = () => {
+    // 1. Records Hall (各關最高紀錄保持人)
+    const hallContainer = document.getElementById('records-hall-container');
+    if (hallContainer) {
+      const records = leaderboardManager.getBestRecords();
+      hallContainer.innerHTML = records.map((rec) => `
+        <div class="record-hall-card">
+          <div class="record-hall-header">
+            <span class="record-badge">${rec.title}</span>
+            <span class="record-time">${rec.formattedTime}</span>
+          </div>
+          <div class="record-hall-holder">
+            <span class="holder-label">歷史紀錄保持人</span>
+            <span class="holder-name">${rec.holderName}</span>
+          </div>
+          <div class="record-hall-meta">
+            <span>達成日期：${rec.date}</span>
+            <span>投幣累積：${rec.plays} 次</span>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // 2. Break Events Timeline (即時打破紀錄歷史動態)
+    const eventsContainer = document.getElementById('record-events-container');
+    if (eventsContainer) {
+      const events = leaderboardManager.getRecentBreakEvents();
+      if (events.length === 0) {
+        eventsContainer.innerHTML = `<div class="empty-events" style="color: #94a3b8; font-size: 13px; text-align: center; padding: 18px 0;">目前尚無破紀錄事件，只要以更短時間通關即可名垂榮譽榜！</div>`;
+      } else {
+        eventsContainer.innerHTML = events.slice(0, 15).map((ev) => `
+          <div class="record-event-row">
+            <div class="event-indicator">⚡</div>
+            <div class="event-detail">
+              <div class="event-text">
+                <span class="event-player">${ev.playerName}</span> 
+                <span class="event-type">${ev.recordType}</span>！
+                (最速成績：<span class="event-time">${ev.timeFormatted}</span>)
+              </div>
+              <div class="event-date">${ev.date} · ${ev.stageName}</div>
+            </div>
+          </div>
+        `).join('');
+      }
+    }
+
+    // 3. Google Sheet Webhook Input
+    if (gsheetUrlInput) {
+      gsheetUrlInput.value = leaderboardManager.getGoogleSheetWebhook();
+    }
+  };
+
+  openLeaderboardBtn?.addEventListener('click', () => {
+    if (leaderboardModal) {
+      renderLeaderboardUI();
+      leaderboardModal.style.display = 'flex';
+    }
+  });
+
+  closeLeaderboardBtn?.addEventListener('click', () => {
+    if (leaderboardModal) leaderboardModal.style.display = 'none';
+  });
+
+  leaderboardModal?.addEventListener('click', (e) => {
+    if (e.target === leaderboardModal) leaderboardModal.style.display = 'none';
+  });
+
+  showGSheetGuideBtn?.addEventListener('click', () => {
+    if (gsheetGuideContent) {
+      gsheetGuideContent.classList.toggle('hidden');
+    }
+  });
+
+  saveGSheetUrlBtn?.addEventListener('click', () => {
+    if (gsheetUrlInput) {
+      leaderboardManager.setGoogleSheetWebhook(gsheetUrlInput.value);
+      if (saveGSheetUrlBtn) {
+        const origText = saveGSheetUrlBtn.textContent;
+        saveGSheetUrlBtn.textContent = '已儲存！';
+        saveGSheetUrlBtn.style.background = '#10b981';
+        setTimeout(() => {
+          saveGSheetUrlBtn.textContent = origText;
+          saveGSheetUrlBtn.style.background = '';
+        }, 2000);
+      }
+    }
+  });
+
   // Desktop Action Button
   if (dropBtn) {
     dropBtn.addEventListener('click', () => {
@@ -612,17 +786,71 @@ function setupUIEventListeners() {
   if (bgmBtn) {
     bgmBtn.addEventListener('click', () => {
       const isMuted = soundEngine.toggleMute();
-      bgmBtn.innerHTML = `<span class="nav-btn-label">${isMuted ? '🔇 靜音' : '🎵 音樂'}</span>`;
+      bgmBtn.innerHTML = `<span class="nav-btn-label">${isMuted ? '靜音' : '音樂'}</span>`;
     });
   }
 
-  // Open Scratchcard Modal
-  const openScratchBtn = document.getElementById('open-scratch-btn');
-  if (openScratchBtn) {
-    openScratchBtn.addEventListener('click', () => {
-      scratchcardManager.openModal();
+  // 📋 Open & Close Stage Briefing Modal
+  const openBriefingBtn = document.getElementById('open-briefing-btn');
+  const briefingModal = document.getElementById('briefing-modal');
+  const closeBriefingBtn = document.getElementById('close-briefing-btn');
+  const startChallengeBtn = document.getElementById('start-challenge-btn');
+
+  if (openBriefingBtn && briefingModal) {
+    openBriefingBtn.addEventListener('click', () => {
+      briefingModal.style.display = 'flex';
     });
   }
+  if (closeBriefingBtn && briefingModal) {
+    closeBriefingBtn.addEventListener('click', () => {
+      briefingModal.style.display = 'none';
+    });
+  }
+  if (startChallengeBtn && briefingModal) {
+    startChallengeBtn.addEventListener('click', () => {
+      briefingModal.style.display = 'none';
+    });
+  }
+  if (briefingModal) {
+    briefingModal.addEventListener('click', (e) => {
+      if (e.target === briefingModal) briefingModal.style.display = 'none';
+    });
+  }
+
+  // 🚀 Quick Stage Jump Buttons inside Briefing Modal
+  document.querySelectorAll('.stage-jump-btn').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      const stageIdx = parseInt((e.target as HTMLElement).getAttribute('data-stage') || '0');
+      if (briefingModal) briefingModal.style.display = 'none';
+      if (levelSystem) levelSystem.startLevel(stageIdx);
+    });
+  });
+
+  // 🎉 Stage Clear Modal Action Button
+  document.getElementById('next-stage-btn')?.addEventListener('click', () => {
+    const clearModal = document.getElementById('stage-clear-modal');
+    if (clearModal) clearModal.style.display = 'none';
+    if (levelSystem) levelSystem.nextLevel();
+  });
+
+  // 💀 Game Over Modal Action Buttons
+  document.getElementById('retry-stage-btn')?.addEventListener('click', () => {
+    const gameOverModal = document.getElementById('game-over-modal');
+    if (gameOverModal) gameOverModal.style.display = 'none';
+    if (levelSystem) levelSystem.restartCurrentLevel();
+  });
+  document.getElementById('restart-campaign-btn')?.addEventListener('click', () => {
+    const gameOverModal = document.getElementById('game-over-modal');
+    if (gameOverModal) gameOverModal.style.display = 'none';
+    if (levelSystem) levelSystem.restartCampaign();
+  });
+
+  // 👑 Grand Victory Modal Action Button
+  document.getElementById('victory-restart-btn')?.addEventListener('click', () => {
+    const victoryModal = document.getElementById('game-victory-modal');
+    if (victoryModal) victoryModal.style.display = 'none';
+    if (levelSystem) levelSystem.restartCampaign();
+  });
 
   // Preset Random Barrier Layout (🎯 經典槍位隨機擺台)
   document.getElementById('preset-barrier-btn')?.addEventListener('click', () => {
@@ -969,32 +1197,6 @@ function setupUIEventListeners() {
     const modeSelect = document.getElementById('setting-machinemode') as HTMLSelectElement | null;
     if (modeSelect) modeSelect.value = mode;
 
-    let fullText = '切換機台 (#01 小型機台 · 潮玩盲盒)';
-    let shortText = '機台 #01';
-    if (mode === 'small') {
-      fullText = '切換機台 (#01 小型機台 · 潮玩盲盒)';
-      shortText = '機台 #01';
-    } else if (mode === 'medium') {
-      fullText = '切換機台 (#02 中型機台)';
-      shortText = '機台 #02';
-    } else if (mode === 'large') {
-      fullText = '切換機台 (#03 中大機台)';
-      shortText = '機台 #03';
-    } else if (mode === 'kbasket') {
-      fullText = '切換機台 (#04 K霸機台)';
-      shortText = '機台 #04';
-    }
-
-    const fullLabel = document.querySelector('#switch-machine-btn .machine-full-name');
-    const shortLabel = document.querySelector('#switch-machine-btn .machine-short-name');
-    if (fullLabel && shortLabel) {
-      fullLabel.textContent = fullText;
-      shortLabel.textContent = shortText;
-    } else {
-      const btnLabel = document.querySelector('#switch-machine-btn .nav-btn-label');
-      if (btnLabel) btnLabel.textContent = fullText;
-    }
-
     // 1. Clear all existing prizes completely first!
     prizesManager.clearPrizes();
 
@@ -1014,46 +1216,46 @@ function setupUIEventListeners() {
     };
 
     if (mode === 'small') {
-      // 小型機台 (真實標準街機比例 寬6.0m x 櫥窗高6.0m x 高底座5.0m, POP MART 6盒精準擺台)
+      // 小型機台 (第三關：潮玩盲盒 8分鐘清台戰 - 寬6.0m x 櫥窗高6.0m, POP MART 5盒精準擺台)
       claw.setClawScale(0.85);
       claw.setMachineBounds(chuteHomeX, chuteHomeZ, 2.35, cabinet.height);
 
       syncDIPPanelUI({
-        strong: '100',
-        height: '66',
-        weak: '46',
-        tophit: '18',
-        speed: '1.6',
+        strong: '95',
+        height: '65',
+        weak: '60',
+        tophit: '10',
+        speed: '2.6',
         dropspeed: '2.0',
-        sway: '1.2',
-        length: '9.0',
-        baffle: '0.5',
-        dolls: '6',
+        sway: '1.35',
+        length: '6.5',
+        baffle: '0.45',
+        dolls: '5',
         antiswing: 'disabled',
         prizetype: 'blindbox'
       });
 
-      prizesManager.spawnPrizes(6, 'blindbox', 2.5, chuteBounds);
+      prizesManager.spawnPrizes(5, 'blindbox', 2.5, chuteBounds);
 
       cameraViewMode = 'front';
       const camBtnLabel = document.querySelector('#toggle-camera-btn .nav-btn-label');
       if (camBtnLabel) camBtnLabel.textContent = '視角: 正面';
       applyCameraView('small', 'front');
     } else if (mode === 'large') {
-      // 中大機台 (寬闊修長大型機台 + 25盒動漫大賞)
+      // 中大機台 (第二關：動漫公仔 10分鐘夾4樣 - 寬闊修長大型機台 + 25盒動漫大賞)
       claw.setClawScale(1.15);
       claw.setMachineBounds(chuteHomeX, chuteHomeZ, 3.7, cabinet.height);
 
       syncDIPPanelUI({
         strong: '95',
         height: '70',
-        weak: '32',
-        tophit: '35',
+        weak: '55',
+        tophit: '15',
         speed: '2.6',
         dropspeed: '2.0',
         sway: '1.35',
         length: '7.5',
-        baffle: '0.6',
+        baffle: '0.50',
         dolls: '25',
         antiswing: 'disabled',
         prizetype: 'anime'
@@ -1062,19 +1264,19 @@ function setupUIEventListeners() {
       prizesManager.spawnPrizes(25, 'anime', 4.8, chuteBounds);
       applyCameraView('large', cameraViewMode);
     } else if (mode === 'kbasket') {
-      // K-霸機台 (超巨無霸直立機台！1.35x 霸王巨爪 + 12大盒巨型家電)
+      // K-霸機台 (第四關：終極魔王關 8分鐘夾3樣 - 1.35x 霸王巨爪 + 12大盒巨型家電 - 參數嚴格對齊照片)
       claw.setClawScale(1.35);
       claw.setMachineBounds(chuteHomeX, chuteHomeZ, 4.8, cabinet.height);
 
       syncDIPPanelUI({
-        strong: '79',
+        strong: '100',
         height: '60',
-        weak: '43',
+        weak: '40',
         tophit: '29',
         speed: '2.4',
-        dropspeed: '1.9',
-        sway: '1.30',
-        length: '4.5',
+        dropspeed: '3.2',
+        sway: '1.3',
+        length: '12.5',
         baffle: '1.1',
         dolls: '12',
         antiswing: 'disabled',
@@ -1084,20 +1286,20 @@ function setupUIEventListeners() {
       prizesManager.spawnPrizes(12, 'giant_appliances', 6.0, chuteBounds);
       applyCameraView('kbasket', cameraViewMode);
     } else {
-      // 中型機台 (標準街機黃金比例, 1.0x 標準爪 + 40隻繽紛娃娃)
+      // 中型機台 (第一關：初試身手 15分鐘夾8樣 - 最簡單新手友善！高抓力、低擋板、零頂撞掉落)
       claw.setClawScale(1.0);
       claw.setMachineBounds(chuteHomeX, chuteHomeZ, 3.0, cabinet.height);
 
       syncDIPPanelUI({
         strong: '100',
-        height: '60',
-        weak: '40',
-        tophit: '25',
+        height: '90',
+        weak: '90',
+        tophit: '0',
         speed: '2.6',
         dropspeed: '2.0',
         sway: '1.35',
         length: '7.0',
-        baffle: '0.5',
+        baffle: '0.35',
         dolls: '40',
         antiswing: 'disabled',
         prizetype: 'mixed'
@@ -1130,17 +1332,6 @@ function setupUIEventListeners() {
 
   document.getElementById('power-saver-btn')?.addEventListener('click', () => {
     (window as any).togglePowerSaver();
-  });
-
-  document.getElementById('switch-machine-btn')?.addEventListener('click', () => {
-    const modes = ['small', 'medium', 'large', 'kbasket'];
-    let curKey = currentMachineMode;
-    if (curKey === 'sanrio') curKey = 'small';
-    if (curKey === 'standard') curKey = 'medium';
-    if (curKey === 'anime') curKey = 'large';
-
-    const nextIdx = (modes.indexOf(curKey) + 1) % modes.length;
-    switchMachineMode(modes[nextIdx]);
   });
 
   document.getElementById('setting-machinemode')?.addEventListener('change', (e) => {
@@ -1189,8 +1380,155 @@ function setupUIEventListeners() {
     });
   }
 
-  // Apply initial machine mode preset (#01 Small Blind Box Machine)
-  switchMachineMode('small');
+  // 🎮 Initialize 4-Stage Challenge Progression System
+  levelSystem = new LevelSystem({
+    onLevelStarted: (level) => {
+      const titleEl = document.getElementById('hud-level-title');
+      if (titleEl) titleEl.textContent = level.shortName;
+      
+      switchMachineMode(level.machineMode);
+
+      // Highlight active card in briefing modal
+      for (let i = 1; i <= 4; i++) {
+        const card = document.getElementById(`stage-card-${i}`);
+        if (card) {
+          if (i === level.stageNum) card.classList.add('active-stage');
+          else card.classList.remove('active-stage');
+        }
+      }
+    },
+    onTick: (_remainingSeconds, formatted, isWarning) => {
+      const timerDigits = document.getElementById('hud-timer-digits');
+      if (timerDigits) timerDigits.textContent = formatted;
+
+      const timerPill = document.getElementById('hud-timer-pill');
+      if (timerPill) {
+        if (isWarning) {
+          timerPill.classList.add('warning-pulse');
+        } else {
+          timerPill.classList.remove('warning-pulse');
+        }
+      }
+
+      if (isWarning && _remainingSeconds <= 10 && _remainingSeconds > 0) {
+        soundEngine.playTimeWarningSFX();
+      }
+    },
+    onProgressUpdated: (currentWins, targetWins, isClearAll, remainingItems) => {
+      const targetProgress = document.getElementById('hud-target-progress');
+      if (targetProgress) {
+        targetProgress.textContent = isClearAll ? `剩餘 ${remainingItems} 樣` : `${currentWins} / ${targetWins} 樣`;
+      }
+
+      const toastProgress = document.getElementById('win-toast-progress');
+      if (toastProgress) {
+        toastProgress.textContent = isClearAll ? `剩餘 ${remainingItems} 樣` : `${currentWins} / ${targetWins} 樣`;
+      }
+    },
+    onStageClear: (level, elapsedSeconds, stageWins) => {
+      soundEngine.playStageClearSFX();
+      launchConfetti();
+
+      const clearModal = document.getElementById('stage-clear-modal');
+      const stageNameEl = document.getElementById('clear-stage-name');
+      const elapsedEl = document.getElementById('clear-elapsed-time');
+      const winsCountEl = document.getElementById('clear-wins-count');
+      const nextTitleEl = document.getElementById('next-stage-title');
+      const nextDetailsEl = document.getElementById('next-stage-details');
+
+      const formattedTime = levelSystem.getFormattedTime(elapsedSeconds);
+
+      if (stageNameEl) stageNameEl.textContent = `恭喜通過 ${level.name}！`;
+      if (elapsedEl) elapsedEl.textContent = formattedTime;
+      if (winsCountEl) winsCountEl.textContent = `${stageWins} 樣`;
+
+      // 檢查並紀錄單關破紀錄 (誰打破紀錄)
+      if (leaderboardManager) {
+        const recordResult = leaderboardManager.checkAndRecordStageWin(
+          level.stageNum,
+          level.name,
+          elapsedSeconds,
+          formattedTime,
+          stageWins,
+          plays
+        );
+        const recordBanner = document.getElementById('clear-new-record-banner');
+        const recordMsg = document.getElementById('clear-record-msg');
+        if (recordBanner && recordMsg) {
+          if (recordResult.isNewRecord) {
+            recordBanner.style.display = 'block';
+            recordMsg.textContent = `太強了！【${leaderboardManager.getPlayerName()}】以 ${formattedTime} 成功打破 ${recordResult.recordTitle}！(原紀錄：${recordResult.previousBest})`;
+          } else {
+            recordBanner.style.display = 'none';
+          }
+        }
+      }
+
+      const nextLevelIndex = levelSystem.currentLevelIndex + 1;
+      if (nextLevelIndex < LEVEL_CONFIGS.length) {
+        const nextCfg = LEVEL_CONFIGS[nextLevelIndex];
+        if (nextTitleEl) nextTitleEl.textContent = `${nextCfg.shortName}：${nextCfg.name}`;
+        if (nextDetailsEl) nextDetailsEl.textContent = `${nextCfg.machineLabel} | 限時 ${Math.floor(nextCfg.timeLimitSeconds / 60)} 分鐘 | 目標：${nextCfg.objectiveText}`;
+      }
+
+      if (clearModal) clearModal.style.display = 'flex';
+    },
+    onGameOver: (level, _elapsedSeconds, _currentWins) => {
+      soundEngine.playGameOverSFX();
+      const gameOverModal = document.getElementById('game-over-modal');
+      const levelNameEl = document.getElementById('game-over-level-name');
+      const progressEl = document.getElementById('game-over-progress-val');
+
+      if (levelNameEl) levelNameEl.textContent = `${level.shortName} 時間已耗盡`;
+      if (progressEl) {
+        progressEl.textContent = level.isClearAll 
+          ? `台內剩餘 ${prizesManager.prizes.length} 盒 (未完成清台)` 
+          : `${levelSystem.stageWins} / ${level.targetWins} 樣`;
+      }
+
+      if (gameOverModal) gameOverModal.style.display = 'flex';
+    },
+    onGameVictory: (totalElapsedSeconds, totalWins) => {
+      soundEngine.playGameVictorySFX();
+      launchConfetti();
+
+      const victoryModal = document.getElementById('game-victory-modal');
+      const totalTimeEl = document.getElementById('victory-total-time');
+      const totalWinsEl = document.getElementById('victory-total-wins');
+      const totalPlaysEl = document.getElementById('victory-total-plays');
+
+      const formattedTotalTime = levelSystem.getFormattedTime(totalElapsedSeconds);
+
+      if (totalTimeEl) totalTimeEl.textContent = formattedTotalTime;
+      if (totalWinsEl) totalWinsEl.textContent = `${totalWins} 樣`;
+      if (totalPlaysEl) totalPlaysEl.textContent = `${plays} 次`;
+
+      // 檢查並紀錄全破大通關紀錄 (誰打破至尊總紀錄)
+      if (leaderboardManager) {
+        const recordResult = leaderboardManager.checkAndRecordGrandVictory(
+          totalElapsedSeconds,
+          formattedTotalTime,
+          totalWins,
+          plays
+        );
+        const victoryBanner = document.getElementById('victory-new-record-banner');
+        const victoryMsg = document.getElementById('victory-record-msg');
+        if (victoryBanner && victoryMsg) {
+          if (recordResult.isNewRecord) {
+            victoryBanner.style.display = 'block';
+            victoryMsg.textContent = `神級操作！【${leaderboardManager.getPlayerName()}】以總耗時 ${formattedTotalTime} 打破至尊夾王歷史紀錄！(原紀錄：${recordResult.previousBest})`;
+          } else {
+            victoryBanner.style.display = 'none';
+          }
+        }
+      }
+
+      if (victoryModal) victoryModal.style.display = 'flex';
+    }
+  });
+
+  // Start Level 1 (機台 #02 中型機台, 限時 15 分鐘, 8 樣過關)
+  levelSystem.startLevel(0);
   updateStatsUI();
 }
 
