@@ -97,7 +97,7 @@ async function init() {
   controls.dampingFactor = 0.05;
   controls.maxPolarAngle = Math.PI / 2 - 0.05;
   controls.minDistance = 3;
-  controls.maxDistance = 18;
+  controls.maxDistance = 35;
   controls.target.set(0, 3.2, 0); // Focus camera on dolls playfield
 
   // Studio High-Key Lighting matching Reference Photo
@@ -332,9 +332,13 @@ function showWinAlert() {
 
   const toast = document.getElementById('win-toast');
   if (toast) {
-    const textEl = toast.querySelector('.win-toast-text');
-    if (textEl) {
-      textEl.textContent = '恭喜中獎！成功夾出娃娃！獲得 1 次刮刮樂！';
+    const titleEl = toast.querySelector('.win-toast-title');
+    if (titleEl) {
+      titleEl.textContent = '🎉 恭喜出貨！成功夾出娃娃！';
+    }
+    const descEl = toast.querySelector('.win-toast-desc');
+    if (descEl) {
+      descEl.innerHTML = '獲得 <span class="win-toast-highlight">1 次</span> 刮刮樂機會 🎟️';
     }
     toast.classList.remove('hidden');
     if (winToastTimer !== null) clearTimeout(winToastTimer);
@@ -608,7 +612,7 @@ function setupUIEventListeners() {
   if (bgmBtn) {
     bgmBtn.addEventListener('click', () => {
       const isMuted = soundEngine.toggleMute();
-      bgmBtn.innerHTML = `<span class="nav-btn-label">${isMuted ? '音樂 (關)' : '音樂 (開)'}</span>`;
+      bgmBtn.innerHTML = `<span class="nav-btn-label">${isMuted ? '🔇 靜音' : '🎵 音樂'}</span>`;
     });
   }
 
@@ -868,6 +872,93 @@ function setupUIEventListeners() {
   let currentMachineMode: string = 'medium';
   let cameraViewMode: 'front' | 'side' = 'front';
 
+  function applyCameraView(mode = currentMachineMode, view = cameraViewMode) {
+    const aspect = window.innerWidth / window.innerHeight;
+    const isMobilePortrait = aspect < 1.0;
+
+    if (view === 'front') {
+      if (mode === 'small') {
+        if (isMobilePortrait) {
+          // 手機直螢幕：相機拉遠以完整容納機台頂部招牌、內部娃娃爪子、操作台與底座全貌
+          const distFactor = Math.max(1.45, 0.92 / aspect);
+          controls.target.set(0, 1.8, 0.2);
+          camera.position.set(0, 3.8, 9.2 * distFactor);
+        } else {
+          controls.target.set(0, 2.2, 0.2);
+          camera.position.set(0, 3.8, 9.2);
+        }
+      } else if (mode === 'large') {
+        if (isMobilePortrait) {
+          const distFactor = Math.max(1.45, 0.92 / aspect);
+          controls.target.set(0, 2.4, 0.2);
+          camera.position.set(0, 4.8, 12.2 * distFactor);
+        } else {
+          controls.target.set(0, 2.8, 0.2);
+          camera.position.set(0, 5.0, 12.2);
+        }
+      } else if (mode === 'kbasket') {
+        if (isMobilePortrait) {
+          const distFactor = Math.max(1.45, 0.92 / aspect);
+          controls.target.set(0, 2.8, 0.2);
+          camera.position.set(0, 5.2, 14.5 * distFactor);
+        } else {
+          controls.target.set(0, 3.2, 0.2);
+          camera.position.set(0, 5.6, 14.5);
+        }
+      } else {
+        // medium
+        if (isMobilePortrait) {
+          const distFactor = Math.max(1.45, 0.92 / aspect);
+          controls.target.set(0, 2.1, 0.2);
+          camera.position.set(0, 4.2, 10.5 * distFactor);
+        } else {
+          controls.target.set(0, 2.5, 0.2);
+          camera.position.set(0, 4.4, 10.5);
+        }
+      }
+    } else {
+      // 側面視角 (side view)
+      if (mode === 'small') {
+        if (isMobilePortrait) {
+          const distFactor = Math.max(1.35, 0.88 / aspect);
+          controls.target.set(-0.9, 1.6, 1.2);
+          camera.position.set(-4.6 * distFactor, 3.6, 3.6 * distFactor);
+        } else {
+          controls.target.set(-0.9, 1.6, 1.2);
+          camera.position.set(-4.6, 3.6, 3.6);
+        }
+      } else if (mode === 'large') {
+        if (isMobilePortrait) {
+          const distFactor = Math.max(1.35, 0.88 / aspect);
+          controls.target.set(-1.4, 2.0, 1.8);
+          camera.position.set(-6.5 * distFactor, 4.8, 4.8 * distFactor);
+        } else {
+          controls.target.set(-1.4, 2.0, 1.8);
+          camera.position.set(-6.5, 4.8, 4.8);
+        }
+      } else if (mode === 'kbasket') {
+        if (isMobilePortrait) {
+          const distFactor = Math.max(1.35, 0.88 / aspect);
+          controls.target.set(-1.8, 2.4, 2.4);
+          camera.position.set(-8.2 * distFactor, 5.5, 5.8 * distFactor);
+        } else {
+          controls.target.set(-1.8, 2.4, 2.4);
+          camera.position.set(-8.2, 5.5, 5.8);
+        }
+      } else {
+        if (isMobilePortrait) {
+          const distFactor = Math.max(1.35, 0.88 / aspect);
+          controls.target.set(-1.1, 1.8, 1.5);
+          camera.position.set(-5.4 * distFactor, 4.2, 4.2 * distFactor);
+        } else {
+          controls.target.set(-1.1, 1.8, 1.5);
+          camera.position.set(-5.4, 4.2, 4.2);
+        }
+      }
+    }
+    controls.update();
+  }
+
   function switchMachineMode(mode: string) {
     // Normalize aliases
     if (mode === 'sanrio') mode = 'small';
@@ -878,12 +969,30 @@ function setupUIEventListeners() {
     const modeSelect = document.getElementById('setting-machinemode') as HTMLSelectElement | null;
     if (modeSelect) modeSelect.value = mode;
 
-    const btnLabel = document.querySelector('#switch-machine-btn .nav-btn-label');
-    if (btnLabel) {
-      if (mode === 'small') btnLabel.textContent = '切換機台 (#01 小型機台 · 潮玩盲盒)';
-      else if (mode === 'medium') btnLabel.textContent = '切換機台 (#02 中型機台)';
-      else if (mode === 'large') btnLabel.textContent = '切換機台 (#03 中大機台)';
-      else if (mode === 'kbasket') btnLabel.textContent = '切換機台 (#04 K霸機台)';
+    let fullText = '切換機台 (#01 小型機台 · 潮玩盲盒)';
+    let shortText = '機台 #01';
+    if (mode === 'small') {
+      fullText = '切換機台 (#01 小型機台 · 潮玩盲盒)';
+      shortText = '機台 #01';
+    } else if (mode === 'medium') {
+      fullText = '切換機台 (#02 中型機台)';
+      shortText = '機台 #02';
+    } else if (mode === 'large') {
+      fullText = '切換機台 (#03 中大機台)';
+      shortText = '機台 #03';
+    } else if (mode === 'kbasket') {
+      fullText = '切換機台 (#04 K霸機台)';
+      shortText = '機台 #04';
+    }
+
+    const fullLabel = document.querySelector('#switch-machine-btn .machine-full-name');
+    const shortLabel = document.querySelector('#switch-machine-btn .machine-short-name');
+    if (fullLabel && shortLabel) {
+      fullLabel.textContent = fullText;
+      shortLabel.textContent = shortText;
+    } else {
+      const btnLabel = document.querySelector('#switch-machine-btn .nav-btn-label');
+      if (btnLabel) btnLabel.textContent = fullText;
     }
 
     // 1. Clear all existing prizes completely first!
@@ -926,13 +1035,10 @@ function setupUIEventListeners() {
 
       prizesManager.spawnPrizes(6, 'blindbox', 2.5, chuteBounds);
 
-      // Natural eye-level front camera looking at the tall upright machine (手動隨意拖拽視角)
       cameraViewMode = 'front';
       const camBtnLabel = document.querySelector('#toggle-camera-btn .nav-btn-label');
       if (camBtnLabel) camBtnLabel.textContent = '視角: 正面';
-      controls.target.set(0, 2.2, 0.2);
-      camera.position.set(0, 3.8, 9.2);
-      controls.update();
+      applyCameraView('small', 'front');
     } else if (mode === 'large') {
       // 中大機台 (寬闊修長大型機台 + 25盒動漫大賞)
       claw.setClawScale(1.15);
@@ -954,10 +1060,7 @@ function setupUIEventListeners() {
       });
 
       prizesManager.spawnPrizes(25, 'anime', 4.8, chuteBounds);
-
-      controls.target.set(0, 2.8, 0.2);
-      camera.position.set(0, 5.0, 12.2);
-      controls.update();
+      applyCameraView('large', cameraViewMode);
     } else if (mode === 'kbasket') {
       // K-霸機台 (超巨無霸直立機台！1.35x 霸王巨爪 + 12大盒巨型家電)
       claw.setClawScale(1.35);
@@ -979,10 +1082,7 @@ function setupUIEventListeners() {
       });
 
       prizesManager.spawnPrizes(12, 'giant_appliances', 6.0, chuteBounds);
-
-      controls.target.set(0, 3.2, 0.2);
-      camera.position.set(0, 5.6, 14.5);
-      controls.update();
+      applyCameraView('kbasket', cameraViewMode);
     } else {
       // 中型機台 (標準街機黃金比例, 1.0x 標準爪 + 40隻繽紛娃娃)
       claw.setClawScale(1.0);
@@ -1004,10 +1104,7 @@ function setupUIEventListeners() {
       });
 
       prizesManager.spawnPrizes(40, 'mixed', 3.8, chuteBounds);
-
-      controls.target.set(0, 2.5, 0.2);
-      camera.position.set(0, 4.4, 10.5);
-      controls.update();
+      applyCameraView('medium', cameraViewMode);
     }
   }
 
@@ -1019,42 +1116,13 @@ function setupUIEventListeners() {
       btnLabel.textContent = (cameraViewMode === 'front') ? '視角: 正面' : '視角: 側面 (出貨口)';
     }
 
-    if (cameraViewMode === 'front') {
-      if (currentMachineMode === 'small') {
-        controls.target.set(0, 1.8, 0.2);
-        camera.position.set(0, 3.8, 9.2);
-      } else if (currentMachineMode === 'large') {
-        controls.target.set(0, 2.5, 0.2);
-        camera.position.set(0, 5.0, 12.2);
-      } else if (currentMachineMode === 'kbasket') {
-        controls.target.set(0, 2.8, 0.2);
-        camera.position.set(0, 5.6, 14.5);
-      } else {
-        controls.target.set(0, 2.2, 0.2);
-        camera.position.set(0, 4.4, 10.5);
-      }
-    } else {
-      // Side view looking directly through the transparent side window into chute battle line!
-      if (currentMachineMode === 'small') {
-        controls.target.set(-0.9, 1.6, 1.2);
-        camera.position.set(-4.6, 3.6, 3.6);
-      } else if (currentMachineMode === 'large') {
-        controls.target.set(-1.4, 2.0, 1.8);
-        camera.position.set(-6.5, 4.8, 4.8);
-      } else if (currentMachineMode === 'kbasket') {
-        controls.target.set(-1.8, 2.4, 2.4);
-        camera.position.set(-8.2, 5.5, 5.8);
-      } else {
-        controls.target.set(-1.1, 1.8, 1.5);
-        camera.position.set(-5.4, 4.2, 4.2);
-      }
-    }
-    controls.update();
+    applyCameraView(currentMachineMode, cameraViewMode);
   }
 
   // Expose globally for instant button bindings
   (window as any).switchMachineMode = switchMachineMode;
   (window as any).toggleCameraView = toggleCameraView;
+  (window as any).applyCameraView = applyCameraView;
 
   document.getElementById('toggle-camera-btn')?.addEventListener('click', () => {
     toggleCameraView();
@@ -1204,6 +1272,9 @@ function setupKeyboardListeners() {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
+    if ((window as any).applyCameraView) {
+      (window as any).applyCameraView();
+    }
   });
 }
 
