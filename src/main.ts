@@ -879,28 +879,28 @@ function setupUIEventListeners() {
     if (view === 'front') {
       if (mode === 'small') {
         if (isMobilePortrait) {
-          // 手機直螢幕：相機拉遠以完整容納機台頂部招牌、內部娃娃爪子、操作台與底座全貌
-          const distFactor = Math.max(1.45, 0.92 / aspect);
-          controls.target.set(0, 1.8, 0.2);
-          camera.position.set(0, 3.8, 9.2 * distFactor);
+          // 精準匹配用戶第 2 張截圖：提升目標高度並適當推遠，讓屋頂立式大燈箱「賭博就是不歸路」完完整整出現在頂部按鈕下方
+          const distFactor = Math.max(2.15, 1.36 / aspect);
+          controls.target.set(0, 2.3, 0.2);
+          camera.position.set(0, 4.6, 9.2 * distFactor);
         } else {
           controls.target.set(0, 2.2, 0.2);
           camera.position.set(0, 3.8, 9.2);
         }
       } else if (mode === 'large') {
         if (isMobilePortrait) {
-          const distFactor = Math.max(1.45, 0.92 / aspect);
-          controls.target.set(0, 2.4, 0.2);
-          camera.position.set(0, 4.8, 12.2 * distFactor);
+          const distFactor = Math.max(2.15, 1.36 / aspect);
+          controls.target.set(0, 2.6, 0.2);
+          camera.position.set(0, 5.2, 12.2 * distFactor);
         } else {
           controls.target.set(0, 2.8, 0.2);
           camera.position.set(0, 5.0, 12.2);
         }
       } else if (mode === 'kbasket') {
         if (isMobilePortrait) {
-          const distFactor = Math.max(1.45, 0.92 / aspect);
-          controls.target.set(0, 2.8, 0.2);
-          camera.position.set(0, 5.2, 14.5 * distFactor);
+          const distFactor = Math.max(2.15, 1.36 / aspect);
+          controls.target.set(0, 3.0, 0.2);
+          camera.position.set(0, 5.6, 14.5 * distFactor);
         } else {
           controls.target.set(0, 3.2, 0.2);
           camera.position.set(0, 5.6, 14.5);
@@ -908,9 +908,9 @@ function setupUIEventListeners() {
       } else {
         // medium
         if (isMobilePortrait) {
-          const distFactor = Math.max(1.45, 0.92 / aspect);
-          controls.target.set(0, 2.1, 0.2);
-          camera.position.set(0, 4.2, 10.5 * distFactor);
+          const distFactor = Math.max(2.15, 1.36 / aspect);
+          controls.target.set(0, 2.4, 0.2);
+          camera.position.set(0, 4.8, 10.5 * distFactor);
         } else {
           controls.target.set(0, 2.5, 0.2);
           camera.position.set(0, 4.4, 10.5);
