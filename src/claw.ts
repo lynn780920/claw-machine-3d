@@ -47,7 +47,7 @@ export class Claw {
   /* ── Configuration ── */
   public config = {
     moveSpeed: 2.6,            // Steady Taiwanese arcade carriage speed (沉穩適中平移速度)
-    dropSpeed: 2.0,            // Steady 2-beat drop speed (沉穩正二拍下探速度)
+    dropSpeed: 1.2,            // Realistic steady Taiwanese arcade descent speed (沉穩擬真正二拍下探速度)
     swayScale: 1.35,           // Authentic balanced arcade swing scale (擬真沉穩甩幅)
     raiseSpeed: 3.2,
     maxRopeLength: 13.5,
