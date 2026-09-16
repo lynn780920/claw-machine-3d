@@ -31,7 +31,6 @@ export interface RecordBreakEvent {
 const NICKNAME_KEY = 'claw_player_nickname';
 const BEST_RECORDS_KEY = 'claw_best_records_v2';
 const RECORD_EVENTS_KEY = 'claw_record_events_v2';
-const GSHEET_WEBHOOK_KEY = 'claw_gsheet_webhook_url';
 
 const DEFAULT_GSHEET_WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbxYVkvXwZ9X9mJN0DZwxh8Cq1tGIarXs1bCpfwytfQkR7VnraTz8YzDlwlV8OgRWqpa/exec';
 
@@ -327,20 +326,7 @@ export class LeaderboardManager {
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
   }
 
-  /* ── 3. Google Sheets 雲端即時連動 ── */
-  public getGoogleSheetWebhook(): string {
-    return localStorage.getItem(GSHEET_WEBHOOK_KEY) || DEFAULT_GSHEET_WEBHOOK_URL;
-  }
-
-  public setGoogleSheetWebhook(url: string) {
-    const trimmed = url.trim();
-    if (trimmed) {
-      localStorage.setItem(GSHEET_WEBHOOK_KEY, trimmed);
-    } else {
-      localStorage.removeItem(GSHEET_WEBHOOK_KEY);
-    }
-  }
-
+  /* ── 3. Google Sheets 雲端即時連動 (純後端自動寫入) ── */
   public async sendToGoogleSheets(payload: {
     event: string;
     player: string;
@@ -349,11 +335,8 @@ export class LeaderboardManager {
     time: string;
     date: string;
   }): Promise<boolean> {
-    const webhookUrl = this.getGoogleSheetWebhook();
-    if (!webhookUrl) return false;
-
     try {
-      await fetch(webhookUrl, {
+      await fetch(DEFAULT_GSHEET_WEBHOOK_URL, {
         method: 'POST',
         mode: 'no-cors',
         headers: { 'Content-Type': 'application/json' },

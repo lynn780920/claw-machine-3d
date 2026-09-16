@@ -591,14 +591,10 @@ function setupUIEventListeners() {
     if (e.target === nicknameModal) nicknameModal.style.display = 'none';
   });
 
-  // ── Live Record-Breaking Leaderboard & Google Sheets Sync ──
+  // ── Live Record-Breaking Leaderboard ──
   const leaderboardModal = document.getElementById('leaderboard-modal');
   const openLeaderboardBtn = document.getElementById('open-leaderboard-btn');
   const closeLeaderboardBtn = document.getElementById('close-leaderboard-btn');
-  const showGSheetGuideBtn = document.getElementById('show-gsheet-guide-btn');
-  const gsheetGuideContent = document.getElementById('gsheet-guide-content');
-  const gsheetUrlInput = document.getElementById('gsheet-url-input') as HTMLInputElement | null;
-  const saveGSheetUrlBtn = document.getElementById('save-gsheet-url-btn');
 
   const renderLeaderboardUI = () => {
     // 1. Records Hall (各關最高紀錄保持人)
@@ -645,11 +641,6 @@ function setupUIEventListeners() {
         `).join('');
       }
     }
-
-    // 3. Google Sheet Webhook Input
-    if (gsheetUrlInput) {
-      gsheetUrlInput.value = leaderboardManager.getGoogleSheetWebhook();
-    }
   };
 
   openLeaderboardBtn?.addEventListener('click', () => {
@@ -665,27 +656,6 @@ function setupUIEventListeners() {
 
   leaderboardModal?.addEventListener('click', (e) => {
     if (e.target === leaderboardModal) leaderboardModal.style.display = 'none';
-  });
-
-  showGSheetGuideBtn?.addEventListener('click', () => {
-    if (gsheetGuideContent) {
-      gsheetGuideContent.classList.toggle('hidden');
-    }
-  });
-
-  saveGSheetUrlBtn?.addEventListener('click', () => {
-    if (gsheetUrlInput) {
-      leaderboardManager.setGoogleSheetWebhook(gsheetUrlInput.value);
-      if (saveGSheetUrlBtn) {
-        const origText = saveGSheetUrlBtn.textContent;
-        saveGSheetUrlBtn.textContent = '已儲存！';
-        saveGSheetUrlBtn.style.background = '#10b981';
-        setTimeout(() => {
-          saveGSheetUrlBtn.textContent = origText;
-          saveGSheetUrlBtn.style.background = '';
-        }, 2000);
-      }
-    }
   });
 
   // Desktop Action Button

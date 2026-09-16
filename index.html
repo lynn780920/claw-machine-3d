@@ -502,40 +502,6 @@
         <div class="record-events-timeline" id="record-events-container">
           <!-- Dynamically populated via JS -->
         </div>
-
-        <!-- Section C: Google Sheets 雲端即時連動 -->
-        <div class="gsheet-sync-box">
-          <div class="gsheet-header">
-            <strong>Google Sheets 雲端連動 (即時同步誰打破紀錄)</strong>
-            <button id="show-gsheet-guide-btn" class="guide-toggle-btn">如何連動 Google 試算表？</button>
-          </div>
-          <div class="gsheet-input-row">
-            <input type="text" id="gsheet-url-input" class="modern-nickname-input" placeholder="貼上 Google Apps Script Webhook 網址 (選填)" />
-            <button id="save-gsheet-url-btn" class="save-small-btn">儲存網址</button>
-          </div>
-          <div id="gsheet-guide-content" class="gsheet-guide-panel hidden">
-            <h4>Google 試算表 1 分鐘免費串接教學：</h4>
-            <ol>
-              <li>在您的 Google Drive 建立一個空白「Google 試算表」。</li>
-              <li>點選頂部選單 <strong>擴充功能</strong> ➔ <strong>Apps Script</strong>。</li>
-              <li>清空原本程式碼，貼上下方腳本並點擊儲存：</li>
-            </ol>
-            <pre class="apps-script-code"><code>function doPost(e) {
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
-  if (sheet.getLastRow() === 0) {
-    sheet.appendRow(["記錄時間", "玩家暱稱", "事件類型", "紀錄項目", "關卡", "成績耗時"]);
-  }
-  var data = JSON.parse(e.postData.contents);
-  sheet.appendRow([data.date, data.player, data.event, data.recordName, data.stage, data.time]);
-  return ContentService.createTextOutput("OK");
-}</code></pre>
-            <ol start="4">
-              <li>點擊右上角 <strong>部署</strong> ➔ <strong>新部署作業</strong> ➔ 齒輪圖示選擇 <strong>網頁應用程式</strong>。</li>
-              <li>將「誰可以存取」設定為 <strong>任何人 (Anyone)</strong>，點擊部署並複製網頁應用程式網址。</li>
-              <li>將該網址貼入上方輸入框點擊「儲存網址」，之後只要有人破紀錄，試算表便會<strong>即時自動新增一筆紀錄</strong>！</li>
-            </ol>
-          </div>
-        </div>
       </div>
     </div>
   </div>

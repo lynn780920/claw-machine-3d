@@ -1444,60 +1444,7 @@ body {
   color: #64748b;
 }
 
-.gsheet-sync-box {
-  margin-top: 18px;
-  background: rgba(30, 41, 59, 0.5);
-  border: 1px solid rgba(56, 189, 248, 0.25);
-  border-radius: 12px;
-  padding: 14px;
-}
-.gsheet-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 10px;
-}
-.guide-toggle-btn {
-  background: transparent;
-  border: none;
-  color: #38bdf8;
-  font-size: 0.8rem;
-  cursor: pointer;
-  text-decoration: underline;
-}
-.gsheet-input-row {
-  display: flex;
-  gap: 8px;
-}
-.save-small-btn {
-  padding: 0 16px;
-  background: #0284c7;
-  color: #ffffff;
-  border: 1px solid #38bdf8;
-  border-radius: 8px;
-  font-weight: 700;
-  cursor: pointer;
-  white-space: nowrap;
-}
-.gsheet-guide-panel {
-  margin-top: 12px;
-  background: rgba(15, 23, 42, 0.95);
-  border-radius: 8px;
-  padding: 12px;
-  font-size: 0.82rem;
-  line-height: 1.6;
-  color: #cbd5e1;
-}
-.apps-script-code {
-  background: #090d16;
-  border: 1px solid #334155;
-  border-radius: 6px;
-  padding: 10px;
-  font-size: 0.78rem;
-  color: #38bdf8;
-  overflow-x: auto;
-  margin: 8px 0;
-}
+
 
 .new-record-banner {
   background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(234, 88, 12, 0.3));
