@@ -396,8 +396,8 @@ export class Claw {
     const visualSwingArm = baseVisualArm * (this.config.swayScale || 1.35);
 
     // Taiwanese arcade resonant pendulum frequency for authentic "正2拍" swing:
-    // In IDLE: T = 1.95s (heavy solid metal claw pendulum cadence, calm, steady and responsive)
-    // In DESCENDING: Mathematically tuned to 1.45*PI / dropDuration so it strictly completes 2 BEATS (外甩第1拍 + 回甩直插第2拍) without generating a 3rd swing!
+    // In IDLE: T = 1.45s (arcade resonant pendulum cadence, responsive and natural for rocking joystick)
+    // In DESCENDING: Synchronized mathematically to exactly 2.0*PI / dropDuration so it strictly completes 2 BEATS (外甩第1拍 + 回甩直插第2拍正中下探)!
     let omegaSq: number;
     let targetTrailAngleX = 0;
     let targetTrailAngleZ = 0;
@@ -405,12 +405,12 @@ export class Claw {
     if (this.state === 'DESCENDING') {
       const dropDistance = Math.max(1.8, (this.carriageY - this.config.minRopeLength) - (minBaseY + 0.35));
       const dropDuration = dropDistance / Math.max(0.5, this.config.dropSpeed);
-      // Exactly 2 beats over the descent duration (Swing 1 out, Swing 2 in, landing on 2nd beat arc):
-      const omega = (Math.PI * 1.45) / dropDuration;
+      // 精準正二拍週期 (週期 T = dropDuration，外甩第1拍 + 回甩直插第2拍正好在觸底/插肉時完成):
+      const omega = (Math.PI * 2.0) / dropDuration;
       omegaSq = omega * omega;
     } else {
-      // Calm, heavy arcade pendulum cadence (T = 1.95s)
-      const omegaIdle = (Math.PI * 2) / 1.95;
+      // 街機實體搖桿共振頻率 (T = 1.45s，完美契合正二拍搖桿甩動節奏)
+      const omegaIdle = (Math.PI * 2) / 1.45;
       omegaSq = omegaIdle * omegaIdle;
     }
 
@@ -666,7 +666,7 @@ export class Claw {
 
         if (prizesManager && prizesManager.bodies.length > 0) {
           const clawTipY = targetY - 0.75 * clawScale;
-          const stopRadiusXZ = 0.52 * clawScale;
+          const stopRadiusXZ = 0.45 * clawScale;
 
           for (const pBody of prizesManager.bodies) {
             const pos = pBody.translation();
@@ -674,8 +674,8 @@ export class Claw {
             const dy = pos.y - clawTipY;
             const dz = pos.z - finalZ;
             const distXZ = Math.sqrt(dx * dx + dz * dz);
-            // 接觸娃娃頂面或斜面
-            if (distXZ <= stopRadiusXZ && (dy >= -0.40 * clawScale && dy <= 0.48 * clawScale)) {
+            // 接觸娃娃頂面或斜面（當爪尖真正觸底插深才觸發撞擊與抓取）
+            if (distXZ <= stopRadiusXZ && (dy >= -0.20 * clawScale && dy <= 0.40 * clawScale)) {
               hitPrizeBody = pBody;
               break;
             }
