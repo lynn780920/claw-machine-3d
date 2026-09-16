@@ -560,21 +560,21 @@ export class Claw {
       }
     }
 
-    // ── F. Soft Contact Velocity Guard (防爆破噴飛 - 限制周圍娃娃最高實體速度 <= 1.8 m/s) ──
+    // ── F. Soft Contact Velocity Guard (防爆破噴飛 - 保持物體運動逼真穩定) ──
     if (prizesManager && prizesManager.bodies.length > 0) {
       for (const pBody of prizesManager.bodies) {
         if (pBody !== this.grabbedBody) {
           const vel = pBody.linvel();
           const speedSq = vel.x * vel.x + vel.y * vel.y + vel.z * vel.z;
-          if (speedSq > 3.24) { // speed > 1.8 m/s
-            const factor = 1.8 / Math.sqrt(speedSq);
+          if (speedSq > 9.0) { // speed > 3.0 m/s
+            const factor = 3.0 / Math.sqrt(speedSq);
             pBody.setLinvel({ x: vel.x * factor, y: vel.y * factor, z: vel.z * factor }, true);
           }
         }
       }
     }
 
-    // ── G. Full-Blade 3-Node Physical Solid Arm Collision (全爪臂 3 點實體防穿越碰撞體) ──
+    // ── G. Solid Metal Arm Collision (全爪臂實體防穿透物理牆 & 合爪高摩擦推擠) ──
     if (prizesManager && prizesManager.bodies.length > 0) {
       const clawScale = this.baseMesh ? this.baseMesh.scale.x : 1.0;
       const isClosing = (this.targetArmAngle === this.config.clawCloseAngle);
@@ -590,20 +590,24 @@ export class Claw {
           outwardDir.y = 0;
           outwardDir.normalize();
 
-          // 3 Collision Nodes along the entire curved metal arm blade (Upper, Mid, Tip)
-          const nodeUpper = prongWorldPos.clone().addScaledVector(outwardDir, 0.05 * clawScale);
-          nodeUpper.y -= 0.15 * clawScale;
+          // 4 Continuous Collision Nodes along the curved blade (Hinge, Upper, Mid, Rubber Tip)
+          const nodeHinge = prongWorldPos.clone();
+          nodeHinge.y -= 0.05 * clawScale;
+
+          const nodeUpper = prongWorldPos.clone().addScaledVector(outwardDir, 0.08 * clawScale);
+          nodeUpper.y -= 0.22 * clawScale;
 
           const nodeMid = prongWorldPos.clone().addScaledVector(outwardDir, 0.22 * clawScale);
-          nodeMid.y -= 0.42 * clawScale;
+          nodeMid.y -= 0.46 * clawScale;
 
-          const nodeTip = prongWorldPos.clone().addScaledVector(outwardDir, 0.28 * clawScale);
-          nodeTip.y -= 0.68 * clawScale;
+          const nodeTip = prongWorldPos.clone().addScaledVector(outwardDir, 0.26 * clawScale);
+          nodeTip.y -= 0.72 * clawScale;
 
           const armNodes = [
-            { pos: nodeUpper, radius: 0.32 * clawScale },
-            { pos: nodeMid,   radius: 0.36 * clawScale },
-            { pos: nodeTip,   radius: 0.38 * clawScale }
+            { pos: nodeHinge, radius: 0.26 * clawScale },
+            { pos: nodeUpper, radius: 0.28 * clawScale },
+            { pos: nodeMid,   radius: 0.32 * clawScale },
+            { pos: nodeTip,   radius: 0.34 * clawScale }
           ];
 
           for (const node of armNodes) {
@@ -616,34 +620,34 @@ export class Claw {
               const dz = bPos.z - node.pos.z;
               const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
 
-              if (dist < node.radius && dist > 0.001) {
+              if (dist < node.radius && dist > 0.0001) {
+                pBody.wakeUp(true);
                 const overlap = (node.radius - dist) / node.radius;
 
                 let pushX = dx / dist;
                 let pushY = dy / dist;
                 let pushZ = dz / dist;
 
-                let forceMag = overlap * 1.4;
                 if (isClosing) {
-                  pushX = -outwardDir.x;
-                  pushZ = -outwardDir.z;
-                  pushY = 0.40;
-                  forceMag *= 2.5;
+                  // 合爪時向爪心內側收攏並向上微托
+                  pushX = -outwardDir.x * 0.75 + pushX * 0.25;
+                  pushZ = -outwardDir.z * 0.75 + pushZ * 0.25;
+                  pushY = 0.45;
                 } else if (isOpening) {
-                  pushX = outwardDir.x;
-                  pushZ = outwardDir.z;
+                  // 放爪時向外推開
+                  pushX = outwardDir.x * 0.8 + pushX * 0.2;
+                  pushZ = outwardDir.z * 0.8 + pushZ * 0.2;
                   pushY = 0.30;
-                  forceMag *= 2.0;
                 }
 
-                // Smooth solid physical separation & corner torque without explosive velocity jumps
-                const impulseMag = Math.min(0.25, overlap * 0.18 * (isClosing ? 1.5 : 1.0));
+                // 強韌法向固體排斥力：徹底阻擋娃娃穿透爪臂模型
+                const impulseMag = Math.min(1.8, overlap * 2.2 + 0.15);
                 pBody.applyImpulse(
-                  { x: pushX * impulseMag, y: pushY * impulseMag * 0.5, z: pushZ * impulseMag },
+                  { x: pushX * impulseMag, y: pushY * impulseMag, z: pushZ * impulseMag },
                   true
                 );
                 pBody.applyTorqueImpulse(
-                  { x: pushZ * impulseMag * 0.2, y: impulseMag * 0.1, z: -pushX * impulseMag * 0.2 },
+                  { x: pushZ * impulseMag * 0.25, y: impulseMag * 0.15, z: -pushX * impulseMag * 0.25 },
                   true
                 );
               }
@@ -653,16 +657,16 @@ export class Claw {
       }
     }
 
-    // ── E. State Machine with Touch-Stop ──
+    // ── E. State Machine with Realistic Impact Dynamics ──
     switch (this.state) {
       case 'DESCENDING': {
         const clawScale = this.baseMesh ? this.baseMesh.scale.x : 1.0;
         const touchedFloor = targetY <= minBaseY + 0.05;
-        let touchedPrize = false;
+        let hitPrizeBody: RAPIER.RigidBody | null = null;
 
         if (prizesManager && prizesManager.bodies.length > 0) {
-          const clawTipY = targetY - 0.70 * clawScale;
-          const stopRadiusXZ = 0.48 * clawScale;
+          const clawTipY = targetY - 0.75 * clawScale;
+          const stopRadiusXZ = 0.52 * clawScale;
 
           for (const pBody of prizesManager.bodies) {
             const pos = pBody.translation();
@@ -670,15 +674,46 @@ export class Claw {
             const dy = pos.y - clawTipY;
             const dz = pos.z - finalZ;
             const distXZ = Math.sqrt(dx * dx + dz * dz);
-            // Scale-aware pile stop: triggers cleanly when claw rests on top of prize pile
-            if (distXZ <= stopRadiusXZ && (dy >= -0.35 * clawScale && dy <= 0.45 * clawScale)) {
-              touchedPrize = true;
+            // 接觸娃娃頂面或斜面
+            if (distXZ <= stopRadiusXZ && (dy >= -0.40 * clawScale && dy <= 0.48 * clawScale)) {
+              hitPrizeBody = pBody;
               break;
             }
           }
         }
 
-        if (touchedFloor || touchedPrize || this.stateTimer > 4.5) {
+        if (touchedFloor || hitPrizeBody || this.stateTimer > 4.5) {
+          // 猛一爪下砸動能傳遞 (真實街機下砸震盪力學)
+          if (hitPrizeBody && prizesManager) {
+            const dropVel = this.config.dropSpeed || 2.0;
+            const impactX = this.swayVelX * 1.2;
+            const impactZ = this.swayVelZ * 1.2;
+            
+            // 喚醒周圍所有沉睡剛體
+            physics.wakeUpNear(finalX, targetY - 0.5 * clawScale, finalZ, 2.0);
+
+            // 施加猛烈向下壓迫與橫向甩動衝量，使娃娃自然翻滾受力
+            hitPrizeBody.applyImpulse(
+              {
+                x: impactX * 0.45 + (Math.random() - 0.5) * 0.25,
+                y: -Math.min(1.2, dropVel * 0.45),
+                z: impactZ * 0.45 + (Math.random() - 0.5) * 0.25
+              },
+              true
+            );
+            hitPrizeBody.applyTorqueImpulse(
+              {
+                x: (Math.random() - 0.5) * 0.4,
+                y: (Math.random() - 0.5) * 0.3,
+                z: (Math.random() - 0.5) * 0.4
+              },
+              true
+            );
+
+            // 爪身受到下砸反作用力微幅反彈停頓
+            this.ropeLength = Math.max(this.config.minRopeLength, this.ropeLength - 0.06);
+          }
+
           this.targetRopeLength = this.ropeLength;
           this.triggerGrab();
         }
@@ -686,7 +721,7 @@ export class Claw {
       }
 
       case 'GRABBING':
-        if (this.stateTimer > 0.4) {
+        if (this.stateTimer > 0.45) {
           this.attemptGrab(physics, prizesManager);
           this.state = 'ASCENDING';
           this.stateTimer = 0;
@@ -729,14 +764,15 @@ export class Claw {
             const dz = pos.z - clawPos.z;
             const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
 
-            if (dist < 1.25) {
+            if (dist < 1.35) {
+              pBody.wakeUp(true);
               const nx = dx / (dist || 1);
               const nz = dz / (dist || 1);
-              const pushForce = 0.28 * (1.25 - dist);
+              const pushForce = 0.45 * (1.35 - dist);
 
               // Apply outward impulse & rotational flip torque
               pBody.applyImpulse({ x: nx * pushForce, y: pushForce * 0.45, z: nz * pushForce }, true);
-              pBody.applyTorqueImpulse({ x: nz * pushForce * 0.25, y: pushForce * 0.15, z: -nx * pushForce * 0.25 }, true);
+              pBody.applyTorqueImpulse({ x: nz * pushForce * 0.3, y: pushForce * 0.2, z: -nx * pushForce * 0.3 }, true);
             }
           }
         }
@@ -786,51 +822,90 @@ export class Claw {
       this.state = 'IDLE';
       this.stateTimer = 0;
     }
+
+    // ── Anti-Floating Guard: 確保非抓取狀態下沒有任何剛體因休眠或阻尼殘留黏在空中 ──
+    if (this.state !== 'GRABBING' && this.state !== 'ASCENDING' && this.state !== 'TOP_HIT' && this.state !== 'RETURNING') {
+      if (prizesManager && prizesManager.bodies.length > 0) {
+        for (const pBody of prizesManager.bodies) {
+          const trans = pBody.translation();
+          // 如果物體懸在空中且速度幾乎為0，強制還原正常阻尼並喚醒
+          if (trans.y > 1.1) {
+            const vel = pBody.linvel();
+            if (vel.x * vel.x + vel.y * vel.y + vel.z * vel.z < 0.04) {
+              pBody.setLinearDamping(0.20);
+              pBody.setAngularDamping(0.35);
+              pBody.wakeUp(true);
+            }
+          }
+        }
+      }
+    }
   }
 
   /* ================================================================
-     DYNAMIC SPHERICAL PHYSICS GRIP LOGIC (NATURAL GRAVITY SWAY & SLIP)
+     GEOMETRIC WRAP & SOLID CARRY LOGIC (AUTHENTIC GRIP WITHOUT PENETRATION)
      ================================================================ */
 
   private attemptGrab(physics: PhysicsSystem, prizesManager?: PrizesManager) {
     const basePos = this.baseMesh.position;
     const clawScale = this.baseMesh ? this.baseMesh.scale.x : 1.0;
-    // Claw center cup volume Y (-0.75 * scale below base plate)
-    const clawTipPos = { x: basePos.x, y: basePos.y - 0.75 * clawScale, z: basePos.z };
+    
+    // 計算當前爪尖在世界空間的最低高度
+    let lowestTipY = basePos.y - 0.75 * clawScale;
+    const tipPositions: THREE.Vector3[] = [];
+    for (let i = 0; i < 3; i++) {
+      const pivot = this.armPivots[i];
+      const hinge = pivot ? pivot.getObjectByName('armHinge') : null;
+      if (hinge) {
+        const pWorld = new THREE.Vector3();
+        hinge.getWorldPosition(pWorld);
+        const outwardDir = pWorld.clone().sub(this.baseMesh.position);
+        outwardDir.y = 0; outwardDir.normalize();
+        const tipPos = pWorld.clone().addScaledVector(outwardDir, 0.26 * clawScale);
+        tipPos.y -= 0.72 * clawScale;
+        tipPositions.push(tipPos);
+        if (tipPos.y < lowestTipY) lowestTipY = tipPos.y;
+      }
+    }
 
-    let nearestBody: RAPIER.RigidBody | null = null;
-    let nearestDist = Infinity;
+    let candidateBody: RAPIER.RigidBody | null = null;
+    let bestScore = -Infinity;
 
-    // Scale-aware grab envelope (0.44m * scale radius for 3-prong cup)
-    const maxDistXZ = 0.44 * clawScale;
-    const maxAbsDY = 0.60 * clawScale;
+    // Scale-aware grab envelope
+    const maxDistXZ = 0.42 * clawScale;
 
     if (prizesManager && prizesManager.bodies.length > 0) {
       for (const pBody of prizesManager.bodies) {
         const bPos = pBody.translation();
-        const dx = bPos.x - clawTipPos.x;
-        const dy = bPos.y - clawTipPos.y;
-        const dz = bPos.z - clawTipPos.z;
-        
+        const dx = bPos.x - basePos.x;
+        const dz = bPos.z - basePos.z;
         const distXZ = Math.sqrt(dx * dx + dz * dz);
-        const absDY = Math.abs(dy);
 
-        // Scale-aware envelope check matching physical claw arm dimensions
-        if (distXZ <= maxDistXZ && absDY <= maxAbsDY) {
-          const totalDist = Math.sqrt(distXZ * distXZ + dy * dy);
-          if (totalDist < nearestDist) {
-            nearestDist = totalDist;
-            nearestBody = pBody;
-          }
+        // 核心幾何規則 1：水平位置必須真正落在三爪包圍的內部
+        if (distXZ > maxDistXZ) continue;
+
+        // 核心幾何規則 2：爪尖必須低於或托住物體的重心/受力點（絕不允許爪尖在物體上方時穿模隔空硬抓！）
+        // 允許適當的容差（爪尖不高於物體中心 0.15m）
+        if (lowestTipY > bPos.y + 0.15 * clawScale) continue;
+
+        // 核心幾何規則 3：物體不能已經在爪頂上方（避免穿透到電機筒內部）
+        if (bPos.y > basePos.y + 0.20 * clawScale) continue;
+
+        // 評分：越接近爪心且爪尖越托住物體下方，評分越高
+        const depthUnderCenter = (bPos.y - lowestTipY);
+        const score = depthUnderCenter * 2.0 - distXZ * 1.5;
+
+        if (score > bestScore) {
+          bestScore = score;
+          candidateBody = pBody;
         }
       }
     }
 
-    if (nearestBody) {
-      const targetBody = nearestBody as RAPIER.RigidBody;
+    if (candidateBody) {
+      const targetBody = candidateBody;
       const bPos = targetBody.translation();
 
-      // Attach joint at prize's current physical location relative to claw base
       const localAnchorX = bPos.x - basePos.x;
       const localAnchorY = bPos.y - basePos.y;
       const localAnchorZ = bPos.z - basePos.z;
@@ -838,15 +913,16 @@ export class Claw {
       for (let i = 0; i < targetBody.numColliders(); i++) {
         const col = targetBody.collider(i);
         col.setSensor(false);
-        col.setFriction(0.85);
+        col.setFriction(0.88);
         col.setRestitution(0.02);
       }
 
-      // Add stabilization damping during lift
-      targetBody.setLinearDamping(0.8);
-      targetBody.setAngularDamping(0.8);
+      // 提起時保持合理阻尼，杜絕過大阻尼
+      targetBody.setLinearDamping(0.40);
+      targetBody.setAngularDamping(0.45);
+      targetBody.wakeUp(true);
 
-      // Spherical Joint anchors prize securely at current physical position relative to claw base
+      // Spherical Joint 錨定接觸點，並啟用碰撞與接觸響應
       const sphericalJointData = RAPIER.JointData.spherical(
         { x: localAnchorX, y: localAnchorY, z: localAnchorZ },
         { x: 0, y: 0, z: 0 }
@@ -868,18 +944,39 @@ export class Claw {
 
   private releasePrize(physics: PhysicsSystem) {
     if (this.grabbedJoint) {
-      physics.world.removeImpulseJoint(this.grabbedJoint, true);
-      if (this.grabbedBody) {
-        for (let i = 0; i < this.grabbedBody.numColliders(); i++) {
-          const col = this.grabbedBody.collider(i);
-          col.setSensor(false);
-          col.setFriction(0.7);
-        }
-        this.grabbedBody.setLinvel({ x: 0, y: -0.3, z: 0 }, true);
+      try {
+        physics.world.removeImpulseJoint(this.grabbedJoint, true);
+      } catch (e) {
+        // Safe joint remove
       }
       this.grabbedJoint = null;
-      this.grabbedBody = null;
     }
+    if (this.grabbedBody) {
+      const body = this.grabbedBody;
+      this.grabbedBody = null;
+
+      // 徹底重置阻尼（原本被設為 0.8，忘記還原導致懸浮滯空！）
+      body.setLinearDamping(0.20);
+      body.setAngularDamping(0.35);
+
+      for (let i = 0; i < body.numColliders(); i++) {
+        const col = body.collider(i);
+        col.setSensor(false);
+        col.setFriction(0.65);
+        col.setRestitution(0.06);
+      }
+
+      // 徹底喚醒剛體，給予微向下與向外分離速度，確保遵循重力自然落體
+      body.wakeUp(true);
+      const curVel = body.linvel();
+      body.setLinvel({
+        x: curVel.x * 0.6 + (Math.random() - 0.5) * 0.25,
+        y: Math.min(-0.8, curVel.y - 0.6),
+        z: curVel.z * 0.6 + (Math.random() - 0.5) * 0.25
+      }, true);
+    }
+
+    physics.wakeUpAllDynamicBodies();
   }
 
   private maybeDropPrize(physics: PhysicsSystem, keepProbability: number) {
