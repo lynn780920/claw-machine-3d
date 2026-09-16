@@ -19,8 +19,8 @@
     <link rel="apple-touch-icon" sizes="180x180" href="./assets/apple-touch-icon-180x180-D0xw-ZwL.png" />
     <link rel="apple-touch-icon" href="./assets/apple-touch-icon-96QgC70_.png" />
     <link rel="manifest" href="./assets/manifest-DWV-rB2U.json" />
-    <script type="module" crossorigin src="./assets/index-BpaUuMdI.js"></script>
-    <link rel="stylesheet" crossorigin href="./assets/index-DA0UxMbv.css">
+    <script type="module" crossorigin src="./assets/index-D2mdkbzf.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-Psv9Sc1I.css">
   </head>
   <body>
     <div id="app">
@@ -32,33 +32,55 @@
       <!-- Win Toast Popup Notification (Appears for 5s ONLY on winning prize) -->
       <div class="win-toast hidden" id="win-toast">
         <div class="win-toast-content">
-          <div class="win-toast-icon">🏆</div>
           <div class="win-toast-body">
             <div class="win-toast-title">恭喜出貨！成功夾出娃娃！</div>
-            <div class="win-toast-desc">獲得 <span class="win-toast-highlight">1 次</span> 刮刮樂機會 🎟️</div>
+            <div class="win-toast-desc">本關目標進度：<span class="win-toast-highlight" id="win-toast-progress">1 / 8 樣</span></div>
           </div>
         </div>
       </div>
 
-      <!-- Unified Floating Top Nav Bar (Responsive Header, Never Overlaps) -->
+      <!-- Unified Floating Top Nav Bar (Responsive Challenge HUD, Never Overlaps) -->
       <div class="top-nav-bar">
-        <button id="switch-machine-btn" class="nav-pill-btn machine-switch" style="background: linear-gradient(135deg, #9333ea, #6b21a8); border: 1px solid #c084fc; color: #fff; font-weight: bold; box-shadow: 0 4px 12px rgba(147, 51, 234, 0.4);">
-          <span class="nav-btn-label">
-            <span class="machine-full-name">切換機台 (#01 小型機台 · 潮玩盲盒)</span>
-            <span class="machine-short-name">機台 #01</span>
-          </span>
+        <!-- Player Nickname Capsule -->
+        <button id="player-profile-btn" class="nav-hud-pill player-pill" style="cursor: pointer; border: 1px solid rgba(168, 85, 247, 0.7); background: rgba(15, 23, 42, 0.85);">
+          <span class="hud-pill-label">玩家</span>
+          <span class="hud-pill-text" id="hud-player-name">設定暱稱</span>
         </button>
+
+        <!-- Level / Stage Indicator -->
+        <div class="nav-hud-pill level-pill" id="hud-level-pill">
+          <span class="hud-pill-label">關卡</span>
+          <span class="hud-pill-text" id="hud-level-title">第 1 關</span>
+        </div>
+
+        <!-- Real-time Countdown Timer -->
+        <div class="nav-hud-pill timer-pill" id="hud-timer-pill">
+          <span class="hud-pill-label">剩餘時間</span>
+          <span class="hud-pill-text timer-digits" id="hud-timer-digits">15:00</span>
+        </div>
+
+        <!-- Target Progress Badge -->
+        <div class="nav-hud-pill target-pill" id="hud-target-pill">
+          <span class="hud-pill-label">目標</span>
+          <span class="hud-pill-text" id="hud-target-progress">0 / 8 樣</span>
+        </div>
+
+        <!-- Stage Briefing & Objectives Button -->
+        <button id="open-briefing-btn" class="nav-pill-btn briefing" style="background: linear-gradient(135deg, #0284c7, #0369a1); border: 1px solid #38bdf8;">
+          <span class="nav-btn-label">關卡說明</span>
+        </button>
+
+        <!-- Record Breaking Leaderboard Button -->
+        <button id="open-leaderboard-btn" class="nav-pill-btn records" style="background: linear-gradient(135deg, #d97706, #b45309); border: 1px solid #fbbf24; color: #fff; font-weight: bold;">
+          <span class="nav-btn-label">紀錄榜</span>
+        </button>
+
         <button id="toggle-camera-btn" class="nav-pill-btn camera" style="background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(56, 189, 248, 0.6); color: #38bdf8; font-weight: bold;">
           <span class="nav-btn-label">視角: 正面</span>
         </button>
+
         <button id="bgm-toggle-btn" class="nav-pill-btn bgm">
           <span class="nav-btn-label">音樂</span>
-        </button>
-        <button id="open-scratch-btn" class="nav-pill-btn scratch">
-          <span class="nav-btn-label">刮刮樂</span> (<span id="scratch-chance-val-badge">0</span>)
-        </button>
-        <button id="toggle-settings-btn" class="nav-pill-btn settings">
-          <span class="nav-btn-label">設定</span>
         </button>
       </div>
 
@@ -260,6 +282,262 @@
         <p><strong style="color: #f43f5e;">觸頂震落機率：</strong> 上升觸頂瞬間 (Top Hit) 撞擊頂軌的震落概率。</p>
         <p><strong style="color: #f43f5e;">出貨口擋板高度：</strong> 可調壓克力擋板高低。越高越難出貨，越低越容易槍位出貨。</p>
         <p><strong style="color: #f43f5e;">鋪貨數量：</strong> 支援 5~50 隻高密度娃娃實體碰撞，絕不穿透。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stage Briefing Modal (關卡說明視窗) -->
+  <div id="briefing-modal" class="challenge-modal-overlay" style="display: none;">
+    <div class="challenge-modal-card briefing-card">
+      <div class="modal-header-banner">
+        <div class="header-badge-title">
+          <h2>4 大關卡破關挑戰說明</h2>
+        </div>
+        <button id="close-briefing-btn" class="modal-close-icon">✕</button>
+      </div>
+
+      <div class="briefing-content-body">
+        <p class="briefing-intro">歡迎挑戰 3D 娃娃機破關模式！玩家必須依序征服 4 個不同難度與機台的關卡，限時時間到若未達成目標即 <strong>GAME OVER</strong>！全部過關即可榮登「至尊夾王」！</p>
+        
+        <div class="stages-roadmap-grid">
+          <!-- Stage 1 -->
+          <div class="stage-roadmap-item" id="stage-card-1">
+            <div class="stage-tag easy">第 1 關 · 簡單</div>
+            <div class="stage-machine-name">標準街機 (初試身手)</div>
+            <div class="stage-params-row">
+              <span class="param-badge">限時 15 分鐘</span>
+              <span class="param-badge target">目標：夾到 8 樣</span>
+            </div>
+            <p class="stage-desc">初試身手暖身關！機台爪力充沛且容錯率高，抓準下爪時機與二收合爪點即可輕鬆過關。</p>
+            <button class="stage-jump-btn" data-stage="0">立即挑戰第 1 關</button>
+          </div>
+
+          <!-- Stage 2 -->
+          <div class="stage-roadmap-item" id="stage-card-2">
+            <div class="stage-tag medium">第 2 關 · 普通</div>
+            <div class="stage-machine-name">大型機台 (動漫公仔賞)</div>
+            <div class="stage-params-row">
+              <span class="param-badge">限時 10 分鐘</span>
+              <span class="param-badge target">目標：夾到 4 樣</span>
+            </div>
+            <p class="stage-desc">技術進階挑戰！動漫模型重盒考驗卡爪角度與甩幅，需善用反向甩爪卡住角位托出。</p>
+            <button class="stage-jump-btn" data-stage="1">立即挑戰第 2 關</button>
+          </div>
+
+          <!-- Stage 3 -->
+          <div class="stage-roadmap-item" id="stage-card-3">
+            <div class="stage-tag hard">第 3 關 · 困難</div>
+            <div class="stage-machine-name">小型機台 (潮玩盲盒清台)</div>
+            <div class="stage-params-row">
+              <span class="param-badge">限時 8 分鐘</span>
+              <span class="param-badge target-clear">目標：限時清台</span>
+            </div>
+            <p class="stage-desc">極速清台任務！台內 POP MART 盲盒必須在 8 分鐘內全部清空 (清台) ! 時間到即 GAME OVER！</p>
+            <button class="stage-jump-btn" data-stage="2">立即挑戰第 3 關</button>
+          </div>
+
+          <!-- Stage 4 -->
+          <div class="stage-roadmap-item" id="stage-card-4">
+            <div class="stage-tag boss">第 4 關 · 魔王</div>
+            <div class="stage-machine-name">K-霸直立機台 (巨型家電決戰)</div>
+            <div class="stage-params-row">
+              <span class="param-badge">限時 8 分鐘</span>
+              <span class="param-badge target-boss">目標：夾到 3 樣</span>
+            </div>
+            <p class="stage-desc">終極魔王決戰！100% 強爪與 2.4 天車速度對抗 1.1m 高擋板，夾出 3 樣巨型家電即通關全破！</p>
+            <button class="stage-jump-btn" data-stage="3">立即挑戰第 4 關</button>
+          </div>
+        </div>
+
+        <div class="briefing-rules-notice">
+          <strong>通關重要規則：</strong>
+          <ul>
+            <li>每關倒數計時即時進行，時間倒數為 0 時直接判定 <strong>GAME OVER</strong>。</li>
+            <li>達成每關指定出貨數量（或清台）時，將立即過關並獲得下一關晉級資格！</li>
+            <li>可隨時在說明中點擊「立即挑戰」跳轉關卡進行專項特訓。</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="modal-footer-row">
+        <button id="start-challenge-btn" class="modal-action-btn primary-start">開始挑戰</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stage Clear Modal (關卡突破視窗) -->
+  <div id="stage-clear-modal" class="challenge-modal-overlay" style="display: none;">
+    <div class="challenge-modal-card stage-clear-card">
+      <div class="stage-clear-banner">
+        <h2 class="clear-title">STAGE CLEAR 關卡突破</h2>
+        <p class="clear-subtitle" id="clear-stage-name">恭喜通過 第 1 關</p>
+      </div>
+
+      <div class="clear-stats-box">
+        <div class="clear-stat-col">
+          <span class="stat-num" id="clear-elapsed-time">02:35</span>
+          <span class="stat-text">本關耗時</span>
+        </div>
+        <div class="clear-stat-col">
+          <span class="stat-num" id="clear-wins-count">8</span>
+          <span class="stat-text">成功出貨數</span>
+        </div>
+      </div>
+
+      <div id="clear-new-record-banner" class="record-break-alert-box" style="display: none;">
+        <span class="record-break-tag">⚡ 打破歷史紀錄 ⚡</span>
+        <p id="clear-record-msg" class="record-break-text">恭喜打破本關最速出貨紀錄！榮譽紀錄已更新！</p>
+      </div>
+
+      <div class="next-stage-preview-box" id="next-stage-preview">
+        <div class="next-label">下一關挑戰預告</div>
+        <div class="next-title" id="next-stage-title">第 2 關：中大模型公仔 (技術進階)</div>
+        <div class="next-details" id="next-stage-details">機台 #03 | 限時 10 分鐘 | 目標：夾出 4 樣</div>
+      </div>
+
+      <div class="modal-footer-row">
+        <button id="next-stage-btn" class="modal-action-btn next-level-btn">進入下一關挑戰</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Game Over Modal (時間耗盡挑戰失敗視窗) -->
+  <div id="game-over-modal" class="challenge-modal-overlay" style="display: none;">
+    <div class="challenge-modal-card game-over-card">
+      <div class="game-over-banner">
+        <h2 class="game-over-title">TIME UP 挑戰失敗</h2>
+        <p class="game-over-subtitle" id="game-over-level-name">第 1 關 時間已耗盡</p>
+      </div>
+
+      <div class="game-over-body">
+        <p class="game-over-msg">很可惜！倒數計時已結束，未能於限時內達成過關目標！</p>
+        <div class="game-over-progress-box">
+          <span class="progress-label">最終完成進度</span>
+          <span class="progress-val" id="game-over-progress-val">5 / 8 樣</span>
+        </div>
+      </div>
+
+      <div class="modal-footer-row double">
+        <button id="retry-stage-btn" class="modal-action-btn retry-btn">本關重新挑戰</button>
+        <button id="restart-campaign-btn" class="modal-action-btn restart-btn">從第一關重來</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Grand Victory / Game Clear Modal (全破通關至尊夾王視窗) -->
+  <div id="game-victory-modal" class="challenge-modal-overlay" style="display: none;">
+    <div class="challenge-modal-card victory-card">
+      <div class="victory-banner">
+        <h2 class="victory-title">全破大通關！</h2>
+        <p class="victory-subtitle">榮登 3D 娃娃機「至尊夾王」！</p>
+      </div>
+
+      <div class="victory-body">
+        <p class="victory-msg">太神了！你已成功攻破全部 4 大關卡，包含最嚴苛的 K-霸巨型家電魔王關！展現了無與倫比的街機甩爪神技！</p>
+        
+        <div id="victory-new-record-banner" class="record-break-alert-box" style="display: none;">
+          <span class="record-break-tag">⚡ 打破歷史總紀錄 ⚡</span>
+          <p id="victory-record-msg" class="record-break-text">神級操作！你已刷新全破至尊夾王的最速總時間紀錄！</p>
+        </div>
+
+        <div class="victory-stats-grid">
+          <div class="victory-stat-item">
+            <span class="v-val" id="victory-total-time">18:42</span>
+            <span class="v-label">全破總耗時</span>
+          </div>
+          <div class="victory-stat-item">
+            <span class="v-val" id="victory-total-wins">21</span>
+            <span class="v-label">總出貨件數</span>
+          </div>
+          <div class="victory-stat-item">
+            <span class="v-val" id="victory-total-plays">0</span>
+            <span class="v-label">總累積投幣次數</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer-row">
+        <button id="victory-restart-btn" class="modal-action-btn champion-restart-btn">再次挑戰破關模式</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Player Nickname Modal (設定玩家暱稱視窗) -->
+  <div id="nickname-modal" class="challenge-modal-overlay" style="display: none;">
+    <div class="challenge-modal-card nickname-card">
+      <div class="modal-header-banner">
+        <div class="header-badge-title">
+          <h2>設定玩家暱稱</h2>
+        </div>
+        <button id="close-nickname-btn" class="modal-close-icon">✕</button>
+      </div>
+      <div class="nickname-form-body">
+        <p class="nickname-tip">請輸入您的玩家暱稱，打破紀錄時將向全體玩家榮譽公告您的紀錄！</p>
+        <div class="input-row">
+          <input type="text" id="player-nickname-input" class="modern-nickname-input" placeholder="請輸入暱稱 (最多16字)" maxlength="16" />
+        </div>
+      </div>
+      <div class="modal-footer-row">
+        <button id="save-nickname-btn" class="modal-action-btn primary-start">確認並開始</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Live Record-Breaking Leaderboard Modal (破紀錄榮譽榜視窗) -->
+  <div id="leaderboard-modal" class="challenge-modal-overlay" style="display: none;">
+    <div class="challenge-modal-card leaderboard-card">
+      <div class="modal-header-banner">
+        <div class="header-badge-title">
+          <h2>破紀錄榮譽榜 (誰打破紀錄)</h2>
+        </div>
+        <button id="close-leaderboard-btn" class="modal-close-icon">✕</button>
+      </div>
+      <div class="leaderboard-content-body">
+        <!-- Section A: 各關最高紀錄保持人 -->
+        <h3 class="records-section-title">各關卡最高紀錄保持人</h3>
+        <div class="records-hall-grid" id="records-hall-container">
+          <!-- Dynamically populated via JS -->
+        </div>
+
+        <!-- Section B: 即時破紀錄流水動態 (誰在何時打破紀錄) -->
+        <h3 class="records-section-title" style="margin-top: 20px;">最新破紀錄即時動態</h3>
+        <div class="record-events-timeline" id="record-events-container">
+          <!-- Dynamically populated via JS -->
+        </div>
+
+        <!-- Section C: Google Sheets 雲端即時連動 -->
+        <div class="gsheet-sync-box">
+          <div class="gsheet-header">
+            <strong>Google Sheets 雲端連動 (即時同步誰打破紀錄)</strong>
+            <button id="show-gsheet-guide-btn" class="guide-toggle-btn">如何連動 Google 試算表？</button>
+          </div>
+          <div class="gsheet-input-row">
+            <input type="text" id="gsheet-url-input" class="modern-nickname-input" placeholder="貼上 Google Apps Script Webhook 網址 (選填)" />
+            <button id="save-gsheet-url-btn" class="save-small-btn">儲存網址</button>
+          </div>
+          <div id="gsheet-guide-content" class="gsheet-guide-panel hidden">
+            <h4>Google 試算表 1 分鐘免費串接教學：</h4>
+            <ol>
+              <li>在您的 Google Drive 建立一個空白「Google 試算表」。</li>
+              <li>點選頂部選單 <strong>擴充功能</strong> ➔ <strong>Apps Script</strong>。</li>
+              <li>清空原本程式碼，貼上下方腳本並點擊儲存：</li>
+            </ol>
+            <pre class="apps-script-code"><code>function doPost(e) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  if (sheet.getLastRow() === 0) {
+    sheet.appendRow(["記錄時間", "玩家暱稱", "事件類型", "紀錄項目", "關卡", "成績耗時"]);
+  }
+  var data = JSON.parse(e.postData.contents);
+  sheet.appendRow([data.date, data.player, data.event, data.recordName, data.stage, data.time]);
+  return ContentService.createTextOutput("OK");
+}</code></pre>
+            <ol start="4">
+              <li>點擊右上角 <strong>部署</strong> ➔ <strong>新部署作業</strong> ➔ 齒輪圖示選擇 <strong>網頁應用程式</strong>。</li>
+              <li>將「誰可以存取」設定為 <strong>任何人 (Anyone)</strong>，點擊部署並複製網頁應用程式網址。</li>
+              <li>將該網址貼入上方輸入框點擊「儲存網址」，之後只要有人破紀錄，試算表便會<strong>即時自動新增一筆紀錄</strong>！</li>
+            </ol>
+          </div>
+        </div>
       </div>
     </div>
   </div>
