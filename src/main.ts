@@ -401,14 +401,14 @@ function applyDIPSettings() {
   };
 
   const strongPercent = getVal('setting-strong', 100);
-  const weakPercent = getVal('setting-weak', 40);
-  const heightPercent = getVal('setting-height', 60);
-  const tophitPercent = getVal('setting-tophit', 25);
+  const weakPercent = getVal('setting-weak', 46);
+  const heightPercent = getVal('setting-height', 66);
+  const tophitPercent = getVal('setting-tophit', 18);
   const antiswing = getStr('setting-antiswing', 'disabled');
-  const speed = getVal('setting-speed', 2.6);
+  const speed = getVal('setting-speed', 1.6);
   const dropSpeed = getVal('setting-dropspeed', 2.0);
-  const swayScale = getVal('setting-sway', 1.35);
-  const length = getVal('setting-length', 13.5);
+  const swayScale = getVal('setting-sway', 1.2);
+  const length = getVal('setting-length', 9.0);
   const baffleHeight = getVal('setting-baffle', 0.5);
 
   if (claw && claw.config) {
@@ -714,21 +714,21 @@ function setupUIEventListeners() {
   // Reset to Optimal Presets
   document.getElementById('reset-presets-btn')!.addEventListener('click', () => {
     (document.getElementById('setting-strong') as HTMLInputElement).value = '100';
-    (document.getElementById('setting-height') as HTMLInputElement).value = '60';
-    (document.getElementById('setting-weak') as HTMLInputElement).value = '40';
-    (document.getElementById('setting-tophit') as HTMLInputElement).value = '25';
-    (document.getElementById('setting-speed') as HTMLInputElement).value = '2.6';
+    (document.getElementById('setting-height') as HTMLInputElement).value = '66';
+    (document.getElementById('setting-weak') as HTMLInputElement).value = '46';
+    (document.getElementById('setting-tophit') as HTMLInputElement).value = '18';
+    (document.getElementById('setting-speed') as HTMLInputElement).value = '1.6';
     (document.getElementById('setting-dropspeed') as HTMLInputElement).value = '2.0';
-    (document.getElementById('setting-sway') as HTMLInputElement).value = '1.35';
-    (document.getElementById('setting-length') as HTMLInputElement).value = '13.5';
+    (document.getElementById('setting-sway') as HTMLInputElement).value = '1.2';
+    (document.getElementById('setting-length') as HTMLInputElement).value = '9.0';
     (document.getElementById('setting-baffle') as HTMLInputElement).value = '0.5';
-    (document.getElementById('setting-dolls') as HTMLInputElement).value = '100';
+    (document.getElementById('setting-dolls') as HTMLInputElement).value = '6';
     (document.getElementById('setting-antiswing') as HTMLSelectElement).value = 'disabled';
 
     applyDIPSettings();
-    document.getElementById('val-dolls')!.textContent = '100';
-    const prizeType = (document.getElementById('setting-prizetype') as HTMLSelectElement)?.value || 'mixed';
-    prizesManager.spawnPrizes(100, prizeType);
+    document.getElementById('val-dolls')!.textContent = '6';
+    const prizeType = (document.getElementById('setting-prizetype') as HTMLSelectElement)?.value || 'blindbox';
+    prizesManager.spawnPrizes(6, prizeType);
   });
 
   // 🟢 佛心天使台 (100% 強爪、85% 爬升維持、65% 弱爪、0 撞頂、0.3m 擋板)
@@ -831,15 +831,15 @@ function setupUIEventListeners() {
     setInput(heightEl, params.height);
     setInput(weakEl, params.weak);
     setInput(tophitEl, params.tophit);
-    setInput(speedEl, params.speed || '2.6');
+    setInput(speedEl, params.speed || '1.6');
     if (dropspeedEl) setInput(dropspeedEl, params.dropspeed || '2.0');
-    if (swayEl) setInput(swayEl, params.sway || '1.35');
-    setInput(lengthEl, params.length);
-    setInput(baffleEl, params.baffle);
-    setInput(dollsEl, params.dolls);
+    if (swayEl) setInput(swayEl, params.sway || '1.2');
+    setInput(lengthEl, params.length || '9.0');
+    setInput(baffleEl, params.baffle || '0.5');
+    setInput(dollsEl, params.dolls || '6');
 
-    if (antiEl) antiEl.value = params.antiswing;
-    if (prizeEl) prizeEl.value = params.prizetype;
+    if (antiEl) antiEl.value = params.antiswing || 'disabled';
+    if (prizeEl) prizeEl.value = params.prizetype || 'blindbox';
 
     // Update text readouts
     const setTxt = (id: string, txt: string) => {
@@ -847,16 +847,16 @@ function setupUIEventListeners() {
       if (el) el.textContent = txt;
     };
 
-    setTxt('val-strong', params.strong + '%');
-    setTxt('val-height', params.height + '%');
-    setTxt('val-weak', params.weak + '%');
-    setTxt('val-tophit', params.tophit + '%');
-    setTxt('val-speed', parseFloat(params.speed || '2.6').toFixed(1));
+    setTxt('val-strong', (params.strong || '100') + '%');
+    setTxt('val-height', (params.height || '66') + '%');
+    setTxt('val-weak', (params.weak || '46') + '%');
+    setTxt('val-tophit', (params.tophit || '18') + '%');
+    setTxt('val-speed', parseFloat(params.speed || '1.6').toFixed(1));
     setTxt('val-dropspeed', parseFloat(params.dropspeed || '2.0').toFixed(1));
-    setTxt('val-sway', parseFloat(params.sway || '1.35').toFixed(2));
-    setTxt('val-length', parseFloat(params.length).toFixed(1));
-    setTxt('val-baffle', parseFloat(params.baffle).toFixed(1));
-    setTxt('val-dolls', params.dolls);
+    setTxt('val-sway', parseFloat(params.sway || '1.2').toFixed(1));
+    setTxt('val-length', parseFloat(params.length || '9.0').toFixed(1));
+    setTxt('val-baffle', parseFloat(params.baffle || '0.5').toFixed(1));
+    setTxt('val-dolls', params.dolls || '6');
 
     // Dispatch DOM events so range slider thumbs re-render visually in all browsers
     [strongEl, heightEl, weakEl, tophitEl, speedEl, dropspeedEl, swayEl, lengthEl, baffleEl, dollsEl].forEach(el => {
@@ -1019,15 +1019,15 @@ function setupUIEventListeners() {
       claw.setMachineBounds(chuteHomeX, chuteHomeZ, 2.35, cabinet.height);
 
       syncDIPPanelUI({
-        strong: '92',
-        height: '52',
-        weak: '45',
+        strong: '100',
+        height: '66',
+        weak: '46',
         tophit: '18',
-        speed: '2.6',
+        speed: '1.6',
         dropspeed: '2.0',
-        sway: '1.35',
-        length: '6.5',
-        baffle: '0.45',
+        sway: '1.2',
+        length: '9.0',
+        baffle: '0.5',
         dolls: '6',
         antiswing: 'disabled',
         prizetype: 'blindbox'

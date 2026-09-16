@@ -46,20 +46,20 @@ export class Claw {
   /* ── Configuration ── */
   /* ── Configuration ── */
   public config = {
-    moveSpeed: 2.6,            // Steady Taiwanese arcade carriage speed (沉穩適中平移速度)
-    dropSpeed: 2.0,            // Steady 2-beat drop speed (沉穩正二拍下探速度)
-    swayScale: 1.35,           // Authentic balanced arcade swing scale (擬真沉穩甩幅)
+    moveSpeed: 1.6,            // Photo setting: 1.6
+    dropSpeed: 2.0,            // Photo setting: 2.0
+    swayScale: 1.2,            // Photo setting: 1.2
     raiseSpeed: 3.2,
-    maxRopeLength: 13.5,
+    maxRopeLength: 9.0,        // Photo setting: 9.0
     minRopeLength: 1.05,
 
     strongStiffness: 250.0,
     mediumStiffness: 100.0,
-    weakStiffness: 40.0,
+    weakStiffness: 46.0,       // Photo setting: 46%
 
-    antiSwingEnabled: false, // Default: false (允許甩爪 擬真大擺幅)
-    topHitProbability: 0.25,
-    weakHeightThreshold: 0.60, // 60%
+    antiSwingEnabled: false, // Default: false (Photo: disabled)
+    topHitProbability: 0.18,   // Photo setting: 18%
+    weakHeightThreshold: 0.66, // Photo setting: 66%
     topHitForce: 6.0,
 
     clawOpenAngle: 0.85,       // Wide open angle (~49 deg outward)
