@@ -46,9 +46,8 @@ export class Claw {
   /* ── Configuration ── */
   /* ── Configuration ── */
   public config = {
-    moveSpeed: 2.0,            // Smooth controlled carriage speed (沉穩慢速好瞄準)
-    dropSpeed: 1.5,            // Authentic steady drop speed (下爪速度 1.5)
-    returnSpeed: 4.2,          // Fast return to chute (爪子自動回原位快速流暢)
+    moveSpeed: 2.6,            // Steady Taiwanese arcade carriage speed (沉穩適中平移速度)
+    dropSpeed: 2.0,            // Steady 2-beat drop speed (沉穩正二拍下探速度)
     swayScale: 1.35,           // Authentic balanced arcade swing scale (擬真沉穩甩幅)
     raiseSpeed: 3.2,
     maxRopeLength: 13.5,
@@ -397,8 +396,8 @@ export class Claw {
     const visualSwingArm = baseVisualArm * (this.config.swayScale || 1.35);
 
     // Taiwanese arcade resonant pendulum frequency for authentic "正2拍" swing:
-    // In IDLE: T = 1.45s (arcade resonant pendulum cadence, responsive and natural for rocking joystick)
-    // In DESCENDING: Synchronized mathematically to exactly 2.0*PI / dropDuration so it strictly completes 2 BEATS (外甩第1拍 + 回甩直插第2拍正中下探)!
+    // In IDLE: T = 1.95s (heavy solid metal claw pendulum cadence, calm, steady and responsive)
+    // In DESCENDING: Mathematically tuned to 1.45*PI / dropDuration so it strictly completes 2 BEATS (外甩第1拍 + 回甩直插第2拍) without generating a 3rd swing!
     let omegaSq: number;
     let targetTrailAngleX = 0;
     let targetTrailAngleZ = 0;
@@ -406,12 +405,12 @@ export class Claw {
     if (this.state === 'DESCENDING') {
       const dropDistance = Math.max(1.8, (this.carriageY - this.config.minRopeLength) - (minBaseY + 0.35));
       const dropDuration = dropDistance / Math.max(0.5, this.config.dropSpeed);
-      // 精準正二拍週期 (週期 T = dropDuration，外甩第1拍 + 回甩直插第2拍正好在觸底/插肉時完成):
-      const omega = (Math.PI * 2.0) / dropDuration;
+      // Exactly 2 beats over the descent duration (Swing 1 out, Swing 2 in, landing on 2nd beat arc):
+      const omega = (Math.PI * 1.45) / dropDuration;
       omegaSq = omega * omega;
     } else {
-      // 街機實體搖桿共振頻率 (T = 1.45s，完美契合正二拍搖桿甩動節奏)
-      const omegaIdle = (Math.PI * 2) / 1.45;
+      // Calm, heavy arcade pendulum cadence (T = 1.95s)
+      const omegaIdle = (Math.PI * 2) / 1.95;
       omegaSq = omegaIdle * omegaIdle;
     }
 
@@ -666,8 +665,8 @@ export class Claw {
         let hitPrizeBody: RAPIER.RigidBody | null = null;
 
         if (prizesManager && prizesManager.bodies.length > 0) {
-          const clawTipY = targetY - 0.75 * clawScale;
-          const stopRadiusXZ = 0.45 * clawScale;
+          const clawTipY = targetY - 0.70 * clawScale;
+          const stopRadiusXZ = 0.48 * clawScale;
 
           for (const pBody of prizesManager.bodies) {
             const pos = pBody.translation();
@@ -675,8 +674,8 @@ export class Claw {
             const dy = pos.y - clawTipY;
             const dz = pos.z - finalZ;
             const distXZ = Math.sqrt(dx * dx + dz * dz);
-            // 接觸娃娃頂面或斜面（當爪尖真正觸底插深才觸發撞擊與抓取）
-            if (distXZ <= stopRadiusXZ && (dy >= -0.20 * clawScale && dy <= 0.40 * clawScale)) {
+            // 接觸娃娃頂面或斜面
+            if (distXZ <= stopRadiusXZ && (dy >= -0.35 * clawScale && dy <= 0.45 * clawScale)) {
               hitPrizeBody = pBody;
               break;
             }
@@ -793,8 +792,7 @@ export class Claw {
         const dist = Math.sqrt(dx * dx + dz * dz);
 
         if (dist > 0.05) {
-          const returnSpeed = (this.config as any).returnSpeed || 4.2;
-          const step = returnSpeed * deltaTime;
+          const step = this.config.moveSpeed * deltaTime;
           const nx = pos.x + (dx / dist) * Math.min(dist, step);
           const nz = pos.z + (dz / dist) * Math.min(dist, step);
           this.carriageBody.setNextKinematicTranslation({ x: nx, y: pos.y, z: nz });
