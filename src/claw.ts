@@ -46,8 +46,9 @@ export class Claw {
   /* ── Configuration ── */
   /* ── Configuration ── */
   public config = {
-    moveSpeed: 2.6,            // Steady Taiwanese arcade carriage speed (沉穩適中平移速度)
-    dropSpeed: 1.2,            // Realistic steady Taiwanese arcade descent speed (沉穩擬真正二拍下探速度)
+    moveSpeed: 2.0,            // Smooth controlled carriage speed (沉穩慢速好瞄準)
+    dropSpeed: 1.5,            // Authentic steady drop speed (下爪速度 1.5)
+    returnSpeed: 4.2,          // Fast return to chute (爪子自動回原位快速流暢)
     swayScale: 1.35,           // Authentic balanced arcade swing scale (擬真沉穩甩幅)
     raiseSpeed: 3.2,
     maxRopeLength: 13.5,
@@ -792,7 +793,8 @@ export class Claw {
         const dist = Math.sqrt(dx * dx + dz * dz);
 
         if (dist > 0.05) {
-          const step = this.config.moveSpeed * deltaTime;
+          const returnSpeed = (this.config as any).returnSpeed || 4.2;
+          const step = returnSpeed * deltaTime;
           const nx = pos.x + (dx / dist) * Math.min(dist, step);
           const nz = pos.z + (dz / dist) * Math.min(dist, step);
           this.carriageBody.setNextKinematicTranslation({ x: nx, y: pos.y, z: nz });
