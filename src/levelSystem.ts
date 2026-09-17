@@ -254,7 +254,26 @@ export class LevelSystem {
     this.updateProgressUI(count);
   }
 
-  private updateProgressUI(remainingCount?: number) {
+  public updateConfig(stageNum: number, overrides: Partial<LevelConfig>) {
+    const idx = LEVEL_CONFIGS.findIndex(c => c.stageNum === stageNum);
+    if (idx !== -1) {
+      LEVEL_CONFIGS[idx] = { ...LEVEL_CONFIGS[idx], ...overrides };
+      if (this.currentLevelIndex === idx) {
+        if (overrides.timeLimitSeconds !== undefined) {
+          this.remainingSeconds = overrides.timeLimitSeconds;
+          this.stageEndTime = Date.now() + this.remainingSeconds * 1000;
+          this.callbacks.onTick(this.remainingSeconds, this.getFormattedTime(this.remainingSeconds), false);
+        }
+        this.updateProgressUI();
+      }
+    }
+  }
+
+  public forceStageClear() {
+    this.triggerStageClear();
+  }
+
+  public updateProgressUI(remainingCount?: number) {
     const config = this.getCurrentConfig();
     const remaining = remainingCount !== undefined ? remainingCount : (this.initialPrizeCount - this.stageWins);
     this.callbacks.onProgressUpdated(
@@ -265,10 +284,10 @@ export class LevelSystem {
     );
   }
 
-  private triggerStageClear() {
+  public triggerStageClear() {
     this.stopTimer();
     const config = this.getCurrentConfig();
-    const elapsedSeconds = config.timeLimitSeconds - this.remainingSeconds;
+    const elapsedSeconds = Math.max(1, config.timeLimitSeconds - this.remainingSeconds);
 
     if (this.currentLevelIndex === LEVEL_CONFIGS.length - 1) {
       // Final level cleared! Grand Victory!

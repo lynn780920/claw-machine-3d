@@ -81,33 +81,54 @@ body {
   box-shadow: 0 0 25px rgba(255, 0, 127, 0.5);
 }
 
-/* ── Unified Floating Top Nav Bar (Responsive Header, Never Overlaps) ── */
-.top-nav-bar {
+/* ── Unified Floating Top Nav Bar (Two-Tier Responsive Container) ── */
+.top-nav-container {
   position: fixed;
-  top: max(12px, env(safe-area-inset-top, 12px));
+  top: max(8px, env(safe-area-inset-top, 8px));
   left: 50%;
   transform: translateX(-50%);
   z-index: 100;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: flex-start;
-  gap: 8px;
-  width: max-content;
-  max-width: 96vw;
-  padding: 4px 8px;
-  background: rgba(15, 23, 42, 0.88);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  border-radius: 30px;
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.35);
-  overflow-x: auto;
-  scrollbar-width: none;
-  -webkit-overflow-scrolling: touch;
+  gap: 5px;
+  width: auto;
+  max-width: 98vw;
+  pointer-events: none; /* children enable pointer events */
 }
 
-.top-nav-bar::-webkit-scrollbar {
-  display: none;
+/* Row 1: Challenge HUD Status Row */
+.hud-status-row {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 3px 8px;
+  background: rgba(15, 23, 42, 0.90);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 30px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+  box-sizing: border-box;
+}
+
+/* Row 2: Functional Control Action Pills */
+.hud-actions-row {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 3px 6px;
+  background: rgba(15, 23, 42, 0.82);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 30px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.28);
+  box-sizing: border-box;
 }
 
 .machine-short-name {
@@ -124,7 +145,7 @@ body {
   font-size: 0.82rem;
   font-weight: 700;
   color: #ffffff;
-  padding: 6px 14px;
+  padding: 5px 12px;
   border-radius: 20px;
   cursor: pointer;
   white-space: nowrap;
@@ -135,27 +156,39 @@ body {
   flex-shrink: 0;
   transition: all 0.2s ease;
   box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+  touch-action: manipulation;
+}
+
+.btn-icon, .hud-icon {
+  font-size: 0.85rem;
+  line-height: 1;
 }
 
 .nav-hud-pill {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 5px 12px;
+  gap: 4px;
+  padding: 4px 10px;
   border-radius: 20px;
   font-family: 'Orbitron', 'Rajdhani', sans-serif;
-  font-size: 0.82rem;
+  font-size: 0.80rem;
   font-weight: 700;
   white-space: nowrap;
   flex-shrink: 0;
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
   user-select: none;
 }
 
 .hud-pill-label {
-  font-size: 0.72rem;
+  font-size: 0.70rem;
   color: rgba(255, 255, 255, 0.7);
-  margin-right: 2px;
+}
+
+.player-pill {
+  cursor: pointer;
+  border: 1px solid rgba(168, 85, 247, 0.7);
+  background: rgba(15, 23, 42, 0.85);
+  color: #e9d5ff;
 }
 
 .level-pill {
@@ -168,7 +201,7 @@ body {
   background: linear-gradient(135deg, #0f172a, #1e293b);
   border: 1px solid #38bdf8;
   color: #38bdf8;
-  letter-spacing: 1px;
+  letter-spacing: 0.5px;
 }
 
 .timer-pill.warning-pulse {
@@ -185,7 +218,7 @@ body {
   }
   100% {
     box-shadow: 0 0 18px rgba(239, 68, 68, 0.95);
-    transform: scale(1.05);
+    transform: scale(1.04);
   }
 }
 
@@ -200,57 +233,99 @@ body {
   border: 1px solid #38bdf8;
 }
 
+.nav-pill-btn.records {
+  background: linear-gradient(135deg, #d97706, #b45309);
+  border: 1px solid #fbbf24;
+  color: #fff;
+  font-weight: bold;
+}
+
+.nav-pill-btn.camera {
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(56, 189, 248, 0.6);
+  color: #38bdf8;
+  font-weight: bold;
+}
+
 .nav-pill-btn.bgm {
   background: linear-gradient(135deg, #0284c7, #0369a1);
   border: 1px solid #38bdf8;
 }
 
-.nav-pill-btn.settings {
-  background: linear-gradient(135deg, #7c3aed, #6d28d9);
-  border: 1px solid #a78bfa;
+.nav-pill-btn.admin-settings-btn {
+  background: linear-gradient(135deg, #7c3aed, #4c1d95);
+  border: 1px solid #c084fc;
+  color: #f5d0fe;
+  font-weight: bold;
+}
+.nav-pill-btn.admin-settings-btn:hover {
+  background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+  color: #ffffff;
 }
 
 .nav-pill-btn:active {
   transform: scale(0.95);
 }
 
-@media (max-width: 680px) {
-  .machine-full-name {
-    display: none;
-  }
-  .machine-short-name {
-    display: inline;
-  }
-  .top-nav-bar {
+/* ── Mobile Optimization (<= 768px and <= 430px) ── */
+@media (max-width: 768px) {
+  .top-nav-container {
     top: max(6px, env(safe-area-inset-top, 6px));
     gap: 4px;
-    padding: 3px 5px;
-    max-width: calc(100vw - 12px);
-    width: calc(100vw - 12px);
-    box-sizing: border-box;
-    justify-content: space-between;
-    overflow-x: auto;
-    scrollbar-width: none;
-    -webkit-overflow-scrolling: touch;
+    width: 98vw;
+    max-width: 98vw;
   }
-  .top-nav-bar::-webkit-scrollbar {
-    display: none;
+  .hud-status-row {
+    width: 100%;
+    justify-content: space-between;
+    gap: 3px;
+    padding: 3px 5px;
+    border-radius: 20px;
+  }
+  .hud-actions-row {
+    width: 100%;
+    justify-content: space-between;
+    gap: 3px;
+    padding: 3px 4px;
+    border-radius: 20px;
+  }
+  .nav-hud-pill {
+    padding: 4px 6px;
+    font-size: 0.74rem;
+    gap: 2px;
+    min-width: 0;
+  }
+  .hud-pill-label {
+    font-size: 0.66rem;
   }
   .nav-pill-btn {
     font-size: 0.72rem;
     padding: 5px 6px;
     letter-spacing: -0.2px;
     gap: 2px;
-    flex: 1 1 auto;
+    flex: 1 1 0;
     min-width: 0;
+    justify-content: center;
+  }
+  .btn-icon, .hud-icon {
+    font-size: 0.76rem;
   }
 }
 
-@media (max-width: 380px) {
+@media (max-width: 400px) {
+  .hud-pill-label {
+    display: none; /* Hide labels like "關卡", "倒數" to give numbers maximum room */
+  }
+  .nav-hud-pill {
+    padding: 4px 5px;
+    font-size: 0.70rem;
+  }
   .nav-pill-btn {
+    font-size: 0.68rem;
+    padding: 4px 3px;
+  }
+  #camera-btn-text {
     font-size: 0.66rem;
-    padding: 4px 4px;
-    letter-spacing: -0.4px;
   }
 }
 
@@ -335,23 +410,23 @@ body {
   color: #ff007f;
 }
 
-/* Settings Panel completely hidden from players */
+/* Settings Panel (Collapsible Drawer with Password Access) */
 .settings-panel {
-  display: none !important;
   position: fixed;
   top: 0;
   right: 0;
-  width: 360px;
+  width: 380px;
   height: 100vh;
-  background: rgba(255, 255, 255, 0.94);
-  backdrop-filter: blur(20px);
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(25px);
+  -webkit-backdrop-filter: blur(25px);
   border-left: 2px solid var(--neon-pink);
-  box-shadow: -8px 0 30px rgba(0, 0, 0, 0.15);
+  box-shadow: -8px 0 35px rgba(0, 0, 0, 0.25);
   padding: 20px;
   display: flex;
   flex-direction: column;
   gap: 12px;
-  z-index: 100;
+  z-index: 200;
   overflow-y: auto !important;
   -webkit-overflow-scrolling: touch !important;
   touch-action: pan-y !important;
@@ -361,10 +436,281 @@ body {
 
 .settings-panel.collapsed {
   transform: translateX(100%);
+  pointer-events: none;
 }
 
 .settings-panel.open {
   transform: translateX(0);
+  pointer-events: auto;
+}
+
+/* 🌟 God Mode Toggle Card */
+.godmode-card {
+  background: linear-gradient(135deg, rgba(234, 179, 8, 0.15), rgba(245, 158, 11, 0.25));
+  border: 2px solid #f59e0b;
+  border-radius: 12px;
+  padding: 12px;
+  margin-top: 4px;
+  margin-bottom: 8px;
+  box-shadow: 0 4px 15px rgba(245, 158, 11, 0.2);
+}
+
+.godmode-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.godmode-title {
+  font-weight: 900;
+  color: #b45309;
+  font-size: 0.95rem;
+  letter-spacing: 0.2px;
+}
+
+.godmode-desc {
+  font-size: 0.78rem;
+  color: #78350f;
+  margin-top: 6px;
+  line-height: 1.45;
+}
+
+/* 🎯 Stage Tuning Cards */
+.section-title.special {
+  color: #7c3aed;
+  border-left-color: #7c3aed;
+}
+
+.stage-tune-card {
+  background: rgba(248, 250, 252, 0.9);
+  border: 1.5px solid #cbd5e1;
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.stage-tune-card.stage-3 {
+  border-color: #ec4899;
+  background: rgba(236, 72, 153, 0.05);
+}
+
+.stage-tune-card.stage-4 {
+  border-color: #ef4444;
+  background: rgba(239, 68, 68, 0.05);
+}
+
+.stage-tune-badge {
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: #db2777;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.stage-tune-badge.boss {
+  color: #dc2626;
+}
+
+.setting-group.compact {
+  margin-bottom: 4px;
+  gap: 2px;
+}
+
+.setting-hint {
+  font-size: 0.72rem;
+  color: #64748b;
+  margin-top: 1px;
+}
+
+.setting-row-toggle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #334155;
+  padding-top: 4px;
+}
+
+/* iOS Style Switch */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.switch.small {
+  width: 38px;
+  height: 20px;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider.round {
+  position: absolute;
+  cursor: pointer;
+  inset: 0;
+  background-color: #cbd5e1;
+  transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 34px;
+}
+
+.slider.round:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.switch.small .slider.round:before {
+  height: 14px;
+  width: 14px;
+  left: 3px;
+  bottom: 3px;
+}
+
+input:checked + .slider.round {
+  background-color: #10b981;
+}
+
+input:checked + .slider.round:before {
+  transform: translateX(20px);
+}
+
+.switch.small input:checked + .slider.round:before {
+  transform: translateX(18px);
+}
+
+/* 🚀 Stage Debug Shortcuts */
+.stage-debug-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin-top: 2px;
+  margin-bottom: 8px;
+}
+
+.stage-quick-btn {
+  padding: 8px 4px;
+  font-size: 0.76rem;
+  font-weight: 800;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  color: #fff;
+  transition: transform 0.15s;
+}
+.stage-quick-btn:active {
+  transform: scale(0.95);
+}
+.stage-quick-btn.jump3 {
+  background: linear-gradient(135deg, #ec4899, #be185d);
+  border: 1px solid #f472b6;
+}
+.stage-quick-btn.jump4 {
+  background: linear-gradient(135deg, #ef4444, #b91c1c);
+  border: 1px solid #f87171;
+}
+.stage-quick-btn.clear {
+  background: linear-gradient(135deg, #10b981, #047857);
+  border: 1px solid #34d399;
+}
+
+/* 🔐 Admin Password Modal */
+.admin-auth-card {
+  max-width: 440px;
+  background: #0f172a;
+  border: 2px solid #8b5cf6;
+  box-shadow: 0 0 35px rgba(139, 92, 246, 0.35);
+}
+
+.admin-auth-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.auth-intro {
+  font-size: 0.88rem;
+  color: #cbd5e1;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.auth-input-container {
+  display: flex;
+  gap: 8px;
+}
+
+.admin-pwd-input {
+  flex: 1;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1.5px solid #8b5cf6;
+  background: rgba(30, 41, 59, 0.9);
+  color: #ffffff;
+  font-size: 1rem;
+  outline: none;
+  box-sizing: border-box;
+}
+.admin-pwd-input:focus {
+  border-color: #c084fc;
+  box-shadow: 0 0 10px rgba(192, 132, 252, 0.4);
+}
+
+.admin-submit-btn {
+  background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+  border: 1px solid #c084fc;
+  color: #ffffff;
+  font-weight: 800;
+  padding: 10px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: transform 0.15s;
+}
+.admin-submit-btn:active {
+  transform: scale(0.96);
+}
+
+.auth-error-tip {
+  color: #f87171;
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.auth-hint-box {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(139, 92, 246, 0.12);
+  border: 1px dashed rgba(192, 132, 252, 0.5);
+  border-radius: 8px;
+  padding: 8px 12px;
+  color: #e9d5ff;
+  font-size: 0.80rem;
+}
+
+.default-pwd-badge {
+  color: #fde047;
+  font-family: 'Orbitron', monospace;
+  letter-spacing: 1px;
 }
 
 .panel-header {

@@ -511,15 +511,15 @@ function triggerActionButtonAction() {
     plays++;
     updateStatsUI();
     soundEngine.playCoinDropSFX();
-    claw.actionButtonPressed();
+    claw.actionButtonPressed(prizesManager);
   } else if (claw.state === 'DESCENDING') {
     // Triggers "二收"
     soundEngine.playClawCloseSFX();
-    claw.actionButtonPressed();
+    claw.actionButtonPressed(prizesManager);
   } else if (claw.state === 'ASCENDING') {
     // Triggers "二拍強退"
     soundEngine.playClawCloseSFX();
-    claw.actionButtonPressed();
+    claw.actionButtonPressed(prizesManager);
   }
 }
 
@@ -1317,15 +1317,76 @@ function setupUIEventListeners() {
     });
   }
 
-  // Collapsible Settings Panel Drawer Toggle
+  // 🔐 Collapsible Settings Panel Drawer with Password Authentication
+  let isAdminUnlocked = false;
   const settingsPanel = document.getElementById('settings-panel') as HTMLElement | null;
   const toggleBtn = document.getElementById('toggle-settings-btn') as HTMLElement | null;
   const closePanelBtn = document.getElementById('close-settings-btn') as HTMLElement | null;
 
-  if (toggleBtn && settingsPanel) {
+  const adminAuthModal = document.getElementById('admin-auth-modal') as HTMLElement | null;
+  const adminPwdInput = document.getElementById('admin-password-input') as HTMLInputElement | null;
+  const submitAdminPwdBtn = document.getElementById('submit-admin-password-btn') as HTMLElement | null;
+  const closeAdminAuthBtn = document.getElementById('close-admin-auth-btn') as HTMLElement | null;
+  const adminAuthError = document.getElementById('admin-auth-error') as HTMLElement | null;
+
+  const openAdminPanel = () => {
+    if (settingsPanel) {
+      settingsPanel.classList.add('open');
+      settingsPanel.classList.remove('collapsed');
+    }
+  };
+
+  const checkAndSubmitAdminPassword = () => {
+    const entered = adminPwdInput ? adminPwdInput.value.trim() : '';
+    // Accepts '8888', 'admin888', '6666'
+    if (entered === '8888' || entered === 'admin888' || entered === '6666') {
+      isAdminUnlocked = true;
+      if (adminAuthError) adminAuthError.style.display = 'none';
+      if (adminAuthModal) adminAuthModal.style.display = 'none';
+      openAdminPanel();
+    } else {
+      if (adminAuthError) adminAuthError.style.display = 'block';
+      if (adminPwdInput) {
+        adminPwdInput.focus();
+        adminPwdInput.select();
+      }
+    }
+  };
+
+  if (toggleBtn) {
     toggleBtn.addEventListener('click', () => {
-      settingsPanel.classList.toggle('open');
-      settingsPanel.classList.toggle('collapsed');
+      if (isAdminUnlocked) {
+        if (settingsPanel) {
+          settingsPanel.classList.toggle('open');
+          settingsPanel.classList.toggle('collapsed');
+        }
+      } else {
+        if (adminAuthModal) {
+          adminAuthModal.style.display = 'flex';
+          if (adminAuthError) adminAuthError.style.display = 'none';
+          if (adminPwdInput) {
+            adminPwdInput.value = '';
+            setTimeout(() => adminPwdInput.focus(), 150);
+          }
+        }
+      }
+    });
+  }
+
+  if (submitAdminPwdBtn) {
+    submitAdminPwdBtn.addEventListener('click', checkAndSubmitAdminPassword);
+  }
+  if (adminPwdInput) {
+    adminPwdInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') checkAndSubmitAdminPassword();
+    });
+  }
+  if (closeAdminAuthBtn && adminAuthModal) {
+    closeAdminAuthBtn.addEventListener('click', () => {
+      adminAuthModal.style.display = 'none';
+    });
+    adminAuthModal.addEventListener('click', (e) => {
+      if (e.target === adminAuthModal) adminAuthModal.style.display = 'none';
     });
   }
 
@@ -1335,6 +1396,130 @@ function setupUIEventListeners() {
       settingsPanel.classList.add('collapsed');
     });
   }
+
+  // 🌟 God Mode (無敵保夾必中模式)
+  const godmodeCheckbox = document.getElementById('setting-godmode') as HTMLInputElement | null;
+  if (godmodeCheckbox) {
+    godmodeCheckbox.addEventListener('change', () => {
+      claw.config.godMode = godmodeCheckbox.checked;
+      if (godmodeCheckbox.checked) {
+        claw.config.strongStiffness = 350.0;
+        claw.config.weakStiffness = 300.0;
+        claw.config.topHitProbability = 0;
+        claw.config.weakHeightThreshold = 0.99;
+      } else {
+        applyMachineSettings();
+      }
+    });
+  }
+
+  // 🎯 Stage 3 Custom Difficulty Settings (盲盒清台戰調參)
+  const s3Target = document.getElementById('setting-stage3-target') as HTMLInputElement | null;
+  const s3Time = document.getElementById('setting-stage3-time') as HTMLInputElement | null;
+  const s3Friction = document.getElementById('setting-stage3-friction') as HTMLInputElement | null;
+
+  if (s3Target) {
+    s3Target.addEventListener('input', () => {
+      const val = parseInt(s3Target.value);
+      const valEl = document.getElementById('val-stage3-target');
+      if (valEl) valEl.textContent = `${val} 盒`;
+      levelSystem.updateConfig(3, {
+        targetWins: val,
+        isClearAll: val >= 5,
+        objectiveText: val >= 5 ? '清台！(台內 5 盒盲盒全數清空)' : `夾出 ${val} 盒盲盒`
+      });
+    });
+  }
+  if (s3Time) {
+    s3Time.addEventListener('input', () => {
+      const val = parseInt(s3Time.value);
+      const valEl = document.getElementById('val-stage3-time');
+      if (valEl) valEl.textContent = `${val} 分鐘`;
+      levelSystem.updateConfig(3, { timeLimitSeconds: val * 60 });
+    });
+  }
+  if (s3Friction) {
+    s3Friction.addEventListener('change', () => {
+      const frictionVal = s3Friction.checked ? 1.5 : 0.45;
+      prizesManager.bodies.forEach(b => {
+        for (let i = 0; i < b.numColliders(); i++) {
+          b.collider(i).setFriction(frictionVal);
+        }
+      });
+    });
+  }
+
+  // ⚡ Stage 4 Custom Difficulty Settings (K-霸家電魔王關調參)
+  const s4Target = document.getElementById('setting-stage4-target') as HTMLInputElement | null;
+  const s4Time = document.getElementById('setting-stage4-time') as HTMLInputElement | null;
+  const s4Baffle = document.getElementById('setting-stage4-baffle') as HTMLInputElement | null;
+  const s4Grip = document.getElementById('setting-stage4-grip') as HTMLInputElement | null;
+  const s4Lightweight = document.getElementById('setting-stage4-lightweight') as HTMLInputElement | null;
+
+  if (s4Target) {
+    s4Target.addEventListener('input', () => {
+      const val = parseInt(s4Target.value);
+      const valEl = document.getElementById('val-stage4-target');
+      if (valEl) valEl.textContent = `${val} 樣`;
+      levelSystem.updateConfig(4, { targetWins: val, objectiveText: `夾出 ${val} 樣巨型家電` });
+    });
+  }
+  if (s4Time) {
+    s4Time.addEventListener('input', () => {
+      const val = parseInt(s4Time.value);
+      const valEl = document.getElementById('val-stage4-time');
+      if (valEl) valEl.textContent = `${val} 分鐘`;
+      levelSystem.updateConfig(4, { timeLimitSeconds: val * 60 });
+    });
+  }
+  if (s4Baffle) {
+    s4Baffle.addEventListener('input', () => {
+      const val = parseFloat(s4Baffle.value);
+      const valEl = document.getElementById('val-stage4-baffle');
+      if (valEl) valEl.textContent = `${val.toFixed(1)} m`;
+      if (cabinet && physics) {
+        cabinet.setBaffleHeight(val, physics);
+      }
+    });
+  }
+  if (s4Grip) {
+    s4Grip.addEventListener('input', () => {
+      const val = parseFloat(s4Grip.value);
+      const valEl = document.getElementById('val-stage4-grip');
+      if (valEl) valEl.textContent = `${val.toFixed(1)}x`;
+      claw.config.superGripMultiplier = val;
+    });
+  }
+  if (s4Lightweight) {
+    s4Lightweight.addEventListener('change', () => {
+      const isLight = s4Lightweight.checked;
+      prizesManager.bodies.forEach(b => {
+        const curMass = b.mass();
+        if (isLight) {
+          b.setAdditionalMass(Math.max(0.08, curMass * 0.4 - curMass), true);
+        } else {
+          b.setAdditionalMass(0, true);
+        }
+      });
+    });
+  }
+
+  // 🚀 Stage Debug Shortcuts
+  document.getElementById('jump-stage3-btn')?.addEventListener('click', () => {
+    levelSystem.startLevel(2); // Stage 3 is index 2
+    settingsPanel?.classList.remove('open');
+    settingsPanel?.classList.add('collapsed');
+  });
+  document.getElementById('jump-stage4-btn')?.addEventListener('click', () => {
+    levelSystem.startLevel(3); // Stage 4 is index 3
+    settingsPanel?.classList.remove('open');
+    settingsPanel?.classList.add('collapsed');
+  });
+  document.getElementById('force-clear-btn')?.addEventListener('click', () => {
+    levelSystem.forceStageClear();
+    settingsPanel?.classList.remove('open');
+    settingsPanel?.classList.add('collapsed');
+  });
 
   // Safe manual modal event listeners
   const manualModal = document.getElementById('manual-modal');

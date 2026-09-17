@@ -64,6 +64,10 @@ export class Claw {
 
     clawOpenAngle: 0.85,       // Wide open angle (~49 deg outward)
     clawCloseAngle: -0.22,     // Tight closed angle (~-13 deg inward wrap)
+
+    // Admin / DIP Switch Overrides
+    godMode: false,            // 100% win guarantee - never drops
+    superGripMultiplier: 1.0,  // Scale grip strength up to 3.0x
   };
 
   /* ── State & Pendulum Dynamics ── */
@@ -314,51 +318,37 @@ export class Claw {
     pin.rotation.x = Math.PI / 2;
     armHinge.add(pin);
 
-    // Component 14 in Patent: Single Continuous Smooth Curved Metal Blade!
-    const prongShape = new THREE.Shape();
-    prongShape.moveTo(0, 0);
-    prongShape.bezierCurveTo(0.14, -0.15, 0.25, -0.42, 0.11, -0.82);
-    prongShape.lineTo(0.04, -0.84);
-    prongShape.bezierCurveTo(0.18, -0.44, 0.09, -0.18, -0.03, 0);
-    prongShape.closePath();
+    // ── Authentic Taiwanese/Japanese Arcade 3D Curved Tubular Metal Prongs (圓管金屬曲爪) ──
+    // Smooth Catmull-Rom 3D Curve forming the elegant curved claw arm:
+    const curvePoints = [
+      new THREE.Vector3(0, 0, 0),
+      new THREE.Vector3(0.12, -0.20, 0),
+      new THREE.Vector3(0.24, -0.45, 0),
+      new THREE.Vector3(0.20, -0.68, 0),
+      new THREE.Vector3(0.08, -0.84, 0)
+    ];
+    const armCurve = new THREE.CatmullRomCurve3(curvePoints);
+    const tubeGeo = new THREE.TubeGeometry(armCurve, 24, 0.034, 16, false);
+    const tubeMesh = new THREE.Mesh(tubeGeo, chrome);
+    tubeMesh.castShadow = true;
+    armHinge.add(tubeMesh);
 
-    const extrudeSettings = {
-      steps: 1,
-      depth: 0.036,
-      bevelEnabled: true,
-      bevelThickness: 0.006,
-      bevelSize: 0.006,
-      bevelSegments: 3,
-    };
+    // ── Bright Red Anti-Slip Rubber Sleeve Tip Cap (紅色防滑膠套爪尖) ──
+    const tipCurvePoints = [
+      new THREE.Vector3(0.16, -0.72, 0),
+      new THREE.Vector3(0.08, -0.84, 0)
+    ];
+    const tipCurve = new THREE.CatmullRomCurve3(tipCurvePoints);
+    const tipSleeveGeo = new THREE.TubeGeometry(tipCurve, 10, 0.042, 16, false);
+    const tipSleeveMesh = new THREE.Mesh(tipSleeveGeo, rubber);
+    tipSleeveMesh.castShadow = true;
+    armHinge.add(tipSleeveMesh);
 
-    const prongGeo = new THREE.ExtrudeGeometry(prongShape, extrudeSettings);
-    prongGeo.translate(0, 0, -0.018);
-
-    const prongMesh = new THREE.Mesh(prongGeo, chrome);
-    prongMesh.castShadow = true;
-    armHinge.add(prongMesh);
-
-    // Fitted Red Rubber Sleeve Tip Cap
-    const sleeveShape = new THREE.Shape();
-    sleeveShape.moveTo(0.09, -0.66);
-    sleeveShape.bezierCurveTo(0.13, -0.73, 0.19, -0.78, 0.11, -0.82);
-    sleeveShape.lineTo(0.04, -0.84);
-    sleeveShape.bezierCurveTo(0.13, -0.78, 0.10, -0.71, 0.06, -0.66);
-    sleeveShape.closePath();
-
-    const sleeveGeo = new THREE.ExtrudeGeometry(sleeveShape, {
-      steps: 1,
-      depth: 0.042,
-      bevelEnabled: true,
-      bevelThickness: 0.004,
-      bevelSize: 0.004,
-      bevelSegments: 2,
-    });
-    sleeveGeo.translate(0, 0, -0.021);
-
-    const sleeveMesh = new THREE.Mesh(sleeveGeo, rubber);
-    sleeveMesh.castShadow = true;
-    armHinge.add(sleeveMesh);
+    // Smooth rounded rubber hemisphere end tip (杜絕尖銳串燒穿刺感)
+    const endCapGeo = new THREE.SphereGeometry(0.042, 14, 14);
+    const endCap = new THREE.Mesh(endCapGeo, rubber);
+    endCap.position.set(0.08, -0.84, 0);
+    armHinge.add(endCap);
 
     // Component 12 in Patent: Linkage Push Rod
     const linkage = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.016, 0.38, 8), chrome);
@@ -524,10 +514,16 @@ export class Claw {
     this.cableLine.geometry.setFromPoints([cableTop, cableBottom]);
 
     // ── D. Smooth Arm Angle Animation (Controlled solenoid closing speed 6.0) ──
-    // When holding an object, clamp arm angle so the metal prongs hug the perimeter rather than piercing through like a skewer
-    const effectiveTargetAngle = (this.grabbedBody && this.state !== 'OPENING' && this.state !== 'IDLE' && this.state !== 'DESCENDING')
-      ? this.grabbedContactAngle
-      : this.targetArmAngle;
+    // Clamps arm angle dynamically so metal prongs hug the perimeter of prizes rather than piercing through like a skewer!
+    let effectiveTargetAngle = this.targetArmAngle;
+    if (this.grabbedBody && this.state !== 'OPENING' && this.state !== 'IDLE' && this.state !== 'DESCENDING') {
+      effectiveTargetAngle = this.grabbedContactAngle;
+    } else if (this.state === 'GRABBING' && prizesManager) {
+      const candidate = this.findCandidatePrize(prizesManager);
+      if (candidate) {
+        effectiveTargetAngle = this.getSafeContactAngle(candidate);
+      }
+    }
     this.currentArmAngle += (effectiveTargetAngle - this.currentArmAngle) * 6.0 * deltaTime;
 
     for (let i = 0; i < 3; i++) {
@@ -579,11 +575,11 @@ export class Claw {
       }
     }
 
-    // ── G. Solid Metal Arm Collision (全爪臂實體防穿透物理牆 & 合爪高摩擦推擠) ──
+    // ── G. Solid Metal Arm Collision (全爪臂實體防穿透物理牆 & 合爪向外撥開非目標) ──
     if (prizesManager && prizesManager.bodies.length > 0) {
       const clawScale = this.baseMesh ? this.baseMesh.scale.x : 1.0;
-      const isClosing = (this.targetArmAngle === this.config.clawCloseAngle);
-      const isOpening = (this.targetArmAngle === this.config.clawOpenAngle);
+      const isClosing = (this.targetArmAngle === this.config.clawCloseAngle || this.state === 'GRABBING');
+      const isOpening = (this.targetArmAngle === this.config.clawOpenAngle || this.state === 'OPENING');
 
       for (let i = 0; i < 3; i++) {
         const pivot = this.armPivots[i];
@@ -634,10 +630,10 @@ export class Claw {
                 let pushZ = dz / dist;
 
                 if (isClosing) {
-                  // 合爪時向爪心內側收攏並向上微托
-                  pushX = -outwardDir.x * 0.75 + pushX * 0.25;
-                  pushZ = -outwardDir.z * 0.75 + pushZ * 0.25;
-                  pushY = 0.45;
+                  // 合爪時：溫柔向外撥開與向上微托，絕不將娃娃硬拉入金屬爪身深處
+                  pushX = outwardDir.x * 0.45 + pushX * 0.55;
+                  pushZ = outwardDir.z * 0.45 + pushZ * 0.55;
+                  pushY = 0.35;
                 } else if (isOpening) {
                   // 放爪時向外推開
                   pushX = outwardDir.x * 0.8 + pushX * 0.2;
@@ -720,7 +716,7 @@ export class Claw {
           }
 
           this.targetRopeLength = this.ropeLength;
-          this.triggerGrab();
+          this.triggerGrab(prizesManager);
         }
         break;
       }
@@ -851,60 +847,60 @@ export class Claw {
      GEOMETRIC WRAP & SOLID CARRY LOGIC (AUTHENTIC GRIP WITHOUT PENETRATION)
      ================================================================ */
 
-  private attemptGrab(physics: PhysicsSystem, prizesManager?: PrizesManager) {
+  /* ================================================================
+     GEOMETRIC WRAP & SOLID CARRY LOGIC (AUTHENTIC GRIP WITHOUT PENETRATION)
+     ================================================================ */
+
+  public findCandidatePrize(prizesManager?: PrizesManager): RAPIER.RigidBody | null {
+    if (!prizesManager || prizesManager.bodies.length === 0) return null;
     const basePos = this.baseMesh.position;
     const clawScale = this.baseMesh ? this.baseMesh.scale.x : 1.0;
-    
-    // 計算當前爪尖在世界空間的最低高度
-    let lowestTipY = basePos.y - 0.75 * clawScale;
-    const tipPositions: THREE.Vector3[] = [];
-    for (let i = 0; i < 3; i++) {
-      const pivot = this.armPivots[i];
-      const hinge = pivot ? pivot.getObjectByName('armHinge') : null;
-      if (hinge) {
-        const pWorld = new THREE.Vector3();
-        hinge.getWorldPosition(pWorld);
-        const outwardDir = pWorld.clone().sub(this.baseMesh.position);
-        outwardDir.y = 0; outwardDir.normalize();
-        const tipPos = pWorld.clone().addScaledVector(outwardDir, 0.26 * clawScale);
-        tipPos.y -= 0.72 * clawScale;
-        tipPositions.push(tipPos);
-        if (tipPos.y < lowestTipY) lowestTipY = tipPos.y;
-      }
-    }
+    const lowestTipY = basePos.y - 0.75 * clawScale;
+    const maxDistXZ = 0.52 * clawScale;
 
     let candidateBody: RAPIER.RigidBody | null = null;
     let bestScore = -Infinity;
 
-    // Scale-aware grab envelope (Generous envelope for reliable, natural arcade grabs)
-    const maxDistXZ = 0.48 * clawScale;
+    for (const pBody of prizesManager.bodies) {
+      if (pBody === this.grabbedBody) continue;
+      const bPos = pBody.translation();
+      const dx = bPos.x - basePos.x;
+      const dz = bPos.z - basePos.z;
+      const distXZ = Math.sqrt(dx * dx + dz * dz);
 
-    if (prizesManager && prizesManager.bodies.length > 0) {
-      for (const pBody of prizesManager.bodies) {
-        const bPos = pBody.translation();
-        const dx = bPos.x - basePos.x;
-        const dz = bPos.z - basePos.z;
-        const distXZ = Math.sqrt(dx * dx + dz * dz);
+      // 落在三爪包圍半徑內
+      if (distXZ > maxDistXZ) continue;
+      // 爪尖需低於物體或包圍在物體重心兩側
+      if (lowestTipY > bPos.y + 0.35 * clawScale) continue;
+      // 不高於爪頂天車筒
+      if (bPos.y > basePos.y + 0.28 * clawScale) continue;
 
-        // 核心幾何規則 1：水平位置落在三爪開闔覆蓋範圍內
-        if (distXZ > maxDistXZ) continue;
-
-        // 核心幾何規則 2：爪尖托住或包圍物體重心（留有適當寬容度）
-        if (lowestTipY > bPos.y + 0.22 * clawScale) continue;
-
-        // 核心幾何規則 3：物體不能高於爪頂電機筒
-        if (bPos.y > basePos.y + 0.25 * clawScale) continue;
-
-        // 評分：越接近爪心且爪尖越托住物體下方，評分越高
-        const depthUnderCenter = (bPos.y - lowestTipY);
-        const score = depthUnderCenter * 2.0 - distXZ * 1.5;
-
-        if (score > bestScore) {
-          bestScore = score;
-          candidateBody = pBody;
-        }
+      const depthUnderCenter = bPos.y - lowestTipY;
+      const score = depthUnderCenter * 2.0 - distXZ * 1.5;
+      if (score > bestScore) {
+        bestScore = score;
+        candidateBody = pBody;
       }
     }
+    return candidateBody;
+  }
+
+  public getSafeContactAngle(pBody: RAPIER.RigidBody): number {
+    const clawScale = this.baseMesh ? this.baseMesh.scale.x : 1.0;
+    const bPos = pBody.translation();
+    const basePos = this.baseMesh.position;
+    const dx = bPos.x - basePos.x;
+    const dz = bPos.z - basePos.z;
+    const distXZ = Math.sqrt(dx * dx + dz * dz);
+    // 嚴格夾持外圍停止角 (0.18 ~ 0.48 rad)：爪尖與爪臂抱在物體外殼輪廓，絕不切進物品內部變成串燒！
+    return Math.max(0.18, Math.min(0.48, 0.14 + (distXZ / (0.45 * clawScale)) * 0.28));
+  }
+
+  private attemptGrab(physics: PhysicsSystem, prizesManager?: PrizesManager) {
+    const basePos = this.baseMesh.position;
+    const clawScale = this.baseMesh ? this.baseMesh.scale.x : 1.0;
+
+    const candidateBody = this.findCandidatePrize(prizesManager);
 
     if (candidateBody) {
       const targetBody = candidateBody;
@@ -914,21 +910,20 @@ export class Claw {
       const localAnchorY = bPos.y - basePos.y;
       const localAnchorZ = bPos.z - basePos.z;
 
-      // Calculate dynamic contact angle so claw blades hug the perimeter instead of piercing through like a skewer
-      const distXZ = Math.sqrt(localAnchorX * localAnchorX + localAnchorZ * localAnchorZ);
-      this.grabbedContactAngle = Math.max(0.18, Math.min(0.38, 0.14 + distXZ * 0.45));
+      // 嚴格計算外圍貼合角，抱住物體外殼
+      this.grabbedContactAngle = this.getSafeContactAngle(targetBody);
       this.targetArmAngle = this.grabbedContactAngle;
 
       for (let i = 0; i < targetBody.numColliders(); i++) {
         const col = targetBody.collider(i);
         col.setSensor(false);
-        col.setFriction(0.88);
-        col.setRestitution(0.02);
+        col.setFriction(0.95);
+        col.setRestitution(0.01);
       }
 
-      // 提起時保持合理阻尼，杜絕過大阻尼
-      targetBody.setLinearDamping(0.40);
-      targetBody.setAngularDamping(0.45);
+      // 提起時保持合理阻尼
+      targetBody.setLinearDamping(0.35);
+      targetBody.setAngularDamping(0.40);
       targetBody.wakeUp(true);
 
       // Spherical Joint 錨定接觸點，並啟用碰撞與接觸響應
@@ -965,7 +960,7 @@ export class Claw {
       const body = this.grabbedBody;
       this.grabbedBody = null;
 
-      // 徹底重置阻尼（原本被設為 0.8，忘記還原導致懸浮滯空！）
+      // 徹底重置阻尼
       body.setLinearDamping(0.20);
       body.setAngularDamping(0.35);
 
@@ -991,7 +986,10 @@ export class Claw {
 
   private maybeDropPrize(physics: PhysicsSystem, keepProbability: number) {
     if (!this.grabbedJoint) return;
-    if (Math.random() > keepProbability) {
+    if (this.config.godMode) return; // 🌟 無敵保夾模式：絕不掉爪！
+
+    const effectiveKeep = Math.min(1.0, keepProbability * this.config.superGripMultiplier);
+    if (Math.random() > effectiveKeep) {
       this.releasePrize(physics);
     }
   }
@@ -1015,32 +1013,43 @@ export class Claw {
     this.carriageMesh.position.set(nx, this.carriageY, nz);
   }
 
-  actionButtonPressed() {
+  actionButtonPressed(prizesManager?: PrizesManager) {
     if (this.state === 'IDLE') {
       this.state = 'DESCENDING';
       this.stateTimer = 0;
       this.targetArmAngle = this.config.clawOpenAngle;
       this.targetRopeLength = this.config.maxRopeLength;
     } else if (this.state === 'DESCENDING') {
-      this.triggerGrab();
+      this.triggerGrab(prizesManager);
     } else if (this.state === 'ASCENDING') {
       this.releasePrize(this.physicsRef);
     }
   }
 
-  private triggerGrab() {
+  private triggerGrab(prizesManager?: PrizesManager) {
     this.state = 'GRABBING';
     this.stateTimer = 0;
     this.descentDepth = this.ropeLength;
     this.targetRopeLength = this.ropeLength;
-    this.targetArmAngle = this.config.clawCloseAngle;
+
+    // 核心防串燒機制：下爪即時檢測下方是否有目標物，合爪角度貼合其外表面停止，杜絕刺穿！
+    const candidate = this.findCandidatePrize(prizesManager);
+    if (candidate) {
+      this.grabbedContactAngle = this.getSafeContactAngle(candidate);
+      this.targetArmAngle = this.grabbedContactAngle;
+    } else {
+      this.targetArmAngle = this.config.clawCloseAngle;
+    }
   }
 
   private triggerTopHit(physics: PhysicsSystem) {
     this.state = 'TOP_HIT';
     this.stateTimer = 0;
 
-    if (Math.random() < this.config.topHitProbability) {
+    if (this.config.godMode) return; // 🌟 無敵保夾模式：撞天車絕不震落！
+
+    const prob = this.config.topHitProbability / Math.max(1.0, this.config.superGripMultiplier);
+    if (Math.random() < prob) {
       this.maybeDropPrize(physics, 0.3);
     }
   }
