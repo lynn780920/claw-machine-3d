@@ -1504,7 +1504,119 @@ function setupUIEventListeners() {
     });
   }
 
-  // 🚀 Stage Debug Shortcuts
+  // 🚀 Stage Debug Shortcuts & Persistence
+  const TUNING_STORAGE_KEY = 'claw_custom_tuning_v2';
+
+  const saveTuningConfigToStorage = () => {
+    try {
+      const cfg = {
+        godMode: godmodeCheckbox?.checked || false,
+        stage3Target: s3Target ? parseInt(s3Target.value) : 5,
+        stage3Time: s3Time ? parseInt(s3Time.value) : 8,
+        stage3Friction: s3Friction?.checked ?? true,
+        stage4Target: s4Target ? parseInt(s4Target.value) : 3,
+        stage4Time: s4Time ? parseInt(s4Time.value) : 8,
+        stage4Baffle: s4Baffle ? parseFloat(s4Baffle.value) : 1.1,
+        stage4Grip: s4Grip ? parseFloat(s4Grip.value) : 1.0,
+        stage4Lightweight: s4Lightweight?.checked || false,
+      };
+      localStorage.setItem(TUNING_STORAGE_KEY, JSON.stringify(cfg));
+    } catch (e) {}
+  };
+
+  const loadTuningConfigFromStorage = () => {
+    try {
+      const raw = localStorage.getItem(TUNING_STORAGE_KEY);
+      if (!raw) return;
+      const cfg = JSON.parse(raw);
+      if (godmodeCheckbox && typeof cfg.godMode === 'boolean') {
+        godmodeCheckbox.checked = cfg.godMode;
+        claw.config.godMode = cfg.godMode;
+      }
+      if (s3Target && cfg.stage3Target !== undefined) {
+        s3Target.value = String(cfg.stage3Target);
+        const el = document.getElementById('val-stage3-target');
+        if (el) el.textContent = `${cfg.stage3Target} 盒`;
+        levelSystem.updateConfig(3, {
+          targetWins: cfg.stage3Target,
+          isClearAll: cfg.stage3Target >= 5,
+          objectiveText: cfg.stage3Target >= 5 ? '清台！(台內 5 盒盲盒全數清空)' : `夾出 ${cfg.stage3Target} 盒盲盒`
+        });
+      }
+      if (s3Time && cfg.stage3Time !== undefined) {
+        s3Time.value = String(cfg.stage3Time);
+        const el = document.getElementById('val-stage3-time');
+        if (el) el.textContent = `${cfg.stage3Time} 分鐘`;
+        levelSystem.updateConfig(3, { timeLimitSeconds: cfg.stage3Time * 60 });
+      }
+      if (s3Friction && cfg.stage3Friction !== undefined) {
+        s3Friction.checked = cfg.stage3Friction;
+      }
+      if (s4Target && cfg.stage4Target !== undefined) {
+        s4Target.value = String(cfg.stage4Target);
+        const el = document.getElementById('val-stage4-target');
+        if (el) el.textContent = `${cfg.stage4Target} 樣`;
+        levelSystem.updateConfig(4, { targetWins: cfg.stage4Target, objectiveText: `夾出 ${cfg.stage4Target} 樣巨型家電` });
+      }
+      if (s4Time && cfg.stage4Time !== undefined) {
+        s4Time.value = String(cfg.stage4Time);
+        const el = document.getElementById('val-stage4-time');
+        if (el) el.textContent = `${cfg.stage4Time} 分鐘`;
+        levelSystem.updateConfig(4, { timeLimitSeconds: cfg.stage4Time * 60 });
+      }
+      if (s4Baffle && cfg.stage4Baffle !== undefined) {
+        s4Baffle.value = String(cfg.stage4Baffle);
+        const el = document.getElementById('val-stage4-baffle');
+        if (el) el.textContent = `${Number(cfg.stage4Baffle).toFixed(1)} m`;
+      }
+      if (s4Grip && cfg.stage4Grip !== undefined) {
+        s4Grip.value = String(cfg.stage4Grip);
+        const el = document.getElementById('val-stage4-grip');
+        if (el) el.textContent = `${Number(cfg.stage4Grip).toFixed(1)}x`;
+        claw.config.superGripMultiplier = cfg.stage4Grip;
+      }
+      if (s4Lightweight && cfg.stage4Lightweight !== undefined) {
+        s4Lightweight.checked = cfg.stage4Lightweight;
+      }
+    } catch (e) {}
+  };
+
+  // Wire auto-save to input events
+  [s3Target, s3Time, s4Target, s4Time, s4Baffle, s4Grip].forEach(input => {
+    input?.addEventListener('change', saveTuningConfigToStorage);
+  });
+  [godmodeCheckbox, s3Friction, s4Lightweight].forEach(toggle => {
+    toggle?.addEventListener('change', saveTuningConfigToStorage);
+  });
+
+  // Load any previously saved tuning configuration on startup
+  loadTuningConfigFromStorage();
+
+  // Copy parameters button
+  document.getElementById('copy-config-btn')?.addEventListener('click', () => {
+    const cfg = {
+      stage3Target: s3Target ? parseInt(s3Target.value) : 5,
+      stage3Time: s3Time ? parseInt(s3Time.value) : 8,
+      stage3Friction: s3Friction?.checked ?? true,
+      stage4Target: s4Target ? parseInt(s4Target.value) : 3,
+      stage4Time: s4Time ? parseInt(s4Time.value) : 8,
+      stage4Baffle: s4Baffle ? parseFloat(s4Baffle.value) : 1.1,
+      stage4Grip: s4Grip ? parseFloat(s4Grip.value) : 1.0,
+      stage4Lightweight: s4Lightweight?.checked || false,
+      godMode: godmodeCheckbox?.checked || false,
+    };
+    const text = JSON.stringify(cfg, null, 2);
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).then(() => {
+        alert('✅ 已複製當前所有自訂參數！您可以直接貼在對話框發給助理，我會立即將這些數值永久寫入專案原始碼並推送至 GitHub！');
+      }).catch(() => {
+        prompt('請手動複製以下設定參數發給助理寫入程式碼：', text);
+      });
+    } else {
+      prompt('請手動複製以下設定參數發給助理寫入程式碼：', text);
+    }
+  });
+
   document.getElementById('jump-stage3-btn')?.addEventListener('click', () => {
     levelSystem.startLevel(2); // Stage 3 is index 2
     settingsPanel?.classList.remove('open');

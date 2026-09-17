@@ -695,24 +695,6 @@ input:checked + .slider.round:before {
   font-weight: 700;
 }
 
-.auth-hint-box {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  background: rgba(139, 92, 246, 0.12);
-  border: 1px dashed rgba(192, 132, 252, 0.5);
-  border-radius: 8px;
-  padding: 8px 12px;
-  color: #e9d5ff;
-  font-size: 0.80rem;
-}
-
-.default-pwd-badge {
-  color: #fde047;
-  font-family: 'Orbitron', monospace;
-  letter-spacing: 1px;
-}
-
 .panel-header {
   border-bottom: 1px solid rgba(255, 0, 127, 0.2);
   padding-bottom: 10px;
