@@ -63,7 +63,7 @@ export class Claw {
     topHitForce: 6.0,
 
     clawOpenAngle: 0.85,       // Wide open angle (~49 deg outward)
-    clawCloseAngle: -0.22,     // Tight closed angle (~-13 deg inward wrap)
+    clawCloseAngle: -0.50,     // Tight closed angle (authentic 密爪: tips touch at center)
 
     // Admin / DIP Switch Overrides
     godMode: false,            // 100% win guarantee - never drops
@@ -100,7 +100,7 @@ export class Claw {
   // Arm animation angle
   private currentArmAngle = 0.85;
   private targetArmAngle = 0.85;
-  private grabbedContactAngle = -0.22;
+  private grabbedContactAngle = -0.50;
 
   constructor(scene: THREE.Scene, physics: PhysicsSystem) {
     this.physicsRef = physics;
@@ -313,6 +313,12 @@ export class Claw {
     armHinge.name = 'armHinge';
     pivotGroup.add(armHinge);
 
+    // Linkage Anchor Bracket for push rod connection
+    const linkBracket = new THREE.Object3D();
+    linkBracket.name = 'linkBracket';
+    linkBracket.position.set(0.10, -0.16, 0);
+    armHinge.add(linkBracket);
+
     // Hinge Pin Bolt
     const pin = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.028, 0.09, 12), gold);
     pin.rotation.x = Math.PI / 2;
@@ -513,24 +519,20 @@ export class Claw {
     const cableBottom = new THREE.Vector3(finalX, targetY + 0.44, finalZ);
     this.cableLine.geometry.setFromPoints([cableTop, cableBottom]);
 
-    // ── D. Smooth Arm Angle Animation (Authentic arcade solenoid speed 7.5) ──
-    // Clamps arm angle dynamically so metal prongs hug perimeter when carrying prize, or closes tightly when empty!
+    // ── D. Smooth Arm Angle Animation (Authentic arcade solenoid speed 9.5) ──
+    // Clamps arm angle dynamically: closes tightly into 密爪 when empty/grabbing, or hugs perimeter when grasping prize!
     let effectiveTargetAngle = this.targetArmAngle;
     if (this.grabbedBody && this.state !== 'OPENING' && this.state !== 'IDLE' && this.state !== 'DESCENDING') {
       effectiveTargetAngle = this.grabbedContactAngle;
     } else if (this.state === 'GRABBING') {
-      const candidate = prizesManager ? this.findCandidatePrize(prizesManager) : null;
-      if (candidate) {
-        effectiveTargetAngle = this.getSafeContactAngle(candidate);
-      } else {
-        effectiveTargetAngle = this.config.clawCloseAngle;
-      }
+      // 下爪到底合爪瞬間：電磁閥通電，確實全力收緊至密爪！
+      effectiveTargetAngle = this.config.clawCloseAngle;
     } else if (this.state === 'ASCENDING' || this.state === 'TOP_HIT' || this.state === 'RETURNING') {
       if (!this.grabbedBody) {
         effectiveTargetAngle = this.config.clawCloseAngle;
       }
     }
-    this.currentArmAngle += (effectiveTargetAngle - this.currentArmAngle) * 7.5 * deltaTime;
+    this.currentArmAngle += (effectiveTargetAngle - this.currentArmAngle) * 9.5 * deltaTime;
 
     for (let i = 0; i < 3; i++) {
       const pivot = this.armPivots[i];
@@ -546,7 +548,7 @@ export class Claw {
     const sliderY = -0.04 - t * 0.08;
     this.sliderGroup.position.y = sliderY;
 
-    // Sync 3 mechanical linkage push rods
+    // Sync 3 mechanical linkage push rods connected to linkBracket
     const sliderWorld = new THREE.Vector3();
     this.sliderGroup.getWorldPosition(sliderWorld);
 
@@ -554,8 +556,9 @@ export class Claw {
       const pivot = this.armPivots[i];
       const hinge = pivot.getObjectByName('armHinge');
       if (hinge && this.linkageMeshes[i]) {
+        const linkBracket = hinge.getObjectByName('linkBracket') || hinge;
         const armWorld = new THREE.Vector3();
-        hinge.getWorldPosition(armWorld);
+        linkBracket.getWorldPosition(armWorld);
 
         const midPoint = new THREE.Vector3().addVectors(sliderWorld, armWorld).multiplyScalar(0.5);
         const linkage = this.linkageMeshes[i];
@@ -581,45 +584,32 @@ export class Claw {
       }
     }
 
-    // ── G. Solid Metal Arm Collision (全爪臂實體防穿透物理牆 & 合爪向外撥開非目標) ──
+    // ── G. Solid Metal Arm Collision (圓管曲爪動態旋轉物理牆 - 跟隨爪臂旋轉防穿透) ──
     if (prizesManager && prizesManager.bodies.length > 0) {
       const clawScale = this.baseMesh ? this.baseMesh.scale.x : 1.0;
-      const isClosing = (this.targetArmAngle === this.config.clawCloseAngle || this.state === 'GRABBING');
-      const isOpening = (this.targetArmAngle === this.config.clawOpenAngle || this.state === 'OPENING');
+      const currentCandidate = (this.state === 'GRABBING') ? this.findCandidatePrize(prizesManager) : null;
+
+      const localArmPts = [
+        new THREE.Vector3(0, 0, 0),        // Hinge
+        new THREE.Vector3(0.12, -0.22, 0), // Upper
+        new THREE.Vector3(0.24, -0.45, 0), // Elbow
+        new THREE.Vector3(0.08, -0.84, 0)  // Tip
+      ];
 
       for (let i = 0; i < 3; i++) {
         const pivot = this.armPivots[i];
         const hinge = pivot ? pivot.getObjectByName('armHinge') : null;
         if (hinge) {
-          const prongWorldPos = new THREE.Vector3();
-          hinge.getWorldPosition(prongWorldPos);
-          const outwardDir = prongWorldPos.clone().sub(this.baseMesh.position);
-          outwardDir.y = 0;
-          outwardDir.normalize();
-
-          // 4 Continuous Collision Nodes along the curved blade (Hinge, Upper, Mid, Rubber Tip)
-          const nodeHinge = prongWorldPos.clone();
-          nodeHinge.y -= 0.05 * clawScale;
-
-          const nodeUpper = prongWorldPos.clone().addScaledVector(outwardDir, 0.08 * clawScale);
-          nodeUpper.y -= 0.22 * clawScale;
-
-          const nodeMid = prongWorldPos.clone().addScaledVector(outwardDir, 0.22 * clawScale);
-          nodeMid.y -= 0.46 * clawScale;
-
-          const nodeTip = prongWorldPos.clone().addScaledVector(outwardDir, 0.26 * clawScale);
-          nodeTip.y -= 0.72 * clawScale;
-
-          const armNodes = [
-            { pos: nodeHinge, radius: 0.26 * clawScale },
-            { pos: nodeUpper, radius: 0.28 * clawScale },
-            { pos: nodeMid,   radius: 0.32 * clawScale },
-            { pos: nodeTip,   radius: 0.34 * clawScale }
-          ];
+          const armNodes = localArmPts.map((pt, idx) => {
+            const worldPos = pt.clone();
+            hinge.localToWorld(worldPos);
+            const radius = (idx === 3 ? 0.085 : 0.075) * clawScale;
+            return { pos: worldPos, radius };
+          });
 
           for (const node of armNodes) {
             for (const pBody of prizesManager.bodies) {
-              if (pBody === this.grabbedBody) continue;
+              if (pBody === this.grabbedBody || pBody === currentCandidate) continue;
 
               const bPos = pBody.translation();
               const dx = bPos.x - node.pos.x;
@@ -627,34 +617,18 @@ export class Claw {
               const dz = bPos.z - node.pos.z;
               const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
 
-              if (dist < node.radius && dist > 0.0001) {
+              const hitLimit = node.radius + 0.12 * clawScale;
+              if (dist < hitLimit && dist > 0.0001) {
                 pBody.wakeUp(true);
-                const overlap = (node.radius - dist) / node.radius;
+                const overlap = hitLimit - dist;
 
-                let pushX = dx / dist;
-                let pushY = dy / dist;
-                let pushZ = dz / dist;
+                const pushX = dx / dist;
+                const pushY = Math.max(0.15, dy / dist);
+                const pushZ = dz / dist;
 
-                if (isClosing) {
-                  // 合爪時：溫柔向外撥開與向上微托，絕不將娃娃硬拉入金屬爪身深處
-                  pushX = outwardDir.x * 0.45 + pushX * 0.55;
-                  pushZ = outwardDir.z * 0.45 + pushZ * 0.55;
-                  pushY = 0.35;
-                } else if (isOpening) {
-                  // 放爪時向外推開
-                  pushX = outwardDir.x * 0.8 + pushX * 0.2;
-                  pushZ = outwardDir.z * 0.8 + pushZ * 0.2;
-                  pushY = 0.30;
-                }
-
-                // 強韌法向固體排斥力：徹底阻擋娃娃穿透爪臂模型
-                const impulseMag = Math.min(1.8, overlap * 2.2 + 0.15);
+                const impulseMag = Math.min(0.8, overlap * 1.5 + 0.05);
                 pBody.applyImpulse(
                   { x: pushX * impulseMag, y: pushY * impulseMag, z: pushZ * impulseMag },
-                  true
-                );
-                pBody.applyTorqueImpulse(
-                  { x: pushZ * impulseMag * 0.25, y: impulseMag * 0.15, z: -pushX * impulseMag * 0.25 },
                   true
                 );
               }
@@ -861,8 +835,8 @@ export class Claw {
     if (!prizesManager || prizesManager.bodies.length === 0) return null;
     const basePos = this.baseMesh.position;
     const clawScale = this.baseMesh ? this.baseMesh.scale.x : 1.0;
-    const lowestTipY = basePos.y - 0.75 * clawScale;
-    const maxDistXZ = 0.52 * clawScale;
+    const lowestTipY = basePos.y - 0.78 * clawScale;
+    const maxDistXZ = 0.38 * clawScale;
 
     let candidateBody: RAPIER.RigidBody | null = null;
     let bestScore = -Infinity;
@@ -874,12 +848,12 @@ export class Claw {
       const dz = bPos.z - basePos.z;
       const distXZ = Math.sqrt(dx * dx + dz * dz);
 
-      // 落在三爪包圍半徑內
+      // 落在三爪有效包覆抓取半徑內
       if (distXZ > maxDistXZ) continue;
-      // 爪尖需低於物體或包圍在物體重心兩側
-      if (lowestTipY > bPos.y + 0.35 * clawScale) continue;
+      // 爪尖需能包圍或低於物體重心
+      if (lowestTipY > bPos.y + 0.20 * clawScale) continue;
       // 不高於爪頂天車筒
-      if (bPos.y > basePos.y + 0.28 * clawScale) continue;
+      if (bPos.y > basePos.y + 0.15 * clawScale) continue;
 
       const depthUnderCenter = bPos.y - lowestTipY;
       const score = depthUnderCenter * 2.0 - distXZ * 1.5;
@@ -898,9 +872,11 @@ export class Claw {
     const dx = bPos.x - basePos.x;
     const dz = bPos.z - basePos.z;
     const distXZ = Math.sqrt(dx * dx + dz * dz);
-    // 自然包爪夾緊角度 (-0.16 ~ +0.02 rad)：爪尖向內收攏環抱娃娃，合爪感十足
-    const normDist = Math.min(1.0, distXZ / (0.40 * clawScale));
-    return -0.16 + normDist * 0.18;
+    // 自然包爪夾緊角度：爪尖向內收攏緊緊抱住娃娃！
+    // 依娃娃重心距離動態算出貼合爪尖半徑 targetR (0.048m~0.28m)
+    const targetR = Math.max(0.048 * clawScale, Math.min(0.28 * clawScale, distXZ + 0.02 * clawScale));
+    const safeAngle = (targetR / clawScale - 0.46) / 0.84;
+    return Math.max(this.config.clawCloseAngle, Math.min(-0.16, safeAngle));
   }
 
   private attemptGrab(physics: PhysicsSystem, prizesManager?: PrizesManager) {
@@ -1043,14 +1019,8 @@ export class Claw {
     this.descentDepth = this.ropeLength;
     this.targetRopeLength = this.ropeLength;
 
-    // 核心防串燒機制：下爪即時檢測下方是否有目標物，合爪角度貼合其外表面停止，杜絕刺穿！
-    const candidate = this.findCandidatePrize(prizesManager);
-    if (candidate) {
-      this.grabbedContactAngle = this.getSafeContactAngle(candidate);
-      this.targetArmAngle = this.grabbedContactAngle;
-    } else {
-      this.targetArmAngle = this.config.clawCloseAngle;
-    }
+    // 下爪合爪：電磁閥通電，三爪全力向內緊閉 (密爪)！
+    this.targetArmAngle = this.config.clawCloseAngle;
   }
 
   private triggerTopHit(physics: PhysicsSystem) {
