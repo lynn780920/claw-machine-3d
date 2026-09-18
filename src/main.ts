@@ -411,11 +411,11 @@ function applyDIPSettings() {
   };
 
   const strongPercent = getVal('setting-strong', 100);
-  const weakPercent = getVal('setting-weak', 46);
-  const heightPercent = getVal('setting-height', 66);
+  const weakPercent = getVal('setting-weak', 60);
+  const heightPercent = getVal('setting-height', 72);
   const tophitPercent = getVal('setting-tophit', 18);
   const antiswing = getStr('setting-antiswing', 'disabled');
-  const speed = getVal('setting-speed', 1.6);
+  const speed = getVal('setting-speed', 1.3);
   const dropSpeed = getVal('setting-dropspeed', 2.0);
   const swayScale = getVal('setting-sway', 1.2);
   const length = getVal('setting-length', 9.0);
@@ -912,10 +912,10 @@ function setupUIEventListeners() {
   // Reset to Optimal Presets
   document.getElementById('reset-presets-btn')!.addEventListener('click', () => {
     (document.getElementById('setting-strong') as HTMLInputElement).value = '100';
-    (document.getElementById('setting-height') as HTMLInputElement).value = '66';
-    (document.getElementById('setting-weak') as HTMLInputElement).value = '46';
+    (document.getElementById('setting-height') as HTMLInputElement).value = '72';
+    (document.getElementById('setting-weak') as HTMLInputElement).value = '60';
     (document.getElementById('setting-tophit') as HTMLInputElement).value = '18';
-    (document.getElementById('setting-speed') as HTMLInputElement).value = '1.6';
+    (document.getElementById('setting-speed') as HTMLInputElement).value = '1.3';
     (document.getElementById('setting-dropspeed') as HTMLInputElement).value = '2.0';
     (document.getElementById('setting-sway') as HTMLInputElement).value = '1.2';
     (document.getElementById('setting-length') as HTMLInputElement).value = '9.0';
@@ -1029,7 +1029,7 @@ function setupUIEventListeners() {
     setInput(heightEl, params.height);
     setInput(weakEl, params.weak);
     setInput(tophitEl, params.tophit);
-    setInput(speedEl, params.speed || '1.6');
+    setInput(speedEl, params.speed || '1.3');
     if (dropspeedEl) setInput(dropspeedEl, params.dropspeed || '2.0');
     if (swayEl) setInput(swayEl, params.sway || '1.2');
     setInput(lengthEl, params.length || '9.0');
@@ -1046,10 +1046,10 @@ function setupUIEventListeners() {
     };
 
     setTxt('val-strong', (params.strong || '100') + '%');
-    setTxt('val-height', (params.height || '66') + '%');
-    setTxt('val-weak', (params.weak || '46') + '%');
+    setTxt('val-height', (params.height || '72') + '%');
+    setTxt('val-weak', (params.weak || '60') + '%');
     setTxt('val-tophit', (params.tophit || '18') + '%');
-    setTxt('val-speed', parseFloat(params.speed || '1.6').toFixed(1));
+    setTxt('val-speed', parseFloat(params.speed || '1.3').toFixed(1));
     setTxt('val-dropspeed', parseFloat(params.dropspeed || '2.0').toFixed(1));
     setTxt('val-sway', parseFloat(params.sway || '1.2').toFixed(1));
     setTxt('val-length', parseFloat(params.length || '9.0').toFixed(1));
@@ -1192,13 +1192,13 @@ function setupUIEventListeners() {
 
       syncDIPPanelUI({
         strong: '95',
-        height: '65',
+        height: '72',
         weak: '60',
         tophit: '10',
-        speed: '2.6',
+        speed: '1.3',
         dropspeed: '2.0',
-        sway: '1.35',
-        length: '6.5',
+        sway: '1.2',
+        length: '9.0',
         baffle: '0.45',
         dolls: '5',
         antiswing: 'disabled',
@@ -1218,13 +1218,13 @@ function setupUIEventListeners() {
 
       syncDIPPanelUI({
         strong: '95',
-        height: '70',
-        weak: '55',
+        height: '72',
+        weak: '60',
         tophit: '15',
-        speed: '2.6',
+        speed: '1.3',
         dropspeed: '2.0',
-        sway: '1.35',
-        length: '7.5',
+        sway: '1.2',
+        length: '9.0',
         baffle: '0.50',
         dolls: '25',
         antiswing: 'disabled',
@@ -1234,19 +1234,19 @@ function setupUIEventListeners() {
       prizesManager.spawnPrizes(25, 'anime', 4.8, chuteBounds);
       applyCameraView('large', cameraViewMode);
     } else if (mode === 'kbasket') {
-      // K-霸機台 (第四關：終極魔王關 8分鐘夾3樣 - 1.35x 霸王巨爪 + 12大盒巨型家電 - 參數嚴格對齊照片)
+      // K-霸機台 (第四關：終極魔王關 8分鐘夾3樣 - 1.35x 霸王巨爪 + 12大盒巨型家電)
       claw.setClawScale(1.35);
       claw.setMachineBounds(chuteHomeX, chuteHomeZ, 4.8, cabinet.height);
 
       syncDIPPanelUI({
         strong: '100',
-        height: '60',
-        weak: '40',
+        height: '72',
+        weak: '60',
         tophit: '29',
-        speed: '2.4',
-        dropspeed: '3.2',
-        sway: '1.3',
-        length: '12.5',
+        speed: '1.3',
+        dropspeed: '2.0',
+        sway: '1.2',
+        length: '9.0',
         baffle: '1.1',
         dolls: '12',
         antiswing: 'disabled',
@@ -1256,19 +1256,19 @@ function setupUIEventListeners() {
       prizesManager.spawnPrizes(12, 'giant_appliances', 6.0, chuteBounds);
       applyCameraView('kbasket', cameraViewMode);
     } else {
-      // 中型機台 (第一關：初試身手 15分鐘夾8樣 - 最簡單新手友善！高抓力、低擋板、零頂撞掉落)
+      // 中型機台 (第一關：初試身手 15分鐘夾8樣 - 統一調至上升72%、弱爪60%、速度1.3、線長9.0)
       claw.setClawScale(1.0);
       claw.setMachineBounds(chuteHomeX, chuteHomeZ, 3.0, cabinet.height);
 
       syncDIPPanelUI({
         strong: '100',
-        height: '90',
-        weak: '90',
+        height: '72',
+        weak: '60',
         tophit: '0',
-        speed: '2.6',
+        speed: '1.3',
         dropspeed: '2.0',
-        sway: '1.35',
-        length: '7.0',
+        sway: '1.2',
+        length: '9.0',
         baffle: '0.35',
         dolls: '40',
         antiswing: 'disabled',

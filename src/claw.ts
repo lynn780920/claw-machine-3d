@@ -46,20 +46,20 @@ export class Claw {
   /* ── Configuration ── */
   /* ── Configuration ── */
   public config = {
-    moveSpeed: 1.6,            // Photo setting: 1.6
-    dropSpeed: 2.0,            // Photo setting: 2.0
-    swayScale: 1.2,            // Photo setting: 1.2
+    moveSpeed: 1.3,            // Setting: 1.3 (天車移動速度 1.3)
+    dropSpeed: 2.0,            // Setting: 2.0
+    swayScale: 1.2,            // Setting: 1.2
     raiseSpeed: 3.2,
-    maxRopeLength: 9.0,        // Photo setting: 9.0
+    maxRopeLength: 9.0,        // Setting: 9.0 (線長調到 9)
     minRopeLength: 1.05,
 
     strongStiffness: 250.0,
-    mediumStiffness: 100.0,
-    weakStiffness: 46.0,       // Photo setting: 46%
+    mediumStiffness: 175.0,
+    weakStiffness: 150.0,       // Setting: 60% (弱爪 60%)
 
-    antiSwingEnabled: false, // Default: false (Photo: disabled)
-    topHitProbability: 0.18,   // Photo setting: 18%
-    weakHeightThreshold: 0.66, // Photo setting: 66%
+    antiSwingEnabled: false,
+    topHitProbability: 0.18,
+    weakHeightThreshold: 0.72, // Setting: 72% (上升 72%)
     topHitForce: 6.0,
 
     clawOpenAngle: 0.85,       // Wide open angle (~49 deg outward)
@@ -234,28 +234,28 @@ export class Claw {
     eyelet.position.y = 0.44;
     this.baseMesh.add(eyelet);
 
-    // Central Shaft (中軸/炮筒)
-    const rodGeo = new THREE.CylinderGeometry(0.045, 0.045, 0.42, 16);
+    // Central Shaft (中軸/炮筒) - 緊湊修身設計，避免過度下凸
+    const rodGeo = new THREE.CylinderGeometry(0.035, 0.035, 0.16, 16);
     const rod = new THREE.Mesh(rodGeo, chromeMat);
-    rod.position.y = -0.21;
+    rod.position.y = -0.08;
     rod.castShadow = true;
     this.baseMesh.add(rod);
 
-    // Bottom Stop Bumper
-    const bottomBumper = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.05, 16), goldAccentMat);
-    bottomBumper.position.y = -0.42;
+    // Bottom Stop Bumper (底部精緻限位卡榫)
+    const bottomBumper = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.03, 16), goldAccentMat);
+    bottomBumper.position.y = -0.16;
     this.baseMesh.add(bottomBumper);
 
-    // Component 2 in Patent: Sliding Collar (中環/滑塊)
+    // Component 2 in Patent: Sliding Collar (中環/滑塊) - 精巧緊實
     this.sliderGroup = new THREE.Group();
-    this.sliderGroup.position.y = -0.3;
+    this.sliderGroup.position.y = -0.10;
     this.baseMesh.add(this.sliderGroup);
 
-    const slideMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 0.12, 24), purpleAnodizedMat);
+    const slideMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, 0.05, 24), purpleAnodizedMat);
     slideMesh.castShadow = true;
     this.sliderGroup.add(slideMesh);
 
-    const slideRing = new THREE.Mesh(new THREE.TorusGeometry(0.185, 0.015, 8, 24), chromeMat);
+    const slideRing = new THREE.Mesh(new THREE.TorusGeometry(0.115, 0.01, 8, 24), chromeMat);
     slideRing.rotation.x = Math.PI / 2;
     this.sliderGroup.add(slideRing);
 
@@ -513,18 +513,24 @@ export class Claw {
     const cableBottom = new THREE.Vector3(finalX, targetY + 0.44, finalZ);
     this.cableLine.geometry.setFromPoints([cableTop, cableBottom]);
 
-    // ── D. Smooth Arm Angle Animation (Controlled solenoid closing speed 6.0) ──
-    // Clamps arm angle dynamically so metal prongs hug the perimeter of prizes rather than piercing through like a skewer!
+    // ── D. Smooth Arm Angle Animation (Authentic arcade solenoid speed 7.5) ──
+    // Clamps arm angle dynamically so metal prongs hug perimeter when carrying prize, or closes tightly when empty!
     let effectiveTargetAngle = this.targetArmAngle;
     if (this.grabbedBody && this.state !== 'OPENING' && this.state !== 'IDLE' && this.state !== 'DESCENDING') {
       effectiveTargetAngle = this.grabbedContactAngle;
-    } else if (this.state === 'GRABBING' && prizesManager) {
-      const candidate = this.findCandidatePrize(prizesManager);
+    } else if (this.state === 'GRABBING') {
+      const candidate = prizesManager ? this.findCandidatePrize(prizesManager) : null;
       if (candidate) {
         effectiveTargetAngle = this.getSafeContactAngle(candidate);
+      } else {
+        effectiveTargetAngle = this.config.clawCloseAngle;
+      }
+    } else if (this.state === 'ASCENDING' || this.state === 'TOP_HIT' || this.state === 'RETURNING') {
+      if (!this.grabbedBody) {
+        effectiveTargetAngle = this.config.clawCloseAngle;
       }
     }
-    this.currentArmAngle += (effectiveTargetAngle - this.currentArmAngle) * 6.0 * deltaTime;
+    this.currentArmAngle += (effectiveTargetAngle - this.currentArmAngle) * 7.5 * deltaTime;
 
     for (let i = 0; i < 3; i++) {
       const pivot = this.armPivots[i];
@@ -534,10 +540,10 @@ export class Claw {
       }
     }
 
-    // Mechanical Collar Movement
+    // Mechanical Collar Movement (精簡行程，緊貼頂盤內側，滑塊絕不上凸下露)
     const t = (this.currentArmAngle - this.config.clawCloseAngle) /
       (this.config.clawOpenAngle - this.config.clawCloseAngle);
-    const sliderY = -0.12 - t * 0.24;
+    const sliderY = -0.04 - t * 0.08;
     this.sliderGroup.position.y = sliderY;
 
     // Sync 3 mechanical linkage push rods
@@ -892,8 +898,9 @@ export class Claw {
     const dx = bPos.x - basePos.x;
     const dz = bPos.z - basePos.z;
     const distXZ = Math.sqrt(dx * dx + dz * dz);
-    // 嚴格夾持外圍停止角 (0.18 ~ 0.48 rad)：爪尖與爪臂抱在物體外殼輪廓，絕不切進物品內部變成串燒！
-    return Math.max(0.18, Math.min(0.48, 0.14 + (distXZ / (0.45 * clawScale)) * 0.28));
+    // 自然包爪夾緊角度 (-0.16 ~ +0.02 rad)：爪尖向內收攏環抱娃娃，合爪感十足
+    const normDist = Math.min(1.0, distXZ / (0.40 * clawScale));
+    return -0.16 + normDist * 0.18;
   }
 
   private attemptGrab(physics: PhysicsSystem, prizesManager?: PrizesManager) {
@@ -943,11 +950,15 @@ export class Claw {
 
       this.grabbedJoint = joint;
       this.grabbedBody = targetBody;
+    } else {
+      // 未抓到物體：爪子確實緊密合爪！
+      this.targetArmAngle = this.config.clawCloseAngle;
     }
   }
 
   private releasePrize(physics: PhysicsSystem) {
     this.grabbedContactAngle = this.config.clawCloseAngle;
+    this.targetArmAngle = this.config.clawCloseAngle;
     if (this.grabbedJoint) {
       try {
         physics.world.removeImpulseJoint(this.grabbedJoint, true);
