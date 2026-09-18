@@ -411,15 +411,15 @@ function applyDIPSettings() {
   };
 
   const strongPercent = getVal('setting-strong', 100);
-  const weakPercent = getVal('setting-weak', 60);
-  const heightPercent = getVal('setting-height', 72);
-  const tophitPercent = getVal('setting-tophit', 18);
+  const weakPercent = getVal('setting-weak', 69);
+  const heightPercent = getVal('setting-height', 76);
+  const tophitPercent = getVal('setting-tophit', 13);
   const antiswing = getStr('setting-antiswing', 'disabled');
-  const speed = getVal('setting-speed', 1.3);
+  const speed = getVal('setting-speed', 2.0);
   const dropSpeed = getVal('setting-dropspeed', 2.0);
-  const swayScale = getVal('setting-sway', 1.2);
+  const swayScale = getVal('setting-sway', 1.4);
   const length = getVal('setting-length', 9.0);
-  const baffleHeight = getVal('setting-baffle', 0.5);
+  const baffleHeight = getVal('setting-baffle', 0.7);
 
   if (claw && claw.config) {
     claw.config.strongStiffness = (strongPercent / 100) * 250.0;
@@ -909,24 +909,24 @@ function setupUIEventListeners() {
     updateStatsUI();
   });
 
-  // Reset to Optimal Presets
+  // Reset to Optimal Presets (Stage 1 Photo Settings)
   document.getElementById('reset-presets-btn')!.addEventListener('click', () => {
     (document.getElementById('setting-strong') as HTMLInputElement).value = '100';
-    (document.getElementById('setting-height') as HTMLInputElement).value = '72';
-    (document.getElementById('setting-weak') as HTMLInputElement).value = '60';
-    (document.getElementById('setting-tophit') as HTMLInputElement).value = '18';
-    (document.getElementById('setting-speed') as HTMLInputElement).value = '1.3';
+    (document.getElementById('setting-height') as HTMLInputElement).value = '76';
+    (document.getElementById('setting-weak') as HTMLInputElement).value = '69';
+    (document.getElementById('setting-tophit') as HTMLInputElement).value = '13';
+    (document.getElementById('setting-speed') as HTMLInputElement).value = '2.0';
     (document.getElementById('setting-dropspeed') as HTMLInputElement).value = '2.0';
-    (document.getElementById('setting-sway') as HTMLInputElement).value = '1.2';
+    (document.getElementById('setting-sway') as HTMLInputElement).value = '1.4';
     (document.getElementById('setting-length') as HTMLInputElement).value = '9.0';
-    (document.getElementById('setting-baffle') as HTMLInputElement).value = '0.5';
-    (document.getElementById('setting-dolls') as HTMLInputElement).value = '6';
+    (document.getElementById('setting-baffle') as HTMLInputElement).value = '0.7';
+    (document.getElementById('setting-dolls') as HTMLInputElement).value = '40';
     (document.getElementById('setting-antiswing') as HTMLSelectElement).value = 'disabled';
 
     applyDIPSettings();
-    document.getElementById('val-dolls')!.textContent = '6';
-    const prizeType = (document.getElementById('setting-prizetype') as HTMLSelectElement)?.value || 'blindbox';
-    prizesManager.spawnPrizes(6, prizeType);
+    document.getElementById('val-dolls')!.textContent = '40';
+    const prizeType = (document.getElementById('setting-prizetype') as HTMLSelectElement)?.value || 'mixed';
+    prizesManager.spawnPrizes(40, prizeType);
   });
 
   // 🟢 佛心天使台 (100% 強爪、85% 爬升維持、65% 弱爪、0 撞頂、0.3m 擋板)
@@ -1046,15 +1046,15 @@ function setupUIEventListeners() {
     };
 
     setTxt('val-strong', (params.strong || '100') + '%');
-    setTxt('val-height', (params.height || '72') + '%');
-    setTxt('val-weak', (params.weak || '60') + '%');
-    setTxt('val-tophit', (params.tophit || '18') + '%');
-    setTxt('val-speed', parseFloat(params.speed || '1.3').toFixed(1));
+    setTxt('val-height', (params.height || '76') + '%');
+    setTxt('val-weak', (params.weak || '69') + '%');
+    setTxt('val-tophit', (params.tophit || '13') + '%');
+    setTxt('val-speed', parseFloat(params.speed || '2.0').toFixed(1));
     setTxt('val-dropspeed', parseFloat(params.dropspeed || '2.0').toFixed(1));
-    setTxt('val-sway', parseFloat(params.sway || '1.2').toFixed(1));
+    setTxt('val-sway', parseFloat(params.sway || '1.4').toFixed(1));
     setTxt('val-length', parseFloat(params.length || '9.0').toFixed(1));
-    setTxt('val-baffle', parseFloat(params.baffle || '0.5').toFixed(1));
-    setTxt('val-dolls', params.dolls || '6');
+    setTxt('val-baffle', parseFloat(params.baffle || '0.7').toFixed(1));
+    setTxt('val-dolls', params.dolls || '40');
 
     // Dispatch DOM events so range slider thumbs re-render visually in all browsers
     [strongEl, heightEl, weakEl, tophitEl, speedEl, dropspeedEl, swayEl, lengthEl, baffleEl, dollsEl].forEach(el => {
@@ -1186,20 +1186,20 @@ function setupUIEventListeners() {
     };
 
     if (mode === 'small') {
-      // 小型機台 (第三關：潮玩盲盒 8分鐘清台戰 - 寬6.0m x 櫥窗高6.0m, POP MART 5盒精準擺台)
+      // 小型機台 (第三關：潮玩盲盒 8分鐘清台戰 - 嚴格按照照片參數)
       claw.setClawScale(0.85);
       claw.setMachineBounds(chuteHomeX, chuteHomeZ, 2.35, cabinet.height);
 
       syncDIPPanelUI({
         strong: '95',
-        height: '72',
-        weak: '60',
-        tophit: '10',
-        speed: '1.3',
+        height: '65',
+        weak: '50',
+        tophit: '14',
+        speed: '2.4',
         dropspeed: '2.0',
-        sway: '1.2',
-        length: '9.0',
-        baffle: '0.45',
+        sway: '1.4',
+        length: '8.5',
+        baffle: '0.5',
         dolls: '5',
         antiswing: 'disabled',
         prizetype: 'blindbox'
@@ -1212,20 +1212,20 @@ function setupUIEventListeners() {
       if (camBtnLabel) camBtnLabel.textContent = '視角: 正面';
       applyCameraView('small', 'front');
     } else if (mode === 'large') {
-      // 中大機台 (第二關：動漫公仔 10分鐘夾4樣 - 寬闊修長大型機台 + 25盒動漫大賞)
+      // 中大機台 (第二關：動漫公仔 10分鐘夾4樣 - 嚴格按照照片參數)
       claw.setClawScale(1.15);
       claw.setMachineBounds(chuteHomeX, chuteHomeZ, 3.7, cabinet.height);
 
       syncDIPPanelUI({
         strong: '95',
-        height: '72',
-        weak: '60',
+        height: '62',
+        weak: '49',
         tophit: '15',
-        speed: '1.3',
+        speed: '1.8',
         dropspeed: '2.0',
-        sway: '1.2',
-        length: '9.0',
-        baffle: '0.50',
+        sway: '1.4',
+        length: '7.5',
+        baffle: '1.0',
         dolls: '25',
         antiswing: 'disabled',
         prizetype: 'anime'
@@ -1256,20 +1256,20 @@ function setupUIEventListeners() {
       prizesManager.spawnPrizes(12, 'giant_appliances', 6.0, chuteBounds);
       applyCameraView('kbasket', cameraViewMode);
     } else {
-      // 中型機台 (第一關：初試身手 15分鐘夾8樣 - 統一調至上升72%、弱爪60%、速度1.3、線長9.0)
+      // 中型機台 (第一關：初試身手 15分鐘夾8樣 - 嚴格按照照片參數)
       claw.setClawScale(1.0);
       claw.setMachineBounds(chuteHomeX, chuteHomeZ, 3.0, cabinet.height);
 
       syncDIPPanelUI({
         strong: '100',
-        height: '72',
-        weak: '60',
-        tophit: '0',
-        speed: '1.3',
+        height: '76',
+        weak: '69',
+        tophit: '13',
+        speed: '2.0',
         dropspeed: '2.0',
-        sway: '1.2',
+        sway: '1.4',
         length: '9.0',
-        baffle: '0.35',
+        baffle: '0.7',
         dolls: '40',
         antiswing: 'disabled',
         prizetype: 'mixed'

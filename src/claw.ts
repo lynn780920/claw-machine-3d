@@ -46,20 +46,20 @@ export class Claw {
   /* ── Configuration ── */
   /* ── Configuration ── */
   public config = {
-    moveSpeed: 1.3,            // Setting: 1.3 (天車移動速度 1.3)
+    moveSpeed: 2.0,            // Setting: 2.0 (天車平移速度 - 照片)
     dropSpeed: 2.0,            // Setting: 2.0
-    swayScale: 1.2,            // Setting: 1.2
+    swayScale: 1.4,            // Setting: 1.4 (甩爪甩幅 - 照片)
     raiseSpeed: 3.2,
-    maxRopeLength: 9.0,        // Setting: 9.0 (線長調到 9)
+    maxRopeLength: 9.0,        // Setting: 9.0 (下探極限線長 - 照片)
     minRopeLength: 1.05,
 
-    strongStiffness: 250.0,
-    mediumStiffness: 175.0,
-    weakStiffness: 150.0,       // Setting: 60% (弱爪 60%)
+    strongStiffness: 250.0,     // 100% 強爪 (照片)
+    mediumStiffness: 211.25,
+    weakStiffness: 172.5,       // 69% 弱爪維持力 (照片)
 
     antiSwingEnabled: false,
-    topHitProbability: 0.18,
-    weakHeightThreshold: 0.72, // Setting: 72% (上升 72%)
+    topHitProbability: 0.13,    // 13% 觸頂震落機率 (照片)
+    weakHeightThreshold: 0.76,  // 76% 電壓轉弱高度 (照片)
     topHitForce: 6.0,
 
     clawOpenAngle: 0.85,       // Wide open angle (~49 deg outward)
