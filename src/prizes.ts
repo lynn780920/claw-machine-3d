@@ -1,7 +1,6 @@
 import * as THREE from 'three';
 import * as RAPIER from '@dimforge/rapier3d-compat';
 import { PhysicsSystem } from './physics';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 export class PrizesManager {
   public prizes: THREE.Object3D[] = [];
@@ -9,71 +8,9 @@ export class PrizesManager {
   private scene: THREE.Scene;
   private physics: PhysicsSystem;
 
-  private static gltfLoader = new GLTFLoader();
-  public static blenderTemplates: Map<string, THREE.Group> = new Map();
-  private static isPreloading = false;
-  private static preloadPromise: Promise<void> | null = null;
-
-  public static preloadBlenderModels(): Promise<void> {
-    if (this.preloadPromise) return this.preloadPromise;
-    this.isPreloading = true;
-    const prizeKeys = [
-      'chiikawa', 'capybara', 'ssr_golden_capybara', 'kirby', 'my_cat',
-      'blindbox', 'ssr_glowing_labubu', 'snack_pack', 'dragonball', 'onepiece',
-      'mug_box', 'sanrio_bottle', 'cookie_box', 'ps5', 'switch',
-      'dyson', 'marshall', 'lego', 'giant_bear'
-    ];
-    const baseUrl = import.meta.env.BASE_URL || './';
-    const cleanBase = baseUrl.endsWith('/') ? baseUrl : baseUrl + '/';
-
-    const promises = prizeKeys.map((key) => {
-      const url = `${cleanBase}models/prizes/${key}.glb`;
-      return new Promise<void>((resolve) => {
-        this.gltfLoader.load(
-          url,
-          (gltf) => {
-            const group = gltf.scene;
-            group.traverse((child) => {
-              if ((child as THREE.Mesh).isMesh) {
-                child.castShadow = true;
-                child.receiveShadow = true;
-              }
-            });
-            this.blenderTemplates.set(key, group);
-            resolve();
-          },
-          undefined,
-          (err) => {
-            console.warn(`[Blender] Could not load ${key}.glb:`, err);
-            resolve();
-          }
-        );
-      });
-    });
-
-    this.preloadPromise = Promise.all(promises).then(() => {
-      console.log(`[Blender] Successfully loaded ${this.blenderTemplates.size}/19 3D prize models!`);
-    });
-    return this.preloadPromise;
-  }
-
-  public getBlenderModel(key: string): THREE.Group | null {
-    const template = PrizesManager.blenderTemplates.get(key);
-    if (!template) return null;
-    const clone = template.clone(true);
-    clone.traverse((child) => {
-      if ((child as THREE.Mesh).isMesh) {
-        child.castShadow = true;
-        child.receiveShadow = true;
-      }
-    });
-    return clone;
-  }
-
   constructor(scene: THREE.Scene, physics: PhysicsSystem) {
     this.scene = scene;
     this.physics = physics;
-    PrizesManager.preloadBlenderModels();
   }
 
   spawnPrizes(
@@ -140,12 +77,6 @@ export class PrizesManager {
       const types = ['dragonball', 'onepiece', 'blindbox', 'ssr_glowing_labubu'];
       prizeType = types[Math.floor(Math.random() * types.length)];
     }
-    // 1. First priority: Spawn high-fidelity Blender 3D Model
-    if (this.spawnBlenderPrize(x, y, z, prizeType)) {
-      return;
-    }
-
-    // 2. Procedural Fallback if models are still preloading
     switch (prizeType) {
       case 'ssr_golden_capybara': this.spawnGoldenCapybara(x, y, z); break;
       case 'ssr_glowing_labubu':  this.spawnGlowingBlindBox(x, y, z); break;
@@ -174,144 +105,6 @@ export class PrizesManager {
       case 'pouch': this.spawnCookieBox(x, y, z); break;
       default: this.spawnChiikawa(x, y, z); break;
     }
-  }
-
-  private spawnBlenderPrize(x: number, y: number, z: number, prizeType: string): boolean {
-    const mesh = this.getBlenderModel(prizeType);
-    if (!mesh) return false;
-
-    const ry = Math.random() * Math.PI * 2;
-    mesh.position.set(x, y, z);
-    mesh.rotation.y = ry;
-    this.scene.add(mesh);
-    this.prizes.push(mesh);
-
-    if (this.physics.world) {
-      let body: RAPIER.RigidBody;
-      switch (prizeType) {
-        case 'chiikawa': {
-          body = this.makeDynBody(x, y, z);
-          this.physics.world.createCollider(RAPIER.ColliderDesc.ball(0.57).setMass(0.25).setFriction(0.65).setRestitution(0.04), body);
-          this.physics.world.createCollider(RAPIER.ColliderDesc.ball(0.49).setTranslation(0, 0.75, 0).setFriction(0.65).setRestitution(0.04), body);
-          this.physics.world.createCollider(RAPIER.ColliderDesc.ball(0.15).setTranslation(-0.65, 0.07, 0.13).setFriction(0.65), body);
-          this.physics.world.createCollider(RAPIER.ColliderDesc.ball(0.15).setTranslation(0.65, 0.07, 0.13).setFriction(0.65), body);
-          this.physics.world.createCollider(RAPIER.ColliderDesc.ball(0.15).setTranslation(-0.40, 1.18, 0).setFriction(0.65), body);
-          this.physics.world.createCollider(RAPIER.ColliderDesc.ball(0.15).setTranslation(0.40, 1.18, 0).setFriction(0.65), body);
-          this.physics.world.createCollider(RAPIER.ColliderDesc.ball(0.11).setTranslation(-0.2, -0.5, 0.14).setFriction(0.65), body);
-          this.physics.world.createCollider(RAPIER.ColliderDesc.ball(0.11).setTranslation(0.2, -0.5, 0.14).setFriction(0.65), body);
-          break;
-        }
-        case 'capybara': {
-          body = this.makeDynBodyWithRotation(x, y, z, 0, ry, 0);
-          this.physics.world.createCollider(RAPIER.ColliderDesc.capsule(0.44 * 1.25, 0.30 * 1.25).setMass(0.35).setFriction(0.65).setRestitution(0.04), body);
-          this.physics.world.createCollider(RAPIER.ColliderDesc.cuboid(0.22 * 1.25, 0.20 * 1.25, 0.28 * 1.25).setTranslation(0, 0.12 * 1.25, -0.48 * 1.25).setFriction(0.65), body);
-          this.physics.world.createCollider(RAPIER.ColliderDesc.ball(0.18 * 1.25).setTranslation(0, 0.52 * 1.25, -0.32 * 1.25).setFriction(0.65), body);
-          break;
-        }
-        case 'ssr_golden_capybara': {
-          body = this.makeDynBodyWithRotation(x, y, z, 0, ry, 0);
-          this.physics.world.createCollider(RAPIER.ColliderDesc.capsule(0.45 * 1.30, 0.30 * 1.30).setMass(0.38).setFriction(0.60).setRestitution(0.04), body);
-          this.physics.world.createCollider(RAPIER.ColliderDesc.cuboid(0.22 * 1.30, 0.20 * 1.30, 0.28 * 1.30).setTranslation(0, 0.12 * 1.30, -0.48 * 1.30).setFriction(0.60), body);
-          break;
-        }
-        case 'kirby': {
-          body = this.makeDynBodyWithRotation(x, y, z, 0, ry, 0);
-          this.physics.world.createCollider(RAPIER.ColliderDesc.ball(0.50 * 1.3).setMass(0.28).setFriction(0.65).setRestitution(0.05), body);
-          this.physics.world.createCollider(RAPIER.ColliderDesc.ball(0.22 * 1.3).setTranslation(-0.34 * 1.3, -0.25 * 1.3, -0.15 * 1.3).setFriction(0.65), body);
-          this.physics.world.createCollider(RAPIER.ColliderDesc.ball(0.22 * 1.3).setTranslation(0.34 * 1.3, -0.25 * 1.3, -0.15 * 1.3).setFriction(0.65), body);
-          break;
-        }
-        case 'my_cat': {
-          body = this.makeDynBodyWithRotation(x, y, z, 0, ry, 0);
-          this.physics.world.createCollider(RAPIER.ColliderDesc.ball(0.52).setMass(0.30).setFriction(0.68).setRestitution(0.04), body);
-          this.physics.world.createCollider(RAPIER.ColliderDesc.ball(0.42).setTranslation(0, 0.50, 0).setFriction(0.68).setRestitution(0.04), body);
-          break;
-        }
-        case 'blindbox': {
-          body = this.makeDynBodyWithRotation(x, y, z, 0, ry, 0);
-          this.physics.world.createCollider(RAPIER.ColliderDesc.cuboid(0.68 / 2, 0.98 / 2, 0.58 / 2).setMass(0.32).setFriction(0.48).setRestitution(0.06), body);
-          break;
-        }
-        case 'ssr_glowing_labubu': {
-          body = this.makeDynBodyWithRotation(x, y, z, 0, ry, 0);
-          this.physics.world.createCollider(RAPIER.ColliderDesc.cuboid(0.72 / 2, 1.02 / 2, 0.62 / 2).setMass(0.34).setFriction(0.48).setRestitution(0.06), body);
-          break;
-        }
-        case 'snack_pack': {
-          body = this.makeDynBodyWithRotation(x, y, z, 0, ry, 0);
-          this.physics.world.createCollider(RAPIER.ColliderDesc.cuboid(0.82 / 2, 1.05 / 2, 0.42 / 2).setMass(0.24).setFriction(0.45).setRestitution(0.08), body);
-          break;
-        }
-        case 'dragonball': {
-          body = this.makeDynBodyWithRotation(x, y, z, 0, ry, 0);
-          this.physics.world.createCollider(RAPIER.ColliderDesc.cuboid(0.82 / 2, 1.08 / 2, 0.68 / 2).setMass(0.35).setFriction(0.38).setRestitution(0.08), body);
-          break;
-        }
-        case 'onepiece': {
-          body = this.makeDynBodyWithRotation(x, y, z, 0, ry, 0);
-          this.physics.world.createCollider(RAPIER.ColliderDesc.cuboid(0.80 / 2, 1.06 / 2, 0.66 / 2).setMass(0.35).setFriction(0.38).setRestitution(0.08), body);
-          break;
-        }
-        case 'mug_box': {
-          body = this.makeDynBodyWithRotation(x, y, z, 0, ry, 0);
-          this.physics.world.createCollider(RAPIER.ColliderDesc.cuboid(1.0 / 2, 0.78 / 2, 0.78 / 2).setMass(0.40).setFriction(0.38).setRestitution(0.07), body);
-          break;
-        }
-        case 'sanrio_bottle': {
-          body = this.makeDynBodyWithRotation(x, y, z, 0, ry, 0);
-          this.physics.world.createCollider(RAPIER.ColliderDesc.cylinder(1.1 / 2, 0.26).setMass(0.38).setFriction(0.42).setRestitution(0.06), body);
-          break;
-        }
-        case 'cookie_box': {
-          body = this.makeDynBodyWithRotation(x, y, z, 0, ry, 0);
-          this.physics.world.createCollider(RAPIER.ColliderDesc.cylinder(0.30 / 2, 0.40).setMass(0.50).setFriction(0.42).setRestitution(0.05), body);
-          break;
-        }
-        case 'ps5': {
-          body = this.makeDynBodyWithRotation(x, y, z, 0, ry, 0);
-          this.physics.world.createCollider(RAPIER.ColliderDesc.cuboid(1.7 / 2, 1.9 / 2, 0.85 / 2).setMass(0.60).setFriction(0.48), body);
-          break;
-        }
-        case 'switch': {
-          body = this.makeDynBodyWithRotation(x, y, z, 0, ry, 0);
-          this.physics.world.createCollider(RAPIER.ColliderDesc.cuboid(1.5 / 2, 1.2 / 2, 0.7 / 2).setMass(0.50).setFriction(0.48), body);
-          break;
-        }
-        case 'dyson': {
-          body = this.makeDynBodyWithRotation(x, y, z, 0, ry, 0);
-          this.physics.world.createCollider(RAPIER.ColliderDesc.cuboid(0.9 / 2, 2.4 / 2, 0.8 / 2).setMass(0.55).setFriction(0.48), body);
-          break;
-        }
-        case 'marshall': {
-          body = this.makeDynBodyWithRotation(x, y, z, 0, ry, 0);
-          this.physics.world.createCollider(RAPIER.ColliderDesc.cuboid(1.5 / 2, 1.1 / 2, 0.95 / 2).setMass(0.55).setFriction(0.48), body);
-          break;
-        }
-        case 'lego': {
-          body = this.makeDynBodyWithRotation(x, y, z, 0, ry, 0);
-          this.physics.world.createCollider(RAPIER.ColliderDesc.cuboid(1.8 / 2, 1.2 / 2, 0.8 / 2).setMass(0.55).setFriction(0.48), body);
-          break;
-        }
-        case 'giant_bear': {
-          body = this.makeDynBodyWithRotation(x, y, z, 0, ry, 0);
-          this.physics.world.createCollider(RAPIER.ColliderDesc.ball(0.72).setMass(0.40).setFriction(0.60).setRestitution(0.04), body);
-          this.physics.world.createCollider(RAPIER.ColliderDesc.ball(0.62).setTranslation(0, 0.98, 0).setFriction(0.60).setRestitution(0.04), body);
-          this.physics.world.createCollider(RAPIER.ColliderDesc.ball(0.20).setTranslation(-0.45, 1.22, 0.05).setFriction(0.65), body);
-          this.physics.world.createCollider(RAPIER.ColliderDesc.ball(0.20).setTranslation(0.45, 1.22, 0.05).setFriction(0.65), body);
-          this.physics.world.createCollider(RAPIER.ColliderDesc.ball(0.22).setTranslation(0, 0.72, 0.42).setFriction(0.60), body);
-          this.physics.world.createCollider(RAPIER.ColliderDesc.cuboid(0.20, 0.09, 0.06).setTranslation(0, 0.35, 0.52).setFriction(0.60), body);
-          break;
-        }
-        default: {
-          body = this.makeDynBodyWithRotation(x, y, z, 0, ry, 0);
-          this.physics.world.createCollider(RAPIER.ColliderDesc.ball(0.5).setMass(0.3), body);
-          break;
-        }
-      }
-      this.physics.registerBody(body, mesh);
-      this.bodies.push(body);
-    }
-    return true;
   }
 
   clearPrizes() {
@@ -2259,29 +2052,6 @@ export class PrizesManager {
     seriesIdx?: number
   ) {
     const W = 0.68, H = 0.98, D = 0.58;
-
-    const blenderModel = this.getBlenderModel('blindbox');
-    if (blenderModel) {
-      blenderModel.position.set(x, y, z);
-      blenderModel.rotation.set(rx, ry, rz);
-      this.scene.add(blenderModel);
-      this.prizes.push(blenderModel);
-
-      if (this.physics.world) {
-        const body = this.makeDynBodyWithRotation(x, y, z, rx, ry, rz);
-        this.physics.world.createCollider(
-          RAPIER.ColliderDesc.cuboid(W / 2, H / 2, D / 2)
-            .setMass(0.32)
-            .setFriction(0.48)
-            .setRestitution(0.06),
-          body
-        );
-        this.physics.registerBody(body, blenderModel);
-        this.bodies.push(body);
-      }
-      return;
-    }
-
     const group = new THREE.Group();
     group.position.set(x, y, z);
     group.rotation.set(rx, ry, rz);

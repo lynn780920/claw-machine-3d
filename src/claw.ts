@@ -46,7 +46,7 @@ export class Claw {
   /* ── Configuration ── */
   /* ── Configuration ── */
   public config = {
-    moveSpeed: 1.8,            // Setting: 1.8 (第一關天車平移速度)
+    moveSpeed: 2.0,            // Setting: 2.0 (天車平移速度 - 照片)
     dropSpeed: 2.0,            // Setting: 2.0
     swayScale: 1.4,            // Setting: 1.4 (甩爪甩幅 - 照片)
     raiseSpeed: 3.2,
@@ -82,8 +82,8 @@ export class Claw {
   // Carriage velocity & acceleration tracking for zero-lag braking inertia
   private lastCarrX = 0;
   private lastCarrZ = 0;
-  private targetInputVx = 0;
-  private targetInputVz = 0;
+  private lastCarrVelX = 0;
+  private lastCarrVelZ = 0;
   private smoothCarrVelX = 0;
   private smoothCarrVelZ = 0;
   private lastSmoothCarrVelX = 0;
@@ -136,8 +136,7 @@ export class Claw {
       this.smoothCarrVelX = 0;
       this.smoothCarrVelZ = 0;
       this.lastSmoothCarrVelX = 0;
-      this.targetInputVx = 0;
-      this.targetInputVz = 0;
+      this.lastSmoothCarrVelZ = 0;
     }
   }
 
@@ -370,68 +369,22 @@ export class Claw {
   update(deltaTime: number, physics: PhysicsSystem, prizesManager?: PrizesManager) {
     this.stateTimer += deltaTime;
 
-    // ── 1. Carriage Kinematic Motion & Smooth Acceleration Drive ──
     const carrPos = this.carriageBody.translation();
-    let carrAccelX = 0;
-    let carrAccelZ = 0;
+    const rawCarrVelX = (carrPos.x - this.lastCarrX) / Math.max(0.0001, deltaTime);
+    const rawCarrVelZ = (carrPos.z - this.lastCarrZ) / Math.max(0.0001, deltaTime);
 
-    if (this.state === 'IDLE') {
-      const targetCarrVelX = this.targetInputVx * this.config.moveSpeed;
-      const targetCarrVelZ = this.targetInputVz * this.config.moveSpeed;
+    // Smooth carriage velocity to eliminate discrete single-frame acceleration spikes (250 m/s^2 noise)
+    const smoothFactor = Math.min(1.0, 16.0 * deltaTime);
+    this.smoothCarrVelX += (rawCarrVelX - this.smoothCarrVelX) * smoothFactor;
+    this.smoothCarrVelZ += (rawCarrVelZ - this.smoothCarrVelZ) * smoothFactor;
 
-      const motorRamp = Math.min(1.0, 24.0 * deltaTime);
-      const prevVelX = this.smoothCarrVelX;
-      const prevVelZ = this.smoothCarrVelZ;
-      this.smoothCarrVelX += (targetCarrVelX - this.smoothCarrVelX) * motorRamp;
-      this.smoothCarrVelZ += (targetCarrVelZ - this.smoothCarrVelZ) * motorRamp;
+    const carrAccelX = (this.smoothCarrVelX - this.lastSmoothCarrVelX) / Math.max(0.0001, deltaTime);
+    const carrAccelZ = (this.smoothCarrVelZ - this.lastSmoothCarrVelZ) / Math.max(0.0001, deltaTime);
+    this.lastSmoothCarrVelX = this.smoothCarrVelX;
+    this.lastSmoothCarrVelZ = this.smoothCarrVelZ;
 
-      if (Math.abs(this.smoothCarrVelX) < 0.002 && targetCarrVelX === 0) this.smoothCarrVelX = 0;
-      if (Math.abs(this.smoothCarrVelZ) < 0.002 && targetCarrVelZ === 0) this.smoothCarrVelZ = 0;
-
-      carrAccelX = (this.smoothCarrVelX - prevVelX) / Math.max(0.0001, deltaTime);
-      carrAccelZ = (this.smoothCarrVelZ - prevVelZ) / Math.max(0.0001, deltaTime);
-
-      let nx = carrPos.x + this.smoothCarrVelX * deltaTime;
-      let nz = carrPos.z + this.smoothCarrVelZ * deltaTime;
-
-      if (nx < -this.carriageLimit) { nx = -this.carriageLimit; this.smoothCarrVelX = 0; }
-      if (nx > this.carriageLimit) { nx = this.carriageLimit; this.smoothCarrVelX = 0; }
-      if (nz < -this.carriageLimit) { nz = -this.carriageLimit; this.smoothCarrVelZ = 0; }
-      if (nz > this.carriageLimit) { nz = this.carriageLimit; this.smoothCarrVelZ = 0; }
-
-      this.carriageBody.setNextKinematicTranslation({ x: nx, y: this.carriageY, z: nz });
-      this.carriageMesh.position.set(nx, this.carriageY, nz);
-    } else if (this.state === 'RETURNING') {
-      const dx = this.homeX - carrPos.x;
-      const dz = this.homeZ - carrPos.z;
-      const dist = Math.sqrt(dx * dx + dz * dz);
-
-      if (dist > 0.05) {
-        const dirX = dx / dist;
-        const dirZ = dz / dist;
-        const targetRetVelX = dirX * this.config.moveSpeed;
-        const targetRetVelZ = dirZ * this.config.moveSpeed;
-        const motorRamp = Math.min(1.0, 20.0 * deltaTime);
-        const prevVelX = this.smoothCarrVelX;
-        const prevVelZ = this.smoothCarrVelZ;
-        this.smoothCarrVelX += (targetRetVelX - this.smoothCarrVelX) * motorRamp;
-        this.smoothCarrVelZ += (targetRetVelZ - this.smoothCarrVelZ) * motorRamp;
-
-        carrAccelX = (this.smoothCarrVelX - prevVelX) / Math.max(0.0001, deltaTime);
-        carrAccelZ = (this.smoothCarrVelZ - prevVelZ) / Math.max(0.0001, deltaTime);
-
-        let nx = carrPos.x + this.smoothCarrVelX * deltaTime;
-        let nz = carrPos.z + this.smoothCarrVelZ * deltaTime;
-        this.carriageBody.setNextKinematicTranslation({ x: nx, y: this.carriageY, z: nz });
-        this.carriageMesh.position.set(nx, this.carriageY, nz);
-      } else {
-        this.smoothCarrVelX = 0;
-        this.smoothCarrVelZ = 0;
-      }
-    } else {
-      this.smoothCarrVelX = 0;
-      this.smoothCarrVelZ = 0;
-    }
+    this.lastCarrX = carrPos.x;
+    this.lastCarrZ = carrPos.z;
 
     const minBaseY = 1.1;
 
@@ -440,61 +393,66 @@ export class Claw {
     const visualSwingArm = baseVisualArm * (this.config.swayScale || 1.35);
 
     // Taiwanese arcade resonant pendulum frequency for authentic "正2拍" swing:
-    // In IDLE: T = 1.20s crisp arcade pendulum cadence
-    // In DESCENDING: Mathematically tuned to 1.45*PI / dropDuration so it strictly completes 2 BEATS
+    // In IDLE: T = 1.95s (heavy solid metal claw pendulum cadence, calm, steady and responsive)
+    // In DESCENDING: Mathematically tuned to 1.45*PI / dropDuration so it strictly completes 2 BEATS (外甩第1拍 + 回甩直插第2拍) without generating a 3rd swing!
     let omegaSq: number;
+    let targetTrailAngleX = 0;
+    let targetTrailAngleZ = 0;
+
     if (this.state === 'DESCENDING') {
       const dropDistance = Math.max(1.8, (this.carriageY - this.config.minRopeLength) - (minBaseY + 0.35));
       const dropDuration = dropDistance / Math.max(0.5, this.config.dropSpeed);
+      // Exactly 2 beats over the descent duration (Swing 1 out, Swing 2 in, landing on 2nd beat arc):
       const omega = (Math.PI * 1.45) / dropDuration;
       omegaSq = omega * omega;
     } else {
-      const omegaIdle = (Math.PI * 2) / 1.20;
+      // Calm, heavy arcade pendulum cadence (T = 1.95s)
+      const omegaIdle = (Math.PI * 2) / 1.95;
       omegaSq = omegaIdle * omegaIdle;
     }
 
-    // ── 2. Canonical Pendulum Dynamics (Euler-Lagrange Equation in Carriage Frame) ──
-    // theta'' = -omegaSq * sin(theta) - dynamicDrive * (a_carr / L) * cos(theta) - damping * theta'
-    const dynamicDrive = 1.35;
-    const accelTorqueX = -dynamicDrive * (carrAccelX / visualSwingArm) * Math.cos(this.swayAngleX);
-    const accelTorqueZ = -dynamicDrive * (carrAccelZ / visualSwingArm) * Math.cos(this.swayAngleZ);
+    // Operator carriage movement coupling:
+    // When moving, the claw promptly trails behind the carriage with authentic dynamic lag;
+    // When reversing direction or stopping, momentum carries the claw across center into natural swing!
+    if (this.state === 'IDLE') {
+      const maxSpeed = Math.max(0.1, this.config.moveSpeed);
+      const trailAngleMax = 0.36; // Dynamic trailing tilt angle (~20.6 degrees)
+      const normVx = Math.max(-1.0, Math.min(1.0, rawCarrVelX / maxSpeed));
+      const normVz = Math.max(-1.0, Math.min(1.0, rawCarrVelZ / maxSpeed));
+      targetTrailAngleX = -normVx * trailAngleMax;
+      targetTrailAngleZ = -normVz * trailAngleMax;
 
-    const restoringTorqueX = -omegaSq * Math.sin(this.swayAngleX);
-    const restoringTorqueZ = -omegaSq * Math.sin(this.swayAngleZ);
+      const deltaVx = rawCarrVelX - this.lastCarrVelX;
+      const deltaVz = rawCarrVelZ - this.lastCarrVelZ;
+      const impulseCoeff = 0.38;
+      this.swayVelX -= (deltaVx / Math.max(0.5, visualSwingArm)) * impulseCoeff;
+      this.swayVelZ -= (deltaVz / Math.max(0.5, visualSwingArm)) * impulseCoeff;
+    }
+    this.lastCarrVelX = rawCarrVelX;
+    this.lastCarrVelZ = rawCarrVelZ;
 
-    const linearDamping = this.config.antiSwingEnabled ? 4.5 : (this.state === 'DESCENDING' ? 0.30 : 0.65);
-    const dampingTorqueX = -linearDamping * this.swayVelX;
-    const dampingTorqueZ = -linearDamping * this.swayVelZ;
-
-    const dragTorqueX = -(0.06 / visualSwingArm) * this.smoothCarrVelX;
-    const dragTorqueZ = -(0.06 / visualSwingArm) * this.smoothCarrVelZ;
-
-    const swayAccelX = restoringTorqueX + accelTorqueX + dampingTorqueX + dragTorqueX;
-    const swayAccelZ = restoringTorqueZ + accelTorqueZ + dampingTorqueZ + dragTorqueZ;
+    // Restoring acceleration pulls towards the dynamic trailing angle equilibrium
+    const swayAccelX = -omegaSq * Math.sin(this.swayAngleX - targetTrailAngleX);
+    const swayAccelZ = -omegaSq * Math.sin(this.swayAngleZ - targetTrailAngleZ);
 
     this.swayVelX += swayAccelX * deltaTime;
     this.swayVelZ += swayAccelZ * deltaTime;
 
+    // Air damping: steady resonance in IDLE; smooth momentum retention during descent
+    let dampingFactor = this.config.antiSwingEnabled ? 0.88 : 0.9975;
+    if (this.state === 'DESCENDING') {
+      dampingFactor = 0.9990;
+    }
+    this.swayVelX *= dampingFactor;
+    this.swayVelZ *= dampingFactor;
+
     this.swayAngleX += this.swayVelX * deltaTime;
     this.swayAngleZ += this.swayVelZ * deltaTime;
 
-    // Hard limit at 0.85 rad (~48.7 degrees) with velocity arrest
-    const maxAngle = 0.85;
-    if (this.swayAngleX > maxAngle) {
-      this.swayAngleX = maxAngle;
-      if (this.swayVelX > 0) this.swayVelX = 0;
-    } else if (this.swayAngleX < -maxAngle) {
-      this.swayAngleX = -maxAngle;
-      if (this.swayVelX < 0) this.swayVelX = 0;
-    }
-
-    if (this.swayAngleZ > maxAngle) {
-      this.swayAngleZ = maxAngle;
-      if (this.swayVelZ > 0) this.swayVelZ = 0;
-    } else if (this.swayAngleZ < -maxAngle) {
-      this.swayAngleZ = -maxAngle;
-      if (this.swayVelZ < 0) this.swayVelZ = 0;
-    }
+    // Authentic arcade max swing angle (~43 degrees / 0.75 rad for steady full swing)
+    const maxAngle = 0.75;
+    this.swayAngleX = Math.max(-maxAngle, Math.min(maxAngle, this.swayAngleX));
+    this.swayAngleZ = Math.max(-maxAngle, Math.min(maxAngle, this.swayAngleZ));
 
     // ── B. Cable Length Animation ──
     if (Math.abs(this.ropeLength - this.targetRopeLength) > 0.01) {
@@ -546,10 +504,8 @@ export class Claw {
       this.swayAngleZ = (maxClawZ - carrPos.z) / visualSwingArm;
     }
 
-    // Align claw body 3D tilt seamlessly with the cable angle for realistic rigid assembly
-    const tiltMultiplier = 0.95;
     const swayQuat = new THREE.Quaternion().setFromEuler(
-      new THREE.Euler(-this.swayAngleZ * tiltMultiplier, 0, this.swayAngleX * tiltMultiplier, 'YXZ')
+      new THREE.Euler(-this.swayAngleZ * 0.70, 0, this.swayAngleX * 0.70, 'YXZ')
     );
 
     this.baseBody.setNextKinematicTranslation({ x: finalX, y: targetY, z: finalZ });
@@ -631,7 +587,7 @@ export class Claw {
     // ── G. Solid Metal Arm Collision (圓管曲爪動態旋轉物理牆 - 跟隨爪臂旋轉防穿透) ──
     if (prizesManager && prizesManager.bodies.length > 0) {
       const clawScale = this.baseMesh ? this.baseMesh.scale.x : 1.0;
-      const currentCandidate = (this.state === 'GRABBING' || this.state === 'DESCENDING') ? this.findCandidatePrize(prizesManager) : null;
+      const currentCandidate = (this.state === 'GRABBING') ? this.findCandidatePrize(prizesManager) : null;
 
       const localArmPts = [
         new THREE.Vector3(0, 0, 0),        // Hinge
@@ -690,14 +646,17 @@ export class Claw {
         let hitPrizeBody: RAPIER.RigidBody | null = null;
 
         if (prizesManager && prizesManager.bodies.length > 0) {
-          for (const pBody of prizesManager.bodies) {
-            const bPos = pBody.translation();
-            const localPos = new THREE.Vector3(bPos.x, bPos.y, bPos.z);
-            this.baseMesh.worldToLocal(localPos);
-            const localRadius = Math.sqrt(localPos.x * localPos.x + localPos.z * localPos.z);
+          const clawTipY = targetY - 0.70 * clawScale;
+          const stopRadiusXZ = 0.48 * clawScale;
 
-            // True 3D tilted claw reach during descent (detects any prize touched by curved prongs or basket):
-            if (localRadius <= 0.62 * clawScale && localPos.y <= -0.30 * clawScale && localPos.y >= -0.98 * clawScale) {
+          for (const pBody of prizesManager.bodies) {
+            const pos = pBody.translation();
+            const dx = pos.x - finalX;
+            const dy = pos.y - clawTipY;
+            const dz = pos.z - finalZ;
+            const distXZ = Math.sqrt(dx * dx + dz * dz);
+            // 接觸娃娃頂面或斜面
+            if (distXZ <= stopRadiusXZ && (dy >= -0.35 * clawScale && dy <= 0.45 * clawScale)) {
               hitPrizeBody = pBody;
               break;
             }
@@ -813,7 +772,13 @@ export class Claw {
         const dz = homeZ - pos.z;
         const dist = Math.sqrt(dx * dx + dz * dz);
 
-        if (dist <= 0.06) {
+        if (dist > 0.05) {
+          const step = this.config.moveSpeed * deltaTime;
+          const nx = pos.x + (dx / dist) * Math.min(dist, step);
+          const nz = pos.z + (dz / dist) * Math.min(dist, step);
+          this.carriageBody.setNextKinematicTranslation({ x: nx, y: pos.y, z: nz });
+          this.carriageMesh.position.set(nx, pos.y, nz);
+        } else {
           this.state = 'RELEASING';
           this.stateTimer = 0;
           this.releasePrize(physics);
@@ -868,9 +833,10 @@ export class Claw {
 
   public findCandidatePrize(prizesManager?: PrizesManager): RAPIER.RigidBody | null {
     if (!prizesManager || prizesManager.bodies.length === 0) return null;
+    const basePos = this.baseMesh.position;
     const clawScale = this.baseMesh ? this.baseMesh.scale.x : 1.0;
-    // Matches the true sweeping radius of the 3 extended curved prongs (0.62m)
-    const maxRadius = 0.62 * clawScale;
+    const lowestTipY = basePos.y - 0.78 * clawScale;
+    const maxDistXZ = 0.38 * clawScale;
 
     let candidateBody: RAPIER.RigidBody | null = null;
     let bestScore = -Infinity;
@@ -878,22 +844,19 @@ export class Claw {
     for (const pBody of prizesManager.bodies) {
       if (pBody === this.grabbedBody) continue;
       const bPos = pBody.translation();
-      const localPos = new THREE.Vector3(bPos.x, bPos.y, bPos.z);
-      this.baseMesh.worldToLocal(localPos);
+      const dx = bPos.x - basePos.x;
+      const dz = bPos.z - basePos.z;
+      const distXZ = Math.sqrt(dx * dx + dz * dz);
 
-      const localRadius = Math.sqrt(localPos.x * localPos.x + localPos.z * localPos.z);
-      const localY = localPos.y;
+      // 落在三爪有效包覆抓取半徑內
+      if (distXZ > maxDistXZ) continue;
+      // 爪尖需能包圍或低於物體重心
+      if (lowestTipY > bPos.y + 0.20 * clawScale) continue;
+      // 不高於爪頂天車筒
+      if (bPos.y > basePos.y + 0.15 * clawScale) continue;
 
-      // 1. Must be within the radial sweep reach of the 3 prongs
-      if (localRadius > maxRadius) continue;
-      // 2. Must be within vertical envelope (between collar base and tip reach)
-      if (localY > 0.20 * clawScale || localY < -1.05 * clawScale) continue;
-
-      // Prioritize objects closer to the central axis and well nested in the claw basket
-      const centerProximity = 1.0 - (localRadius / maxRadius);
-      const heightFitness = 1.0 - Math.min(1.0, Math.abs(localY - (-0.60 * clawScale)) / (0.50 * clawScale));
-      const score = centerProximity * 2.2 + heightFitness * 1.5;
-
+      const depthUnderCenter = bPos.y - lowestTipY;
+      const score = depthUnderCenter * 2.0 - distXZ * 1.5;
       if (score > bestScore) {
         bestScore = score;
         candidateBody = pBody;
@@ -905,13 +868,13 @@ export class Claw {
   public getSafeContactAngle(pBody: RAPIER.RigidBody): number {
     const clawScale = this.baseMesh ? this.baseMesh.scale.x : 1.0;
     const bPos = pBody.translation();
-    const localPos = new THREE.Vector3(bPos.x, bPos.y, bPos.z);
-    this.baseMesh.worldToLocal(localPos);
-
-    const localRadius = Math.sqrt(localPos.x * localPos.x + localPos.z * localPos.z);
+    const basePos = this.baseMesh.position;
+    const dx = bPos.x - basePos.x;
+    const dz = bPos.z - basePos.z;
+    const distXZ = Math.sqrt(dx * dx + dz * dz);
     // 自然包爪夾緊角度：爪尖向內收攏緊緊抱住娃娃！
-    // 依娃娃在爪內半徑動態算出貼合爪尖半徑 targetR
-    const targetR = Math.max(0.048 * clawScale, Math.min(0.32 * clawScale, localRadius + 0.02 * clawScale));
+    // 依娃娃重心距離動態算出貼合爪尖半徑 targetR (0.048m~0.28m)
+    const targetR = Math.max(0.048 * clawScale, Math.min(0.28 * clawScale, distXZ + 0.02 * clawScale));
     const safeAngle = (targetR / clawScale - 0.46) / 0.84;
     return Math.max(this.config.clawCloseAngle, Math.min(-0.16, safeAngle));
   }
@@ -1026,14 +989,15 @@ export class Claw {
     // Handled natively
   }
 
-  moveCarriage(vx: number, vz: number, _deltaTime?: number) {
-    if (this.state !== 'IDLE') {
-      this.targetInputVx = 0;
-      this.targetInputVz = 0;
-      return;
-    }
-    this.targetInputVx = vx;
-    this.targetInputVz = vz;
+  moveCarriage(vx: number, vz: number, deltaTime: number) {
+    if (this.state !== 'IDLE') return;
+    const pos = this.carriageBody.translation();
+    let nx = pos.x + vx * this.config.moveSpeed * deltaTime;
+    let nz = pos.z + vz * this.config.moveSpeed * deltaTime;
+    nx = Math.max(-this.carriageLimit, Math.min(this.carriageLimit, nx));
+    nz = Math.max(-this.carriageLimit, Math.min(this.carriageLimit, nz));
+    this.carriageBody.setNextKinematicTranslation({ x: nx, y: this.carriageY, z: nz });
+    this.carriageMesh.position.set(nx, this.carriageY, nz);
   }
 
   actionButtonPressed(prizesManager?: PrizesManager) {
@@ -1042,10 +1006,6 @@ export class Claw {
       this.stateTimer = 0;
       this.targetArmAngle = this.config.clawOpenAngle;
       this.targetRopeLength = this.config.maxRopeLength;
-      this.targetInputVx = 0;
-      this.targetInputVz = 0;
-      this.smoothCarrVelX = 0;
-      this.smoothCarrVelZ = 0;
     } else if (this.state === 'DESCENDING') {
       this.triggerGrab(prizesManager);
     } else if (this.state === 'ASCENDING') {
