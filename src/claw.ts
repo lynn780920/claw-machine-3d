@@ -389,49 +389,69 @@ export class Claw {
 
     const minBaseY = 1.1;
 
-    // Visual pendulum swing arm scaled by swayScale and dynamically lengthened with cable
-    const baseVisualArm = 1.15;
-    const extraRope = Math.max(0, this.ropeLength - this.config.minRopeLength);
-    const visualSwingArm = (baseVisualArm + extraRope * 0.35) * (this.config.swayScale || 1.25);
+    // Visual pendulum swing arm scaled by swayScale (沉穩適中大甩幅)
+    const baseVisualArm = 1.25;
+    const visualSwingArm = baseVisualArm * (this.config.swayScale || 1.35);
 
-    // ── Taiwanese Arcade Natural Pendulum Dynamics ──
-    // Authentic gravity pendulum frequency: omega = sqrt(g / L) -> T ~ 1.7s
-    const g = 9.81;
-    const omegaSq = g / Math.max(0.5, visualSwingArm);
+    // Taiwanese arcade resonant pendulum frequency for authentic "正2拍" swing:
+    // In IDLE: T = 1.95s (heavy solid metal claw pendulum cadence, calm, steady and responsive)
+    // In DESCENDING: Mathematically tuned to 1.45*PI / dropDuration so it strictly completes 2 BEATS (外甩第1拍 + 回甩直插第2拍) without generating a 3rd swing!
+    let omegaSq: number;
+    let targetTrailAngleX = 0;
+    let targetTrailAngleZ = 0;
 
-    // Steady trailing angle when moving continuously (~5 degrees lag, no frantic shaking while moving)
-    const maxSpeed = Math.max(0.1, this.config.moveSpeed);
-    const trailAngleMax = 0.09;
-    const normVx = Math.max(-1.0, Math.min(1.0, rawCarrVelX / maxSpeed));
-    const normVz = Math.max(-1.0, Math.min(1.0, rawCarrVelZ / maxSpeed));
-    const targetEquilibriumX = -normVx * trailAngleMax;
-    const targetEquilibriumZ = -normVz * trailAngleMax;
-
-    // 煞車頓甩衝量轉移：當天車急停或反向切換時，天車速度變化量瞬間轉化為鐘擺初角速度
-    if (this.state === 'IDLE' && (Math.abs(deltaVx) > 0.08 || Math.abs(deltaVz) > 0.08)) {
-      const impulseCoeff = 0.50;
-      this.swayVelX -= (deltaVx / visualSwingArm) * impulseCoeff;
-      this.swayVelZ -= (deltaVz / visualSwingArm) * impulseCoeff;
+    if (this.state === 'DESCENDING') {
+      const dropDistance = Math.max(1.8, (this.carriageY - this.config.minRopeLength) - (minBaseY + 0.35));
+      const dropDuration = dropDistance / Math.max(0.5, this.config.dropSpeed);
+      // Exactly 2 beats over the descent duration (Swing 1 out, Swing 2 in, landing on 2nd beat arc):
+      const omega = (Math.PI * 1.45) / dropDuration;
+      omegaSq = omega * omega;
+    } else {
+      // Calm, heavy arcade pendulum cadence (T = 1.95s)
+      const omegaIdle = (Math.PI * 2) / 1.95;
+      omegaSq = omegaIdle * omegaIdle;
     }
 
-    // 重力回復力矩引導鐘擺往動態平衡點振盪
-    const swayAccelX = -omegaSq * Math.sin(this.swayAngleX - targetEquilibriumX);
-    const swayAccelZ = -omegaSq * Math.sin(this.swayAngleZ - targetEquilibriumZ);
+    // Operator carriage movement coupling:
+    // When moving, the claw promptly trails behind the carriage with authentic dynamic lag;
+    // When reversing direction or stopping, momentum carries the claw across center into natural swing!
+    if (this.state === 'IDLE') {
+      const maxSpeed = Math.max(0.1, this.config.moveSpeed);
+      const trailAngleMax = 0.36; // Dynamic trailing tilt angle (~20.6 degrees)
+      const normVx = Math.max(-1.0, Math.min(1.0, rawCarrVelX / maxSpeed));
+      const normVz = Math.max(-1.0, Math.min(1.0, rawCarrVelZ / maxSpeed));
+      targetTrailAngleX = -normVx * trailAngleMax;
+      targetTrailAngleZ = -normVz * trailAngleMax;
+
+      const deltaVx = rawCarrVelX - this.lastCarrVelX;
+      const deltaVz = rawCarrVelZ - this.lastCarrVelZ;
+      const impulseCoeff = 0.38;
+      this.swayVelX -= (deltaVx / Math.max(0.5, visualSwingArm)) * impulseCoeff;
+      this.swayVelZ -= (deltaVz / Math.max(0.5, visualSwingArm)) * impulseCoeff;
+    }
+    this.lastCarrVelX = rawCarrVelX;
+    this.lastCarrVelZ = rawCarrVelZ;
+
+    // Restoring acceleration pulls towards the dynamic trailing angle equilibrium
+    const swayAccelX = -omegaSq * Math.sin(this.swayAngleX - targetTrailAngleX);
+    const swayAccelZ = -omegaSq * Math.sin(this.swayAngleZ - targetTrailAngleZ);
 
     this.swayVelX += swayAccelX * deltaTime;
     this.swayVelZ += swayAccelZ * deltaTime;
 
-    // 真實空氣與鋼索摩擦阻尼：非防甩狀態下可流暢擺盪 4~5 個週期，防甩片開啟時 0.8s 內平穩消擺
-    const dampingRate = this.config.antiSwingEnabled ? 3.0 : (this.state === 'DESCENDING' ? 0.08 : 0.38);
-    const dampingFactor = Math.exp(-dampingRate * deltaTime);
+    // Air damping: steady resonance in IDLE; smooth momentum retention during descent
+    let dampingFactor = this.config.antiSwingEnabled ? 0.88 : 0.9975;
+    if (this.state === 'DESCENDING') {
+      dampingFactor = 0.9990;
+    }
     this.swayVelX *= dampingFactor;
     this.swayVelZ *= dampingFactor;
 
     this.swayAngleX += this.swayVelX * deltaTime;
     this.swayAngleZ += this.swayVelZ * deltaTime;
 
-    // 真實機台合理擺幅上限：約 21 度 (0.36 rad)，保證自然不破綻
-    const maxAngle = 0.36;
+    // Authentic arcade max swing angle (~43 degrees / 0.75 rad for steady full swing)
+    const maxAngle = 0.75;
     this.swayAngleX = Math.max(-maxAngle, Math.min(maxAngle, this.swayAngleX));
     this.swayAngleZ = Math.max(-maxAngle, Math.min(maxAngle, this.swayAngleZ));
 
@@ -485,10 +505,8 @@ export class Claw {
       this.swayAngleZ = (maxClawZ - carrPos.z) / visualSwingArm;
     }
 
-    // 重力自然垂直懸掛：爪身主要垂直下垂，僅隨鋼索微幅傾斜
-    const tiltMultiplier = 0.35;
     const swayQuat = new THREE.Quaternion().setFromEuler(
-      new THREE.Euler(-this.swayAngleZ * tiltMultiplier, 0, this.swayAngleX * tiltMultiplier, 'YXZ')
+      new THREE.Euler(-this.swayAngleZ * 0.70, 0, this.swayAngleX * 0.70, 'YXZ')
     );
 
     this.baseBody.setNextKinematicTranslation({ x: finalX, y: targetY, z: finalZ });
@@ -945,9 +963,8 @@ export class Claw {
 
       // ── 真正的 3D 甩爪動量轉移 (Authentic Fling & Drop Momentum) ──
       // 1. 爪頭鐘擺切線瞬時速度 (Tangential Swing Velocity)
-      const baseVisualArm = 1.15;
-      const extraRope = Math.max(0, this.ropeLength - this.config.minRopeLength);
-      const visualSwingArm = (baseVisualArm + extraRope * 0.35) * (this.config.swayScale || 1.25);
+      const baseVisualArm = 1.25;
+      const visualSwingArm = baseVisualArm * (this.config.swayScale || 1.35);
 
       const swingLinVelX = visualSwingArm * Math.cos(this.swayAngleX) * this.swayVelX;
       const swingLinVelZ = visualSwingArm * Math.cos(this.swayAngleZ) * this.swayVelZ;
