@@ -373,8 +373,8 @@ export class Claw {
     const rawCarrVelX = (carrPos.x - this.lastCarrX) / Math.max(0.0001, deltaTime);
     const rawCarrVelZ = (carrPos.z - this.lastCarrZ) / Math.max(0.0001, deltaTime);
 
-    // Smooth carriage velocity to eliminate discrete single-frame acceleration spikes (250 m/s^2 noise)
-    const smoothFactor = Math.min(1.0, 16.0 * deltaTime);
+    // Smooth carriage velocity to eliminate discrete single-frame acceleration spikes
+    const smoothFactor = Math.min(1.0, 18.0 * deltaTime);
     this.smoothCarrVelX += (rawCarrVelX - this.smoothCarrVelX) * smoothFactor;
     this.smoothCarrVelZ += (rawCarrVelZ - this.smoothCarrVelZ) * smoothFactor;
 
@@ -388,69 +388,55 @@ export class Claw {
 
     const minBaseY = 1.1;
 
-    // Visual pendulum swing arm scaled by swayScale (沉穩適中大甩幅)
+    // Visual pendulum swing arm scaled by swayScale and dynamically lengthened with cable
     const baseVisualArm = 1.25;
-    const visualSwingArm = baseVisualArm * (this.config.swayScale || 1.35);
+    const extraRope = Math.max(0, this.ropeLength - this.config.minRopeLength);
+    const visualSwingArm = (baseVisualArm + extraRope * 0.40) * (this.config.swayScale || 1.35);
 
-    // Taiwanese arcade resonant pendulum frequency for authentic "正2拍" swing:
+    // Taiwanese arcade resonant pendulum frequency:
     // In IDLE: T = 1.95s (heavy solid metal claw pendulum cadence, calm, steady and responsive)
-    // In DESCENDING: Mathematically tuned to 1.45*PI / dropDuration so it strictly completes 2 BEATS (外甩第1拍 + 回甩直插第2拍) without generating a 3rd swing!
+    // In DESCENDING: Mathematically tuned so it strictly completes 2 BEATS (外甩第1拍 + 回甩直插第2拍)
     let omegaSq: number;
-    let targetTrailAngleX = 0;
-    let targetTrailAngleZ = 0;
-
     if (this.state === 'DESCENDING') {
       const dropDistance = Math.max(1.8, (this.carriageY - this.config.minRopeLength) - (minBaseY + 0.35));
       const dropDuration = dropDistance / Math.max(0.5, this.config.dropSpeed);
-      // Exactly 2 beats over the descent duration (Swing 1 out, Swing 2 in, landing on 2nd beat arc):
       const omega = (Math.PI * 1.45) / dropDuration;
       omegaSq = omega * omega;
     } else {
-      // Calm, heavy arcade pendulum cadence (T = 1.95s)
       const omegaIdle = (Math.PI * 2) / 1.95;
       omegaSq = omegaIdle * omegaIdle;
     }
 
-    // Operator carriage movement coupling:
-    // When moving, the claw promptly trails behind the carriage with authentic dynamic lag;
-    // When reversing direction or stopping, momentum carries the claw across center into natural swing!
+    // ── Ultra-Smooth Continuous Inertial Coupling (經典加速懸掛雙擺運動學) ──
+    // d'Alembert's inertial pseudo-acceleration: -a_carr / L * cos(theta)
+    // Eliminates sudden velocity impulse steps and guarantees butter-smooth swaying!
+    let inertialTorqueX = 0;
+    let inertialTorqueZ = 0;
     if (this.state === 'IDLE') {
-      const maxSpeed = Math.max(0.1, this.config.moveSpeed);
-      const trailAngleMax = 0.36; // Dynamic trailing tilt angle (~20.6 degrees)
-      const normVx = Math.max(-1.0, Math.min(1.0, rawCarrVelX / maxSpeed));
-      const normVz = Math.max(-1.0, Math.min(1.0, rawCarrVelZ / maxSpeed));
-      targetTrailAngleX = -normVx * trailAngleMax;
-      targetTrailAngleZ = -normVz * trailAngleMax;
-
-      const deltaVx = rawCarrVelX - this.lastCarrVelX;
-      const deltaVz = rawCarrVelZ - this.lastCarrVelZ;
-      const impulseCoeff = 0.38;
-      this.swayVelX -= (deltaVx / Math.max(0.5, visualSwingArm)) * impulseCoeff;
-      this.swayVelZ -= (deltaVz / Math.max(0.5, visualSwingArm)) * impulseCoeff;
+      const effectiveArm = Math.max(0.5, visualSwingArm);
+      const accelMultiplier = 1.15;
+      inertialTorqueX = -(carrAccelX / effectiveArm) * Math.cos(this.swayAngleX) * accelMultiplier;
+      inertialTorqueZ = -(carrAccelZ / effectiveArm) * Math.cos(this.swayAngleZ) * accelMultiplier;
     }
-    this.lastCarrVelX = rawCarrVelX;
-    this.lastCarrVelZ = rawCarrVelZ;
 
-    // Restoring acceleration pulls towards the dynamic trailing angle equilibrium
-    const swayAccelX = -omegaSq * Math.sin(this.swayAngleX - targetTrailAngleX);
-    const swayAccelZ = -omegaSq * Math.sin(this.swayAngleZ - targetTrailAngleZ);
+    // Restoring acceleration pulls towards gravitational vertical equilibrium
+    const swayAccelX = -omegaSq * Math.sin(this.swayAngleX) + inertialTorqueX;
+    const swayAccelZ = -omegaSq * Math.sin(this.swayAngleZ) + inertialTorqueZ;
 
     this.swayVelX += swayAccelX * deltaTime;
     this.swayVelZ += swayAccelZ * deltaTime;
 
-    // Air damping: steady resonance in IDLE; smooth momentum retention during descent
-    let dampingFactor = this.config.antiSwingEnabled ? 0.88 : 0.9975;
-    if (this.state === 'DESCENDING') {
-      dampingFactor = 0.9990;
-    }
+    // Continuous time-independent air damping: steady resonance in IDLE; full momentum retention during descent
+    const dampingRate = this.config.antiSwingEnabled ? 2.5 : (this.state === 'DESCENDING' ? 0.02 : 0.08);
+    const dampingFactor = Math.exp(-dampingRate * deltaTime);
     this.swayVelX *= dampingFactor;
     this.swayVelZ *= dampingFactor;
 
     this.swayAngleX += this.swayVelX * deltaTime;
     this.swayAngleZ += this.swayVelZ * deltaTime;
 
-    // Authentic arcade max swing angle (~43 degrees / 0.75 rad for steady full swing)
-    const maxAngle = 0.75;
+    // Authentic arcade max swing angle (~45 degrees / 0.78 rad for full wide swing)
+    const maxAngle = 0.78;
     this.swayAngleX = Math.max(-maxAngle, Math.min(maxAngle, this.swayAngleX));
     this.swayAngleZ = Math.max(-maxAngle, Math.min(maxAngle, this.swayAngleZ));
 
@@ -504,8 +490,9 @@ export class Claw {
       this.swayAngleZ = (maxClawZ - carrPos.z) / visualSwingArm;
     }
 
+    const tiltMultiplier = 0.85;
     const swayQuat = new THREE.Quaternion().setFromEuler(
-      new THREE.Euler(-this.swayAngleZ * 0.70, 0, this.swayAngleX * 0.70, 'YXZ')
+      new THREE.Euler(-this.swayAngleZ * tiltMultiplier, 0, this.swayAngleX * tiltMultiplier, 'YXZ')
     );
 
     this.baseBody.setNextKinematicTranslation({ x: finalX, y: targetY, z: finalZ });
@@ -781,7 +768,7 @@ export class Claw {
         } else {
           this.state = 'RELEASING';
           this.stateTimer = 0;
-          this.releasePrize(physics);
+          this.releasePrize(physics, 'CHUTE_RELEASE');
           this.targetArmAngle = this.config.clawOpenAngle;
         }
         break;
@@ -932,7 +919,7 @@ export class Claw {
     }
   }
 
-  private releasePrize(physics: PhysicsSystem) {
+  private releasePrize(physics: PhysicsSystem, reason: 'NORMAL' | 'WEAK_DROP' | 'TOP_HIT' | 'CHUTE_RELEASE' = 'NORMAL') {
     this.grabbedContactAngle = this.config.clawCloseAngle;
     this.targetArmAngle = this.config.clawCloseAngle;
     if (this.grabbedJoint) {
@@ -947,24 +934,77 @@ export class Claw {
       const body = this.grabbedBody;
       this.grabbedBody = null;
 
-      // 徹底重置阻尼
-      body.setLinearDamping(0.20);
-      body.setAngularDamping(0.35);
+      // 重置阻尼至真實空氣阻力數值
+      body.setLinearDamping(0.15);
+      body.setAngularDamping(0.25);
 
       for (let i = 0; i < body.numColliders(); i++) {
         const col = body.collider(i);
         col.setSensor(false);
         col.setFriction(0.65);
-        col.setRestitution(0.06);
+        col.setRestitution(0.08);
       }
 
-      // 徹底喚醒剛體，給予微向下與向外分離速度，確保遵循重力自然落體
       body.wakeUp(true);
-      const curVel = body.linvel();
-      body.setLinvel({
-        x: curVel.x * 0.6 + (Math.random() - 0.5) * 0.25,
-        y: Math.min(-0.8, curVel.y - 0.6),
-        z: curVel.z * 0.6 + (Math.random() - 0.5) * 0.25
+
+      // ── 真正的 3D 甩爪動量轉移 (Authentic Fling & Drop Momentum) ──
+      // 1. 爪頭鐘擺切線瞬時速度 (Tangential Swing Velocity)
+      const baseVisualArm = 1.25;
+      const extraRope = Math.max(0, this.ropeLength - this.config.minRopeLength);
+      const visualSwingArm = (baseVisualArm + extraRope * 0.40) * (this.config.swayScale || 1.35);
+
+      const swingLinVelX = visualSwingArm * Math.cos(this.swayAngleX) * this.swayVelX;
+      const swingLinVelZ = visualSwingArm * Math.cos(this.swayAngleZ) * this.swayVelZ;
+      const swingLinVelY = -visualSwingArm * (
+        Math.sin(this.swayAngleX) * this.swayVelX +
+        Math.sin(this.swayAngleZ) * this.swayVelZ
+      );
+
+      // 2. 天車平移速度 (Carriage Velocity)
+      const carrVx = this.smoothCarrVelX;
+      const carrVz = this.smoothCarrVelZ;
+
+      // 3. 爪子整體 3D 合成速度（完全保留玩家大甩甩幅之強大慣性！）
+      let throwVx = carrVx + swingLinVelX * 1.18;
+      let throwVz = carrVz + swingLinVelZ * 1.18;
+      let throwVy = swingLinVelY;
+
+      // 4. 依照掉落情境精準賦予物理向量
+      if (reason === 'TOP_HIT') {
+        // 撞天車震落：強烈向下反衝震波 + 沿當前天車傾角反彈
+        throwVy = -1.8;
+        throwVx += Math.sin(this.swayAngleX) * 1.35;
+        throwVz += Math.sin(this.swayAngleZ) * 1.35;
+      } else if (reason === 'WEAK_DROP') {
+        // 電壓轉弱滑落：在上升途中脫鉤，保留部分上升慣性後呈自然拋物線下墜
+        const ascentVel = (this.state === 'ASCENDING') ? 0.9 : 0;
+        throwVy = Math.max(-0.6, ascentVel + swingLinVelY * 0.5);
+      } else if (reason === 'CHUTE_RELEASE') {
+        // 到達洞口正常放爪：輕輕順勢落入出貨口
+        throwVy = Math.min(-0.35, swingLinVelY);
+      } else {
+        throwVy = Math.min(-0.45, swingLinVelY);
+      }
+
+      // 5. 三爪張開時機械推力 (放爪推角推肉，沿物體相對於爪中心方向微推並賦予旋轉)
+      const bPos = body.translation();
+      const cPos = this.baseMesh.position;
+      const pushDx = bPos.x - cPos.x;
+      const pushDz = bPos.z - cPos.z;
+      const pushDist = Math.hypot(pushDx, pushDz);
+      if (pushDist > 0.02) {
+        throwVx += (pushDx / pushDist) * 0.30;
+        throwVz += (pushDz / pushDist) * 0.30;
+      }
+
+      // 6. 賦予精確線速度，徹底移除人工削弱與隨機打散，保持自然拋物線
+      body.setLinvel({ x: throwVx, y: throwVy, z: throwVz }, true);
+
+      // 7. 轉移自然角動量（翻滾旋轉）
+      body.setAngvel({
+        x: -this.swayVelZ * 0.85 + (Math.random() - 0.5) * 0.3,
+        y: (Math.random() - 0.5) * 0.5,
+        z: this.swayVelX * 0.85 + (Math.random() - 0.5) * 0.3
       }, true);
     }
 
@@ -977,7 +1017,7 @@ export class Claw {
 
     const effectiveKeep = Math.min(1.0, keepProbability * this.config.superGripMultiplier);
     if (Math.random() > effectiveKeep) {
-      this.releasePrize(physics);
+      this.releasePrize(physics, 'WEAK_DROP');
     }
   }
 
@@ -1031,7 +1071,7 @@ export class Claw {
 
     const prob = this.config.topHitProbability / Math.max(1.0, this.config.superGripMultiplier);
     if (Math.random() < prob) {
-      this.maybeDropPrize(physics, 0.3);
+      this.releasePrize(physics, 'TOP_HIT');
     }
   }
 }
