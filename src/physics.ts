@@ -13,11 +13,32 @@ export class PhysicsSystem {
     this.world = new RAPIER.World(gravity);
 
     // High precision solver iterations to eliminate interpenetration and tunneling
-    this.world.integrationParameters.numSolverIterations = 16;
-    this.world.integrationParameters.numAdditionalSolverIterations = 8;
-    this.world.integrationParameters.contactSkin = 0.008;
+    this.world.integrationParameters.numSolverIterations = 20;
+    this.world.integrationParameters.numAdditionalSolverIterations = 10;
+    // 20mm contact skin cushion gives the constraint solver predictive margins so high-speed falls or pile weight never penetrate
+    this.world.integrationParameters.contactSkin = 0.02;
 
     this.isInitialized = true;
+  }
+
+  // Pre-settles stacked prizes synchronously so they never start in an interpenetrating state
+  prewarmSimulation(steps = 25) {
+    if (!this.isInitialized || !this.world) return;
+    const originalDt = this.world.integrationParameters.dt;
+    this.world.integrationParameters.dt = originalDt / 2;
+    for (let i = 0; i < steps; i++) {
+      this.world.step();
+    }
+    this.world.integrationParameters.dt = originalDt;
+    
+    // Sync Rapier positions/rotations with Three.js meshes
+    this.bodies.forEach((mesh, body) => {
+      if (body.bodyType() !== RAPIER.RigidBodyType.Dynamic) return;
+      const trans = body.translation();
+      const rot = body.rotation();
+      mesh.position.set(trans.x, trans.y, trans.z);
+      mesh.quaternion.set(rot.x, rot.y, rot.z, rot.w);
+    });
   }
 
   step() {

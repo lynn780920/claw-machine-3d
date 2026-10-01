@@ -13,6 +13,62 @@ export class PrizesManager {
     this.physics = physics;
   }
 
+  private getPrizeDimensions(prizeType: string): { radius: number; height: number } {
+    switch (prizeType) {
+      case 'chiikawa':
+        return { radius: 0.68, height: 1.4 };
+      case 'kirby':
+        return { radius: 0.60, height: 1.1 };
+      case 'my_cat':
+        return { radius: 0.56, height: 1.2 };
+      case 'capybara':
+      case 'ssr_golden_capybara':
+        return { radius: 0.58, height: 0.9 };
+      case 'dragonball':
+      case 'onepiece':
+        return { radius: 0.65, height: 1.5 };
+      case 'mug_box':
+        return { radius: 0.65, height: 1.25 };
+      case 'cookie_box':
+        return { radius: 0.68, height: 0.65 };
+      case 'sanrio_bottle':
+        return { radius: 0.45, height: 1.2 };
+      case 'blindbox':
+      case 'ssr_glowing_labubu':
+        return { radius: 0.40, height: 0.85 };
+      case 'snack_pack':
+        return { radius: 0.46, height: 0.95 };
+      case 'ps5':
+      case 'switch':
+      case 'dyson':
+      case 'marshall':
+      case 'lego':
+      case 'giant_bear':
+        return { radius: 0.95, height: 1.6 };
+      default:
+        return { radius: 0.60, height: 1.2 };
+    }
+  }
+
+  private resolvePrizeType(typeFilter: string): string {
+    if (typeFilter === 'mixed') {
+      const types = [
+        'chiikawa', 'capybara', 'kirby', 'my_cat',
+        'blindbox', 'snack_pack',
+        'dragonball', 'onepiece', 'mug_box', 'sanrio_bottle', 'cookie_box',
+        'ssr_golden_capybara', 'ssr_glowing_labubu'
+      ];
+      return types[Math.floor(Math.random() * types.length)];
+    } else if (typeFilter === 'giant_appliances') {
+      const types = ['ps5', 'switch', 'dyson', 'marshall', 'lego', 'giant_bear'];
+      return types[Math.floor(Math.random() * types.length)];
+    } else if (typeFilter === 'anime') {
+      const types = ['dragonball', 'onepiece', 'blindbox', 'ssr_glowing_labubu'];
+      return types[Math.floor(Math.random() * types.length)];
+    }
+    return typeFilter;
+  }
+
   spawnPrizes(
     count = 80,
     typeFilter: string = 'mixed',
@@ -24,22 +80,98 @@ export class PrizesManager {
       this.spawnStagedBlindBoxes(chuteBounds, count);
       return;
     }
+
+    const cMinX = chuteBounds ? chuteBounds.minX : -4.5;
+    const cMaxX = chuteBounds ? chuteBounds.maxX : -1.5;
+    const cMinZ = chuteBounds ? chuteBounds.minZ : 1.5;
+    const cMaxZ = chuteBounds ? chuteBounds.maxZ : 4.5;
+
+    // Track placed prize footprints to guarantee non-overlapping positions
+    const placed: { x: number; y: number; z: number; radius: number; height: number }[] = [];
+
+    // Half span of playable machine floor
+    const halfSpanX = spreadRadius * 0.72;
+    const halfSpanZ = spreadRadius * 0.70;
+
     for (let i = 0; i < count; i++) {
-      let x = (Math.random() - 0.35) * spreadRadius;
-      let z = (Math.random() - 0.45) * spreadRadius;
-      if (chuteBounds) {
-        if (x >= chuteBounds.minX - 0.5 && x <= chuteBounds.maxX + 0.5 &&
-            z >= chuteBounds.minZ - 0.5 && z <= chuteBounds.maxZ + 0.5) {
-          x = chuteBounds.maxX + 0.6 + Math.random() * (spreadRadius * 0.35);
+      const prizeType = this.resolvePrizeType(typeFilter);
+      const { radius, height } = this.getPrizeDimensions(prizeType);
+
+      let bestX = 0;
+      let bestZ = 0;
+      let bestY = 999;
+      let foundCandidate = false;
+
+      // Search for candidate positions with minimal elevation / zero overlap
+      const maxAttempts = 60;
+      for (let attempt = 0; attempt < maxAttempts; attempt++) {
+        // Bias slightly rearward to prevent items pressing against front glass
+        const candX = (Math.random() * 2 - 1) * (halfSpanX - radius);
+        const candZ = (Math.random() * 2 - 1) * (halfSpanZ - radius) - 0.25;
+
+        // Skip if candidate falls within chute area (plus safety clearance)
+        if (
+          candX >= cMinX - radius - 0.25 &&
+          candX <= cMaxX + radius + 0.25 &&
+          candZ >= cMinZ - radius - 0.25 &&
+          candZ <= cMaxZ + radius + 0.25
+        ) {
+          continue;
         }
-      } else {
-        if (x < -1.4 && z > 1.4) x += 2.8; // Clear exit chute area
+
+        // Check horizontal overlap against previously placed prizes
+        let highestUnderneath = 0.0;
+        let hasHorizontalOverlap = false;
+
+        for (const p of placed) {
+          const dx = candX - p.x;
+          const dz = candZ - p.z;
+          const dist2D = Math.sqrt(dx * dx + dz * dz);
+          const reqDist2D = radius + p.radius + 0.10; // 10cm safety gap between neighbor dolls
+
+          if (dist2D < reqDist2D) {
+            hasHorizontalOverlap = true;
+            const topOfP = p.y + p.height * 0.5;
+            if (topOfP > highestUnderneath) {
+              highestUnderneath = topOfP;
+            }
+          }
+        }
+
+        let candY: number;
+        if (!hasHorizontalOverlap) {
+          // Bottom layer on floor pad: no dolls beneath
+          candY = height * 0.5 + 0.08 + Math.random() * 0.05;
+        } else {
+          // Natural pile layer: spawn with clean clearance ABOVE highest underlying doll
+          candY = highestUnderneath + height * 0.5 + 0.18 + Math.random() * 0.10;
+        }
+
+        if (candY < bestY) {
+          bestY = candY;
+          bestX = candX;
+          bestZ = candZ;
+          foundCandidate = true;
+
+          // Found clean floor spot without any overlap: accept immediately!
+          if (!hasHorizontalOverlap) {
+            break;
+          }
+        }
       }
-      const tier = Math.floor(i / 16);
-      const heightOffset = Math.max(0, (z < 0 ? -z * 0.20 : 0));
-      const y = 0.85 + tier * 0.70 + heightOffset + (Math.random() * 0.25);
-      this.spawnPrizeByType(x, y, z, typeFilter);
+
+      if (!foundCandidate) {
+        bestX = 1.0 + Math.random() * 1.5;
+        bestZ = -1.0 + Math.random() * 1.5;
+        bestY = 1.0 + Math.floor(i / 10) * 0.8;
+      }
+
+      this.spawnPrizeByType(bestX, bestY, bestZ, prizeType);
+      placed.push({ x: bestX, y: bestY, z: bestZ, radius, height });
     }
+
+    // Prewarm physics simulation: drops all stacked dolls and settles them into rock-solid, zero-penetration rest
+    this.physics.prewarmSimulation(25);
   }
 
   spawnSinglePrize(x: number, y: number, z: number, prizeType: string) {
@@ -51,32 +183,40 @@ export class PrizesManager {
     const barrierTypes = ['mug_box', 'cookie_box', 'sanrio_bottle', 'onepiece'];
     this.spawnSinglePrize(-1.2, 1.2, 3.0, barrierTypes[Math.floor(Math.random() * barrierTypes.length)]);
     this.spawnSinglePrize(-3.0, 1.2, 1.2, barrierTypes[Math.floor(Math.random() * barrierTypes.length)]);
+
     const prizeList = ['chiikawa', 'dragonball', 'onepiece', 'mug_box', 'sanrio_bottle', 'cookie_box'];
+    const placed: { x: number; y: number; z: number; radius: number; height: number }[] = [
+      { x: -1.2, y: 1.2, z: 3.0, radius: 0.65, height: 1.3 },
+      { x: -3.0, y: 1.2, z: 1.2, radius: 0.65, height: 1.3 }
+    ];
+
     for (let i = 0; i < 16; i++) {
-      const rx = (Math.random() - 0.3) * 4.5;
-      const rz = (Math.random() - 0.5) * 5.0;
-      const ry = 1.0 + (i % 3) * 1.2;
-      this.spawnSinglePrize(rx, ry, rz, prizeList[Math.floor(Math.random() * prizeList.length)]);
+      const pType = prizeList[Math.floor(Math.random() * prizeList.length)];
+      const { radius, height } = this.getPrizeDimensions(pType);
+      let candX = 0, candZ = 0, candY = 1.0;
+      for (let attempt = 0; attempt < 35; attempt++) {
+        candX = (Math.random() - 0.3) * 4.5;
+        candZ = (Math.random() - 0.5) * 5.0;
+        let maxUnder = 0;
+        let overlap = false;
+        for (const p of placed) {
+          const dist = Math.hypot(candX - p.x, candZ - p.z);
+          if (dist < radius + p.radius + 0.1) {
+            overlap = true;
+            if (p.y + p.height * 0.5 > maxUnder) maxUnder = p.y + p.height * 0.5;
+          }
+        }
+        candY = overlap ? maxUnder + height * 0.5 + 0.2 : height * 0.5 + 0.1;
+        if (!overlap || attempt > 25) break;
+      }
+      this.spawnSinglePrize(candX, candY, candZ, pType);
+      placed.push({ x: candX, y: candY, z: candZ, radius, height });
     }
+    this.physics.prewarmSimulation(25);
   }
 
   private spawnPrizeByType(x: number, y: number, z: number, typeFilter: string) {
-    let prizeType = typeFilter;
-    if (typeFilter === 'mixed') {
-      const types = [
-        'chiikawa', 'capybara', 'kirby', 'my_cat',
-        'blindbox', 'snack_pack',
-        'dragonball', 'onepiece', 'mug_box', 'sanrio_bottle', 'cookie_box',
-        'ssr_golden_capybara', 'ssr_glowing_labubu'
-      ];
-      prizeType = types[Math.floor(Math.random() * types.length)];
-    } else if (typeFilter === 'giant_appliances') {
-      const types = ['ps5', 'switch', 'dyson', 'marshall', 'lego', 'giant_bear'];
-      prizeType = types[Math.floor(Math.random() * types.length)];
-    } else if (typeFilter === 'anime') {
-      const types = ['dragonball', 'onepiece', 'blindbox', 'ssr_glowing_labubu'];
-      prizeType = types[Math.floor(Math.random() * types.length)];
-    }
+    const prizeType = this.resolvePrizeType(typeFilter);
     switch (prizeType) {
       case 'ssr_golden_capybara': this.spawnGoldenCapybara(x, y, z); break;
       case 'ssr_glowing_labubu':  this.spawnGlowingBlindBox(x, y, z); break;
@@ -239,22 +379,26 @@ export class PrizesManager {
 
   // ── Helper: create dynamic rigid body ──────────────────────────
   private makeDynBody(x: number, y: number, z: number) {
-    return this.physics.world.createRigidBody(
+    const body = this.physics.world.createRigidBody(
       RAPIER.RigidBodyDesc.dynamic().setTranslation(x, y, z)
-        .setCcdEnabled(true).setLinearDamping(0.18).setAngularDamping(0.35)
+        .setCcdEnabled(true).setLinearDamping(0.22).setAngularDamping(0.42)
     );
+    body.enableCcd(true);
+    return body;
   }
 
   private makeDynBodyWithRotation(x: number, y: number, z: number, rx = 0, ry = 0, rz = 0) {
     const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(rx, ry, rz));
-    return this.physics.world.createRigidBody(
+    const body = this.physics.world.createRigidBody(
       RAPIER.RigidBodyDesc.dynamic()
         .setTranslation(x, y, z)
         .setRotation({ x: q.x, y: q.y, z: q.z, w: q.w })
         .setCcdEnabled(true)
         .setLinearDamping(0.25)
-        .setAngularDamping(0.40)
+        .setAngularDamping(0.45)
     );
+    body.enableCcd(true);
+    return body;
   }
 
   // ══════════════════════════════════════════════════════════════
@@ -408,23 +552,23 @@ export class PrizesManager {
 
     if (this.physics.world) {
       const body2 = this.makeDynBody(x, y, z);
-      // Main plush body & head compound shapes (scaled 1.35x)
-      this.physics.world.createCollider(RAPIER.ColliderDesc.ball(0.57).setMass(0.25).setFriction(0.65).setRestitution(0.04), body2);
-      this.physics.world.createCollider(RAPIER.ColliderDesc.ball(0.49).setTranslation(0, 0.75, 0).setFriction(0.65).setRestitution(0.04), body2);
+      // Main plush body & head compound shapes (scaled 1.35x to match visual mesh)
+      this.physics.world.createCollider(RAPIER.ColliderDesc.ball(0.68).setMass(0.32).setFriction(0.65).setRestitution(0.03), body2);
+      this.physics.world.createCollider(RAPIER.ColliderDesc.ball(0.58).setTranslation(0, 0.76, 0).setFriction(0.65).setRestitution(0.03), body2);
       // Nubbin arms
-      this.physics.world.createCollider(RAPIER.ColliderDesc.ball(0.15).setTranslation(-0.65, 0.07, 0.13).setFriction(0.65), body2);
-      this.physics.world.createCollider(RAPIER.ColliderDesc.ball(0.15).setTranslation(0.65, 0.07, 0.13).setFriction(0.65), body2);
+      this.physics.world.createCollider(RAPIER.ColliderDesc.ball(0.18).setTranslation(-0.65, 0.07, 0.13).setFriction(0.65), body2);
+      this.physics.world.createCollider(RAPIER.ColliderDesc.ball(0.18).setTranslation(0.65, 0.07, 0.13).setFriction(0.65), body2);
       // Ear colliders for Hooking
       if (charIdx === 2) {
-        this.physics.world.createCollider(RAPIER.ColliderDesc.capsule(0.20, 0.11).setTranslation(-0.30, 1.45, 0).setFriction(0.65), body2);
-        this.physics.world.createCollider(RAPIER.ColliderDesc.capsule(0.20, 0.11).setTranslation(0.30, 1.45, 0).setFriction(0.65), body2);
+        this.physics.world.createCollider(RAPIER.ColliderDesc.capsule(0.24, 0.13).setTranslation(-0.30, 1.45, 0).setFriction(0.65), body2);
+        this.physics.world.createCollider(RAPIER.ColliderDesc.capsule(0.24, 0.13).setTranslation(0.30, 1.45, 0).setFriction(0.65), body2);
       } else {
-        this.physics.world.createCollider(RAPIER.ColliderDesc.ball(0.15).setTranslation(-0.40, 1.18, 0).setFriction(0.65), body2);
-        this.physics.world.createCollider(RAPIER.ColliderDesc.ball(0.15).setTranslation(0.40, 1.18, 0).setFriction(0.65), body2);
+        this.physics.world.createCollider(RAPIER.ColliderDesc.ball(0.18).setTranslation(-0.40, 1.18, 0).setFriction(0.65), body2);
+        this.physics.world.createCollider(RAPIER.ColliderDesc.ball(0.18).setTranslation(0.40, 1.18, 0).setFriction(0.65), body2);
       }
-      // Small feet colliders
-      this.physics.world.createCollider(RAPIER.ColliderDesc.ball(0.11).setTranslation(-0.2, -0.5, 0.14).setFriction(0.65), body2);
-      this.physics.world.createCollider(RAPIER.ColliderDesc.ball(0.2, -0.5, 0.14).setFriction(0.65), body2);
+      // Small feet colliders with correct 1.35x positioning
+      this.physics.world.createCollider(RAPIER.ColliderDesc.ball(0.16).setTranslation(-0.27, -0.65, 0.19).setFriction(0.65), body2);
+      this.physics.world.createCollider(RAPIER.ColliderDesc.ball(0.16).setTranslation(0.27, -0.65, 0.19).setFriction(0.65), body2);
 
       this.physics.registerBody(body2, group);
       this.bodies.push(body2);
@@ -1258,26 +1402,26 @@ export class PrizesManager {
     // ══ ⚙️ RAPIER PHYSICS BODY REGISTRATION ══
     if (this.physics.world) {
       const phyBody = this.makeDynBody(x, y, z);
-      // Soft plush body & head compound shapes
+      // Soft plush body & head compound shapes (Body radius 0.45 * 1.05 = 0.473 -> ball(0.48))
       this.physics.world.createCollider(
-        RAPIER.ColliderDesc.ball(0.44).setMass(0.2).setFriction(0.65).setRestitution(0.04), phyBody);
+        RAPIER.ColliderDesc.ball(0.48).setMass(0.28).setFriction(0.65).setRestitution(0.03), phyBody);
       this.physics.world.createCollider(
-        RAPIER.ColliderDesc.ball(0.38).setTranslation(0, 0.58, 0).setFriction(0.65).setRestitution(0.04), phyBody);
+        RAPIER.ColliderDesc.ball(0.41).setTranslation(0, 0.58, 0).setFriction(0.65).setRestitution(0.03), phyBody);
       // Chubby paws
       this.physics.world.createCollider(
-        RAPIER.ColliderDesc.ball(0.13).setTranslation(-0.46, 0.02, 0.12).setFriction(0.65), phyBody);
+        RAPIER.ColliderDesc.ball(0.14).setTranslation(-0.46, 0.02, 0.12).setFriction(0.65), phyBody);
       this.physics.world.createCollider(
-        RAPIER.ColliderDesc.ball(0.13).setTranslation(0.46, 0.02, 0.12).setFriction(0.65), phyBody);
+        RAPIER.ColliderDesc.ball(0.14).setTranslation(0.46, 0.02, 0.12).setFriction(0.65), phyBody);
       // Cat ears colliders (槍位/勾貓耳朵)
       this.physics.world.createCollider(
-        RAPIER.ColliderDesc.capsule(0.08, 0.06).setTranslation(-0.27, 0.92, 0.04).setFriction(0.68), phyBody);
+        RAPIER.ColliderDesc.capsule(0.10, 0.07).setTranslation(-0.27, 0.92, 0.04).setFriction(0.68), phyBody);
       this.physics.world.createCollider(
-        RAPIER.ColliderDesc.capsule(0.08, 0.06).setTranslation(0.27, 0.92, 0.04).setFriction(0.68), phyBody);
+        RAPIER.ColliderDesc.capsule(0.10, 0.07).setTranslation(0.27, 0.92, 0.04).setFriction(0.68), phyBody);
       // Scarf tail & spotted tail colliders
       this.physics.world.createCollider(
-        RAPIER.ColliderDesc.cuboid(0.05, 0.16, 0.03).setTranslation(-0.10, 0.06, 0.28).setFriction(0.65), phyBody);
+        RAPIER.ColliderDesc.cuboid(0.06, 0.16, 0.04).setTranslation(-0.10, 0.06, 0.28).setFriction(0.65), phyBody);
       this.physics.world.createCollider(
-        RAPIER.ColliderDesc.capsule(0.20, 0.06).setTranslation(0.14, -0.20, -0.42).setFriction(0.65), phyBody);
+        RAPIER.ColliderDesc.capsule(0.22, 0.07).setTranslation(0.14, -0.20, -0.42).setFriction(0.65), phyBody);
 
       this.physics.registerBody(phyBody, group);
       this.bodies.push(phyBody);
@@ -1703,20 +1847,20 @@ export class PrizesManager {
 
     if (this.physics.world) {
       const phyBody = this.makeDynBody(x, y, z);
-      // Main loaf body capsule
+      // Main loaf body capsule (visual: cylinder radius 0.38 * 1.25 = 0.475, length 0.72 * 1.25 = 0.90)
       this.physics.world.createCollider(
-        RAPIER.ColliderDesc.capsule(0.32, 0.38).setRotation(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1,0,0), Math.PI / 2)).setMass(0.35).setFriction(0.65).setRestitution(0.04), phyBody);
+        RAPIER.ColliderDesc.capsule(0.40, 0.48).setRotation(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1,0,0), Math.PI / 2)).setMass(0.35).setFriction(0.65).setRestitution(0.03), phyBody);
       // Head & Snout box
       this.physics.world.createCollider(
-        RAPIER.ColliderDesc.cuboid(0.24, 0.22, 0.25).setTranslation(0, 0.16, 0.40).setFriction(0.65), phyBody);
+        RAPIER.ColliderDesc.cuboid(0.28, 0.26, 0.28).setTranslation(0, 0.18, 0.45).setFriction(0.65), phyBody);
       // Top orange hook point
       this.physics.world.createCollider(
-        RAPIER.ColliderDesc.ball(0.12).setTranslation(0, 0.48, 0.32).setFriction(0.65), phyBody);
+        RAPIER.ColliderDesc.ball(0.14).setTranslation(0, 0.52, 0.35).setFriction(0.65), phyBody);
       // Legs
       this.physics.world.createCollider(
-        RAPIER.ColliderDesc.ball(0.12).setTranslation(-0.22, -0.32, 0.26).setFriction(0.65), phyBody);
+        RAPIER.ColliderDesc.ball(0.14).setTranslation(-0.24, -0.36, 0.28).setFriction(0.65), phyBody);
       this.physics.world.createCollider(
-        RAPIER.ColliderDesc.ball(0.12).setTranslation(0.22, -0.32, 0.26).setFriction(0.65), phyBody);
+        RAPIER.ColliderDesc.ball(0.14).setTranslation(0.24, -0.36, 0.28).setFriction(0.65), phyBody);
 
       this.physics.registerBody(phyBody, group);
       this.bodies.push(phyBody);
@@ -1821,11 +1965,11 @@ export class PrizesManager {
     if (this.physics.world) {
       const phyBody = this.makeDynBody(x, y, z);
       this.physics.world.createCollider(
-        RAPIER.ColliderDesc.capsule(0.32, 0.38).setRotation(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1,0,0), Math.PI / 2)).setMass(0.40).setFriction(0.68).setRestitution(0.04), phyBody);
+        RAPIER.ColliderDesc.capsule(0.40, 0.48).setRotation(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1,0,0), Math.PI / 2)).setMass(0.40).setFriction(0.68).setRestitution(0.03), phyBody);
       this.physics.world.createCollider(
-        RAPIER.ColliderDesc.cuboid(0.24, 0.22, 0.25).setTranslation(0, 0.16, 0.40).setFriction(0.68), phyBody);
+        RAPIER.ColliderDesc.cuboid(0.28, 0.26, 0.28).setTranslation(0, 0.18, 0.45).setFriction(0.68), phyBody);
       this.physics.world.createCollider(
-        RAPIER.ColliderDesc.ball(0.13).setTranslation(0, 0.48, 0.32).setFriction(0.68), phyBody);
+        RAPIER.ColliderDesc.ball(0.14).setTranslation(0, 0.52, 0.35).setFriction(0.68), phyBody);
       this.physics.registerBody(phyBody, group);
       this.bodies.push(phyBody);
     }
@@ -2014,19 +2158,19 @@ export class PrizesManager {
 
     if (this.physics.world) {
       const phyBody = this.makeDynBody(x, y, z);
-      // Main Kirby body sphere
+      // Main Kirby body sphere: SphereGeometry(0.55) * 1.05 = 0.5775 -> ball(0.585)
       this.physics.world.createCollider(
-        RAPIER.ColliderDesc.ball(0.55).setMass(0.28).setFriction(0.62).setRestitution(0.06), phyBody);
+        RAPIER.ColliderDesc.ball(0.585).setMass(0.30).setFriction(0.65).setRestitution(0.03), phyBody);
       // Raised arms colliders (Hooking target)
       this.physics.world.createCollider(
-        RAPIER.ColliderDesc.ball(0.18).setTranslation(-0.55, 0.20, 0.14).setFriction(0.65), phyBody);
+        RAPIER.ColliderDesc.ball(0.19).setTranslation(-0.55, 0.20, 0.14).setFriction(0.65), phyBody);
       this.physics.world.createCollider(
-        RAPIER.ColliderDesc.ball(0.18).setTranslation(0.55, 0.20, 0.14).setFriction(0.65), phyBody);
+        RAPIER.ColliderDesc.ball(0.19).setTranslation(0.55, 0.20, 0.14).setFriction(0.65), phyBody);
       // Shoes colliders
       this.physics.world.createCollider(
-        RAPIER.ColliderDesc.cuboid(0.18, 0.12, 0.26).setTranslation(-0.28, -0.44, 0.16).setFriction(0.60), phyBody);
+        RAPIER.ColliderDesc.cuboid(0.20, 0.14, 0.28).setTranslation(-0.28, -0.44, 0.16).setFriction(0.62), phyBody);
       this.physics.world.createCollider(
-        RAPIER.ColliderDesc.cuboid(0.18, 0.12, 0.26).setTranslation(0.28, -0.44, 0.16).setFriction(0.60), phyBody);
+        RAPIER.ColliderDesc.cuboid(0.20, 0.14, 0.28).setTranslation(0.28, -0.44, 0.16).setFriction(0.62), phyBody);
 
       this.physics.registerBody(phyBody, group);
       this.bodies.push(phyBody);

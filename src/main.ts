@@ -134,10 +134,8 @@ async function init() {
   claw = new Claw(scene, physics);
   
   prizesManager = new PrizesManager(scene, physics);
-  const dollCount = parseInt((document.getElementById('setting-dolls') as HTMLInputElement).value);
-  prizesManager.spawnPrizes(dollCount);
 
-  // 5. Connect UI settings and keyboard event listeners
+  // 5. Connect UI settings, level progression and keyboard event listeners
   setupUIEventListeners();
   setupKeyboardListeners();
 
