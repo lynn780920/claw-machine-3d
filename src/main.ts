@@ -628,7 +628,7 @@ function setupUIEventListeners() {
       } else {
         eventsContainer.innerHTML = events.slice(0, 15).map((ev) => `
           <div class="record-event-row">
-            <div class="event-indicator">⚡</div>
+            <div class="event-indicator"><svg viewBox="0 0 20 20" fill="currentColor" class="inline-svg-icon" style="color: #facc15;"><path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clip-rule="evenodd"/></svg></div>
             <div class="event-detail">
               <div class="event-text">
                 <span class="event-player">${ev.playerName}</span> 
@@ -1608,7 +1608,7 @@ function setupUIEventListeners() {
     const text = JSON.stringify(cfg, null, 2);
     if (navigator.clipboard) {
       navigator.clipboard.writeText(text).then(() => {
-        alert('✅ 已複製當前所有自訂參數！您可以直接貼在對話框發給助理，我會立即將這些數值永久寫入專案原始碼並推送至 GitHub！');
+        alert('已複製當前所有自訂參數！您可以直接貼在對話框發給助理，我會立即將這些數值永久寫入專案原始碼並推送至 GitHub！');
       }).catch(() => {
         prompt('請手動複製以下設定參數發給助理寫入程式碼：', text);
       });
@@ -1980,20 +1980,20 @@ function createArcadeEnvironment(scene: THREE.Scene) {
   wctx.shadowBlur = 25;
   wctx.fillStyle = '#ff0075';
   wctx.font = '900 100px sans-serif';
-  wctx.fillText('🎧 CLUB CLAW 2077 🍸', 120, 380);
+  wctx.fillText('CLUB CLAW 2077', 120, 380);
 
   wctx.shadowColor = '#00f0ff';
   wctx.shadowBlur = 25;
   wctx.fillStyle = '#00f0ff';
   wctx.font = '900 105px sans-serif';
-  wctx.fillText('⚡ VIP NIGHT PUNK ⚡', 1050, 420);
+  wctx.fillText('VIP NIGHT PUNK', 1050, 420);
 
   wctx.shadowColor = '#ffe600';
   wctx.shadowBlur = 18;
   wctx.fillStyle = '#ffe600';
   wctx.font = '800 65px sans-serif';
-  wctx.fillText('🎶 BASS BOOST ARCADE 🎶', 300, 850);
-  wctx.fillText('☠️ NO SLEEP TILL DAWN ☠️', 1200, 850);
+  wctx.fillText('BASS BOOST ARCADE', 300, 850);
+  wctx.fillText('NO SLEEP TILL DAWN', 1200, 850);
 
   wctx.shadowBlur = 0;
 
@@ -2049,19 +2049,19 @@ function createArcadeEnvironment(scene: THREE.Scene) {
   bctx.fillStyle = '#ffffff';
   bctx.font = '900 88px sans-serif';
   bctx.textAlign = 'center';
-  bctx.fillText('🍸 NIGHTCLUB 3D 娃娃機旗艦店 🎧', 1024, 175);
+  bctx.fillText('NIGHTCLUB 3D 娃娃機旗艦店', 1024, 175);
 
   bctx.shadowColor = '#00f0ff';
   bctx.shadowBlur = 25;
   bctx.fillStyle = '#00f0ff';
   bctx.font = '700 52px sans-serif';
-  bctx.fillText('⚡ 賽博龐克 · 滿滿機台 · 極限甩爪狂歡 ⚡', 1024, 285);
+  bctx.fillText('賽博龐克 · 滿滿機台 · 極限甩爪狂歡', 1024, 285);
 
   bctx.shadowColor = '#ffe600';
   bctx.shadowBlur = 18;
   bctx.fillStyle = '#ffe600';
   bctx.font = '600 38px sans-serif';
-  bctx.fillText('🔥 100 個堆山爆抓 · 50 刮彩券好禮連發 🔥', 1024, 385);
+  bctx.fillText('100 個堆山爆抓 · 50 刮彩券好禮連發', 1024, 385);
 
   const bannerTex = new THREE.CanvasTexture(bannerCanvas);
   const bannerMat = new THREE.MeshBasicMaterial({ map: bannerTex, transparent: true });

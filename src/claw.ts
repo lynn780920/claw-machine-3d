@@ -373,15 +373,16 @@ export class Claw {
     const rawCarrVelX = (carrPos.x - this.lastCarrX) / Math.max(0.0001, deltaTime);
     const rawCarrVelZ = (carrPos.z - this.lastCarrZ) / Math.max(0.0001, deltaTime);
 
-    // Smooth carriage velocity to eliminate discrete single-frame acceleration spikes
-    const smoothFactor = Math.min(1.0, 18.0 * deltaTime);
+    // Natural carriage velocity smoothing for momentum calculations
+    const smoothFactor = Math.min(1.0, 16.0 * deltaTime);
     this.smoothCarrVelX += (rawCarrVelX - this.smoothCarrVelX) * smoothFactor;
     this.smoothCarrVelZ += (rawCarrVelZ - this.smoothCarrVelZ) * smoothFactor;
 
-    const carrAccelX = (this.smoothCarrVelX - this.lastSmoothCarrVelX) / Math.max(0.0001, deltaTime);
-    const carrAccelZ = (this.smoothCarrVelZ - this.lastSmoothCarrVelZ) / Math.max(0.0001, deltaTime);
-    this.lastSmoothCarrVelX = this.smoothCarrVelX;
-    this.lastSmoothCarrVelZ = this.smoothCarrVelZ;
+    // Detect sudden velocity change (急停煞車頓甩 / 換向頓甩):
+    const deltaVx = rawCarrVelX - this.lastCarrVelX;
+    const deltaVz = rawCarrVelZ - this.lastCarrVelZ;
+    this.lastCarrVelX = rawCarrVelX;
+    this.lastCarrVelZ = rawCarrVelZ;
 
     this.lastCarrX = carrPos.x;
     this.lastCarrZ = carrPos.z;
@@ -389,45 +390,39 @@ export class Claw {
     const minBaseY = 1.1;
 
     // Visual pendulum swing arm scaled by swayScale and dynamically lengthened with cable
-    const baseVisualArm = 1.25;
+    const baseVisualArm = 1.15;
     const extraRope = Math.max(0, this.ropeLength - this.config.minRopeLength);
-    const visualSwingArm = (baseVisualArm + extraRope * 0.40) * (this.config.swayScale || 1.35);
+    const visualSwingArm = (baseVisualArm + extraRope * 0.35) * (this.config.swayScale || 1.25);
 
-    // Taiwanese arcade resonant pendulum frequency:
-    // In IDLE: T = 1.95s (heavy solid metal claw pendulum cadence, calm, steady and responsive)
-    // In DESCENDING: Mathematically tuned so it strictly completes 2 BEATS (外甩第1拍 + 回甩直插第2拍)
-    let omegaSq: number;
-    if (this.state === 'DESCENDING') {
-      const dropDistance = Math.max(1.8, (this.carriageY - this.config.minRopeLength) - (minBaseY + 0.35));
-      const dropDuration = dropDistance / Math.max(0.5, this.config.dropSpeed);
-      const omega = (Math.PI * 1.45) / dropDuration;
-      omegaSq = omega * omega;
-    } else {
-      const omegaIdle = (Math.PI * 2) / 1.95;
-      omegaSq = omegaIdle * omegaIdle;
+    // ── Taiwanese Arcade Natural Pendulum Dynamics ──
+    // Authentic gravity pendulum frequency: omega = sqrt(g / L) -> T ~ 1.7s
+    const g = 9.81;
+    const omegaSq = g / Math.max(0.5, visualSwingArm);
+
+    // Steady trailing angle when moving continuously (~5 degrees lag, no frantic shaking while moving)
+    const maxSpeed = Math.max(0.1, this.config.moveSpeed);
+    const trailAngleMax = 0.09;
+    const normVx = Math.max(-1.0, Math.min(1.0, rawCarrVelX / maxSpeed));
+    const normVz = Math.max(-1.0, Math.min(1.0, rawCarrVelZ / maxSpeed));
+    const targetEquilibriumX = -normVx * trailAngleMax;
+    const targetEquilibriumZ = -normVz * trailAngleMax;
+
+    // 煞車頓甩衝量轉移：當天車急停或反向切換時，天車速度變化量瞬間轉化為鐘擺初角速度
+    if (this.state === 'IDLE' && (Math.abs(deltaVx) > 0.08 || Math.abs(deltaVz) > 0.08)) {
+      const impulseCoeff = 0.50;
+      this.swayVelX -= (deltaVx / visualSwingArm) * impulseCoeff;
+      this.swayVelZ -= (deltaVz / visualSwingArm) * impulseCoeff;
     }
 
-    // ── Ultra-Smooth Continuous Inertial Coupling (經典加速懸掛雙擺運動學) ──
-    // d'Alembert's inertial pseudo-acceleration: -a_carr / L * cos(theta)
-    // Eliminates sudden velocity impulse steps and guarantees butter-smooth swaying!
-    let inertialTorqueX = 0;
-    let inertialTorqueZ = 0;
-    if (this.state === 'IDLE') {
-      const effectiveArm = Math.max(0.5, visualSwingArm);
-      const accelMultiplier = 1.15;
-      inertialTorqueX = -(carrAccelX / effectiveArm) * Math.cos(this.swayAngleX) * accelMultiplier;
-      inertialTorqueZ = -(carrAccelZ / effectiveArm) * Math.cos(this.swayAngleZ) * accelMultiplier;
-    }
-
-    // Restoring acceleration pulls towards gravitational vertical equilibrium
-    const swayAccelX = -omegaSq * Math.sin(this.swayAngleX) + inertialTorqueX;
-    const swayAccelZ = -omegaSq * Math.sin(this.swayAngleZ) + inertialTorqueZ;
+    // 重力回復力矩引導鐘擺往動態平衡點振盪
+    const swayAccelX = -omegaSq * Math.sin(this.swayAngleX - targetEquilibriumX);
+    const swayAccelZ = -omegaSq * Math.sin(this.swayAngleZ - targetEquilibriumZ);
 
     this.swayVelX += swayAccelX * deltaTime;
     this.swayVelZ += swayAccelZ * deltaTime;
 
-    // Continuous time-independent air damping: steady resonance in IDLE; full momentum retention during descent
-    const dampingRate = this.config.antiSwingEnabled ? 2.5 : (this.state === 'DESCENDING' ? 0.02 : 0.08);
+    // 真實空氣與鋼索摩擦阻尼：非防甩狀態下可流暢擺盪 4~5 個週期，防甩片開啟時 0.8s 內平穩消擺
+    const dampingRate = this.config.antiSwingEnabled ? 3.0 : (this.state === 'DESCENDING' ? 0.08 : 0.38);
     const dampingFactor = Math.exp(-dampingRate * deltaTime);
     this.swayVelX *= dampingFactor;
     this.swayVelZ *= dampingFactor;
@@ -435,8 +430,8 @@ export class Claw {
     this.swayAngleX += this.swayVelX * deltaTime;
     this.swayAngleZ += this.swayVelZ * deltaTime;
 
-    // Authentic arcade max swing angle (~45 degrees / 0.78 rad for full wide swing)
-    const maxAngle = 0.78;
+    // 真實機台合理擺幅上限：約 21 度 (0.36 rad)，保證自然不破綻
+    const maxAngle = 0.36;
     this.swayAngleX = Math.max(-maxAngle, Math.min(maxAngle, this.swayAngleX));
     this.swayAngleZ = Math.max(-maxAngle, Math.min(maxAngle, this.swayAngleZ));
 
@@ -490,7 +485,8 @@ export class Claw {
       this.swayAngleZ = (maxClawZ - carrPos.z) / visualSwingArm;
     }
 
-    const tiltMultiplier = 0.85;
+    // 重力自然垂直懸掛：爪身主要垂直下垂，僅隨鋼索微幅傾斜
+    const tiltMultiplier = 0.35;
     const swayQuat = new THREE.Quaternion().setFromEuler(
       new THREE.Euler(-this.swayAngleZ * tiltMultiplier, 0, this.swayAngleX * tiltMultiplier, 'YXZ')
     );
@@ -949,9 +945,9 @@ export class Claw {
 
       // ── 真正的 3D 甩爪動量轉移 (Authentic Fling & Drop Momentum) ──
       // 1. 爪頭鐘擺切線瞬時速度 (Tangential Swing Velocity)
-      const baseVisualArm = 1.25;
+      const baseVisualArm = 1.15;
       const extraRope = Math.max(0, this.ropeLength - this.config.minRopeLength);
-      const visualSwingArm = (baseVisualArm + extraRope * 0.40) * (this.config.swayScale || 1.35);
+      const visualSwingArm = (baseVisualArm + extraRope * 0.35) * (this.config.swayScale || 1.25);
 
       const swingLinVelX = visualSwingArm * Math.cos(this.swayAngleX) * this.swayVelX;
       const swingLinVelZ = visualSwingArm * Math.cos(this.swayAngleZ) * this.swayVelZ;

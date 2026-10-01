@@ -710,7 +710,7 @@ export class PrizesManager {
     const topTex = this.makeCanvasTex(312, 242, ctx => {
       ctx.fillStyle = v.accent; ctx.fillRect(0, 0, 312, 242);
       ctx.fillStyle = '#fff'; ctx.font = 'bold 22px serif'; ctx.textAlign = 'center';
-      ctx.fillText('🎁 Gift Box', 156, 130);
+      ctx.fillText('GIFT BOX', 156, 130);
     });
 
     const mats = [
@@ -1864,8 +1864,8 @@ export class PrizesManager {
       ctx.strokeStyle = '#ff0075'; ctx.lineWidth = 6; ctx.shadowColor = '#ff0075'; ctx.shadowBlur = 16;
       ctx.beginPath(); ctx.arc(160, 255, 80, 0, Math.PI * 2); ctx.stroke();
 
-      ctx.fillStyle = '#00f0ff'; ctx.font = '900 60px sans-serif';
-      ctx.fillText('⚡', 160, 275);
+      ctx.fillStyle = '#00f0ff'; ctx.font = '900 48px sans-serif';
+      ctx.fillText('SSR', 160, 272);
 
       ctx.shadowBlur = 0;
       ctx.fillStyle = '#ffffff'; ctx.font = 'bold 13px sans-serif';
@@ -2057,12 +2057,12 @@ export class PrizesManager {
     group.rotation.set(rx, ry, rz);
 
     const series = [
-      { name: 'SKULLPANDA', sub: 'City of Night', bg: '#18181b', accent: '#a855f7', holo: '#c084fc', icon: 'SP 🌙' },
-      { name: 'LABUBU',     sub: 'The Monsters',  bg: '#1e1b4b', accent: '#38bdf8', holo: '#f43f5e', icon: 'LABUBU 😈' },
-      { name: 'DIMOO',      sub: 'Retro Series',  bg: '#064e3b', accent: '#34d399', holo: '#facc15', icon: 'DIMOO ☁️' },
-      { name: 'CRYBABY',    sub: 'Crying Parade', bg: '#831843', accent: '#f472b6', holo: '#fde047', icon: 'CRYBABY 💧' },
-      { name: 'MOLLY',      sub: 'Space V3',      bg: '#4c0519', accent: '#fb7185', holo: '#38bdf8', icon: 'MOLLY 👑' },
-      { name: 'HIRONO',     sub: 'The Other One', bg: '#27272a', accent: '#fb923c', holo: '#a1a1aa', icon: 'HIRONO 🎭' }
+      { name: 'SKULLPANDA', sub: 'City of Night', bg: '#18181b', accent: '#a855f7', holo: '#c084fc', icon: 'SKULLPANDA' },
+      { name: 'LABUBU',     sub: 'The Monsters',  bg: '#1e1b4b', accent: '#38bdf8', holo: '#f43f5e', icon: 'LABUBU' },
+      { name: 'DIMOO',      sub: 'Retro Series',  bg: '#064e3b', accent: '#34d399', holo: '#facc15', icon: 'DIMOO' },
+      { name: 'CRYBABY',    sub: 'Crying Parade', bg: '#831843', accent: '#f472b6', holo: '#fde047', icon: 'CRYBABY' },
+      { name: 'MOLLY',      sub: 'Space V3',      bg: '#4c0519', accent: '#fb7185', holo: '#38bdf8', icon: 'MOLLY' },
+      { name: 'HIRONO',     sub: 'The Other One', bg: '#27272a', accent: '#fb923c', holo: '#a1a1aa', icon: 'HIRONO' }
     ];
     const s = series[seriesIdx !== undefined ? (seriesIdx % series.length) : Math.floor(Math.random() * series.length)];
 
@@ -2109,7 +2109,7 @@ export class PrizesManager {
       ctx.beginPath(); ctx.moveTo(25, 365); ctx.lineTo(295, 365); ctx.stroke();
       ctx.setLineDash([]);
       ctx.fillStyle = '#ffffff'; ctx.font = 'bold 11px sans-serif';
-      ctx.fillText('✂ PULL TO OPEN HERE ✂', 160, 356);
+      ctx.fillText('PULL TO OPEN HERE', 160, 356);
 
       // Bottom Barcode & Info
       ctx.fillStyle = '#ffffff';

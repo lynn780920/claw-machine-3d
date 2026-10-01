@@ -162,6 +162,31 @@ body {
 .btn-icon, .hud-icon {
   font-size: 0.85rem;
   line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hud-svg {
+  width: 14px;
+  height: 14px;
+  fill: currentColor;
+  display: block;
+}
+
+.close-icon-svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+  display: block;
+}
+
+.inline-svg-icon {
+  width: 1.1em;
+  height: 1.1em;
+  vertical-align: -0.18em;
+  fill: currentColor;
+  display: inline-block;
 }
 
 .nav-hud-pill {
@@ -444,7 +469,7 @@ body {
   pointer-events: auto;
 }
 
-/* 🌟 God Mode Toggle Card */
+/* God Mode Toggle Card */
 .godmode-card {
   background: linear-gradient(135deg, rgba(234, 179, 8, 0.15), rgba(245, 158, 11, 0.25));
   border: 2px solid #f59e0b;
@@ -475,7 +500,7 @@ body {
   line-height: 1.45;
 }
 
-/* 🎯 Stage Tuning Cards */
+/* Stage Tuning Cards */
 .section-title.special {
   color: #7c3aed;
   border-left-color: #7c3aed;
@@ -597,7 +622,7 @@ input:checked + .slider.round:before {
   transform: translateX(18px);
 }
 
-/* 🚀 Stage Debug Shortcuts */
+/* Stage Debug Shortcuts */
 .stage-debug-row {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -632,7 +657,7 @@ input:checked + .slider.round:before {
   border: 1px solid #34d399;
 }
 
-/* 🔐 Admin Password Modal */
+/* Admin Password Modal */
 .admin-auth-card {
   max-width: 440px;
   background: #0f172a;

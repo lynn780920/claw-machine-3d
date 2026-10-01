@@ -285,7 +285,7 @@ export class Cabinet {
 
     // 3. Set machine dimensions (Authentic Taiwanese Street Claw Machine Aspect Ratios)
     if (mode === 'sanrio' || mode === 'small') {
-      // 🌸 小型機台 (真實標準街機比例 寬6.0m x 深5.2m x 櫥窗高6.0m, 底座高5.0m)
+      // 小型機台 (真實標準街機比例 寬6.0m x 深5.2m x 櫥窗高6.0m, 底座高5.0m)
       this.width = 6.0;
       this.depth = 5.2;
       this.height = 6.0;
@@ -294,7 +294,7 @@ export class Cabinet {
       this.chuteMinZ = 0.65;
       this.chuteMaxZ = 2.25;
     } else if (mode === 'anime' || mode === 'large') {
-      // ⚡ 中大機台 (寬闊修長大型機台)
+      // 中大機台 (寬闊修長大型機台)
       this.width = 8.8;
       this.depth = 7.6;
       this.height = 7.4;
@@ -303,7 +303,7 @@ export class Cabinet {
       this.chuteMinZ = 1.10;
       this.chuteMaxZ = 3.45;
     } else if (mode === 'kbasket') {
-      // 🥊 K-霸機台 (超巨無霸直立機台)
+      // K-霸機台 (超巨無霸直立機台)
       this.width = 11.2;
       this.depth = 9.8;
       this.height = 8.4;
@@ -312,7 +312,7 @@ export class Cabinet {
       this.chuteMinZ = 1.45;
       this.chuteMaxZ = 4.45;
     } else {
-      // 👑 Standard medium (標準街機黃金比例)
+      // Standard medium (標準街機黃金比例)
       this.width = 7.4;
       this.depth = 6.4;
       this.height = 6.6;
@@ -648,7 +648,7 @@ export class Cabinet {
     doorFlap.position.set(-1.45, -floorThickness - baseHeight * 0.65, halfD + 0.07);
     this.mesh.add(doorFlap);
 
-    // 🕹️ Interactive Joystick Group (Left Side of Console Deck)
+    // Interactive Joystick Group (Left Side of Console Deck)
     this.joystickGroup.position.set(-0.65, 0.32, consoleZ);
 
     const stickBaseMat = new THREE.MeshStandardMaterial({ color: 0x111827, metalness: 0.3, roughness: 0.5 });
@@ -677,7 +677,7 @@ export class Cabinet {
     this.joystickBall.name = 'joystickBall';
     this.joystickGroup.add(this.joystickBall);
 
-    // 🔴 Big Red Arcade Action Push Button (Right Side of Console Deck)
+    // Big Red Arcade Action Push Button (Right Side of Console Deck)
     const btnBaseGeo = new THREE.CylinderGeometry(0.32, 0.36, 0.08, 24);
     const btnBaseMat = new THREE.MeshStandardMaterial({ color: 0x111827, roughness: 0.6 });
     const btnBaseMesh = new THREE.Mesh(btnBaseGeo, btnBaseMat);
@@ -847,7 +847,7 @@ export class Cabinet {
   // Dynamic Theme Switching for 4 Machine Types
   public setTheme(theme: string) {
     if (theme === 'kbasket') {
-      // 🥊 K-霸機台 (酷炫極致電競黑紅 + 霸王巨爪)
+      // K-霸機台 (酷炫極致電競黑紅 + 霸王巨爪)
       this.bodyMat.color.setHex(0x111116);
       this.bodyDarkMat.color.setHex(0x22222d);
       this.accentMat.color.setHex(0xff0033);
@@ -856,7 +856,7 @@ export class Cabinet {
       this.neonBorderMat.emissive.setHex(0xff0033);
       this.updateMarqueeText('K - 霸', '', '#ffffff', '#ff0033', '#111116');
     } else if (theme === 'sanrio' || theme === 'small') {
-      // 🌸 小型機台 (1:1 還原 Kujiflip 經典象牙白日系街機 + 金色霓虹招牌)
+      // 小型機台 (1:1 還原 Kujiflip 經典象牙白日系街機 + 金色霓虹招牌)
       this.bodyMat.color.setHex(0xf8fafc);
       this.bodyDarkMat.color.setHex(0xe2e8f0);
       this.accentMat.color.setHex(0xf59e0b);
@@ -867,7 +867,7 @@ export class Cabinet {
       this.neonBorderMat.emissive.setHex(0xf59e0b);
       this.updateMarqueeText('賭博就是不歸路', '', '#fef08a', '#f59e0b', '#101014');
     } else if (theme === 'anime' || theme === 'large') {
-      // ⚡ 中大機台 (動漫模型黑金尊爵 + 加大強爪)
+      // 中大機台 (動漫模型黑金尊爵 + 加大強爪)
       this.bodyMat.color.setHex(0x1a1625);
       this.bodyDarkMat.color.setHex(0x2d2438);
       this.accentMat.color.setHex(0xf59e0b);
@@ -876,7 +876,7 @@ export class Cabinet {
       this.neonBorderMat.emissive.setHex(0xfcb316);
       this.updateMarqueeText('BIG PRIZE', '中大機台 · 動漫模型大賞', '#ffffff', '#f59e0b', '#1a1625');
     } else {
-      // 👑 中型機台 (經典黃色街機)
+      // 中型機台 (經典黃色街機)
       this.bodyMat.color.setHex(0xffcc00);
       this.bodyDarkMat.color.setHex(0xe6b800);
       this.accentMat.color.setHex(0xdc2626);
