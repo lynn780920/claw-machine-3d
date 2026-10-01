@@ -19,8 +19,89 @@
     <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon-180x180.png" />
     <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
     <link rel="manifest" href="./manifest.json" />
+    <style>
+      #initial-loader {
+        position: fixed;
+        inset: 0;
+        background: radial-gradient(circle at center, #110d24 0%, #06030c 100%);
+        z-index: 999999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: opacity 0.45s ease-out;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang TC", "Microsoft JhengHei", sans-serif;
+      }
+      .loader-content {
+        text-align: center;
+        max-width: 380px;
+        width: 85%;
+        padding: 30px 24px;
+        background: rgba(15, 23, 42, 0.85);
+        border: 1px solid rgba(0, 240, 255, 0.35);
+        border-radius: 16px;
+        box-shadow: 0 0 40px rgba(0, 240, 255, 0.2), inset 0 0 20px rgba(0, 240, 255, 0.08);
+      }
+      .loader-joystick {
+        font-size: 48px;
+        display: inline-block;
+        animation: loaderBob 1.2s ease-in-out infinite alternate;
+      }
+      @keyframes loaderBob {
+        0% { transform: translateY(0) rotate(-6deg); }
+        100% { transform: translateY(-8px) rotate(6deg); }
+      }
+      .loader-title {
+        font-size: 24px;
+        font-weight: 800;
+        color: #00f0ff;
+        text-shadow: 0 0 12px rgba(0, 240, 255, 0.6);
+        margin-top: 12px;
+        letter-spacing: 2px;
+      }
+      .loader-desc {
+        font-size: 14px;
+        color: #94a3b8;
+        margin-top: 8px;
+      }
+      .loader-progress-bar {
+        width: 100%;
+        height: 6px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 3px;
+        margin-top: 22px;
+        overflow: hidden;
+      }
+      .loader-progress-inner {
+        height: 100%;
+        width: 45%;
+        background: linear-gradient(90deg, #00f0ff, #ec4899);
+        border-radius: 3px;
+        animation: loaderPulse 1.4s ease-in-out infinite alternate;
+      }
+      @keyframes loaderPulse {
+        0% { width: 25%; transform: translateX(0); }
+        100% { width: 75%; transform: translateX(35%); }
+      }
+      .loader-sub {
+        font-size: 12px;
+        color: #64748b;
+        margin-top: 14px;
+      }
+    </style>
   </head>
   <body>
+    <!-- Instant Zero-Delay First Load Screen -->
+    <div id="initial-loader">
+      <div class="loader-content">
+        <div class="loader-joystick">🕹️</div>
+        <div class="loader-title">線上娃娃機</div>
+        <div class="loader-desc">3D 街機物理世界載入中...</div>
+        <div class="loader-progress-bar">
+          <div class="loader-progress-inner"></div>
+        </div>
+        <div class="loader-sub">首次開啟需下載 3D 物理引擎，請稍候片刻</div>
+      </div>
+    </div>
     <div id="app">
       <!-- 3D Viewport -->
       <div id="canvas-container">
@@ -270,8 +351,8 @@
         </div>
 
         <div class="setting-group">
-          <label>天車平移速度 <span class="value" id="val-speed">2.0</span></label>
-          <input type="range" id="setting-speed" min="1.0" max="6.0" step="0.1" value="2.0">
+          <label>天車平移速度 <span class="value" id="val-speed">1.8</span></label>
+          <input type="range" id="setting-speed" min="1.0" max="6.0" step="0.1" value="1.8">
         </div>
 
         <div class="setting-group">

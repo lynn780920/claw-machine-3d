@@ -134,6 +134,7 @@ async function init() {
   claw = new Claw(scene, physics);
   
   prizesManager = new PrizesManager(scene, physics);
+  await PrizesManager.preloadBlenderModels();
   const dollCount = parseInt((document.getElementById('setting-dolls') as HTMLInputElement).value);
   prizesManager.spawnPrizes(dollCount);
 
@@ -165,6 +166,18 @@ async function init() {
     // Step Rapier3D physics simulation
     physics.step();
 
+    // Smoothly shrink and cleanup fallen prize meshes (Zero setInterval lag)
+    for (let i = shrinkingPrizes.length - 1; i >= 0; i--) {
+      const item = shrinkingPrizes[i];
+      item.scale -= dt * 2.2;
+      if (item.scale <= 0.05) {
+        scene.remove(item.mesh);
+        shrinkingPrizes.splice(i, 1);
+      } else {
+        item.mesh.scale.set(item.scale, item.scale, item.scale);
+      }
+    }
+
     // Sync helper guides / indicator ring
     const clawPos = claw.baseMesh.position;
     cabinet.updateIndicator(clawPos.x, clawPos.z, clawPos.y);
@@ -179,10 +192,19 @@ async function init() {
     controls.update();
     
     renderer.render(scene, camera);
+
+    // Dismiss instant initial loading overlay once 3D scene renders
+    const initialLoader = document.getElementById('initial-loader');
+    if (initialLoader) {
+      initialLoader.style.opacity = '0';
+      setTimeout(() => initialLoader.remove(), 450);
+    }
   }
   
   animate(0);
 }
+
+const shrinkingPrizes: Array<{ mesh: THREE.Object3D; scale: number }> = [];
 
 // Check if any dolls fell down the exit chute
 function checkWinCondition() {
@@ -196,23 +218,14 @@ function checkWinCondition() {
     const pos = body.translation();
     
     // Generous chute & slide ramp footprint detection (Never misses prizes falling into hole or down the delivery ramp)
-    const isEnteringChuteHole = (pos.x >= minX - 0.35 && pos.x <= maxX + 0.35 && pos.z >= minZ - 0.35 && pos.y < -0.15);
+    const isEnteringChuteHole = (pos.x >= minX - 0.35 && pos.x <= maxX + 0.35 && pos.z >= minZ - 0.35 && pos.z <= maxZ + 0.35 && pos.y < -0.15);
     const isFallenBelowFloor = (pos.y < -0.45); // Any prize falling down the pit/void below the playfield
 
     if (isEnteringChuteHole || isFallenBelowFloor) {
       const prizeMesh = prizesManager.prizes[idx];
       
-      // Visual shrink-and-delete animation
-      let scale = 1.0;
-      const shrink = setInterval(() => {
-        scale -= 0.1;
-        if (scale <= 0.1) {
-          clearInterval(shrink);
-          scene.remove(prizeMesh);
-        } else {
-          prizeMesh.scale.set(scale, scale, scale);
-        }
-      }, 50);
+      // Visual shrink-and-delete handled in main animation loop
+      shrinkingPrizes.push({ mesh: prizeMesh, scale: 1.0 });
 
       physics.unregisterBody(body);
       physics.world.removeRigidBody(body);
@@ -232,7 +245,7 @@ function checkWinCondition() {
 
 let winToastTimer: number | null = null;
 
-// High-performance reusable Confetti Canvas (Zero lag, no DOM thrashing, no save/restore overhead)
+// High-performance reusable Confetti Canvas (Zero lag, capped 720p fillrate, no GPU stalling)
 let confettiCanvas: HTMLCanvasElement | null = null;
 let confettiCtx: CanvasRenderingContext2D | null = null;
 const confettiParticles: Array<{
@@ -255,9 +268,12 @@ function getConfettiCanvas() {
     document.body.appendChild(confettiCanvas);
     confettiCtx = confettiCanvas.getContext('2d');
   }
-  if (confettiCanvas.width !== window.innerWidth || confettiCanvas.height !== window.innerHeight) {
-    confettiCanvas.width = window.innerWidth;
-    confettiCanvas.height = window.innerHeight;
+  // Cap resolution to 1280x720 max for lightweight GPU blitting on 2K/4K/Retina screens
+  const targetW = Math.min(window.innerWidth, 1280);
+  const targetH = Math.min(window.innerHeight, 720);
+  if (confettiCanvas.width !== targetW || confettiCanvas.height !== targetH) {
+    confettiCanvas.width = targetW;
+    confettiCanvas.height = targetH;
   }
   return { canvas: confettiCanvas, ctx: confettiCtx };
 }
@@ -270,17 +286,19 @@ function launchConfetti() {
 
   const colors = ['#f43f5e', '#38bdf8', '#fbbf24', '#34d399', '#a855f7', '#fb923c', '#ffd700'];
   const centerX = canvas.width / 2;
-  const startY = canvas.height * 0.45;
+  const startY = canvas.height * 0.40;
 
-  // 55 vibrant particles provide rich celebration without lagging mobile/desktop GPU
-  for (let i = 0; i < 55; i++) {
+  // Prevent particle explosion stacking if multiple items drop concurrently
+  if (confettiParticles.length > 70) return;
+
+  for (let i = 0; i < 45; i++) {
     confettiParticles.push({
-      x: centerX + (Math.random() - 0.5) * 160,
-      y: startY + (Math.random() - 0.5) * 60,
-      vx: (Math.random() - 0.5) * 18,
-      vy: -Math.random() * 15 - 5,
-      w: Math.random() * 12 + 6,
-      h: Math.random() * 7 + 4,
+      x: centerX + (Math.random() - 0.5) * (canvas.width * 0.25),
+      y: startY + (Math.random() - 0.5) * 40,
+      vx: (Math.random() - 0.5) * 16,
+      vy: -Math.random() * 14 - 4,
+      w: Math.random() * 10 + 5,
+      h: Math.random() * 6 + 3,
       color: colors[Math.floor(Math.random() * colors.length)],
       rot: Math.random() * Math.PI,
       vrot: (Math.random() - 0.5) * 0.2
@@ -298,26 +316,24 @@ function launchConfetti() {
         const p = confettiParticles[i];
         p.x += p.vx;
         p.y += p.vy;
-        p.vy += 0.38; // gentle gravity
+        p.vy += 0.36; // gentle gravity
         p.vx *= 0.985;
         p.rot += p.vrot;
 
-        if (p.y < canvas.height + 60) {
+        if (p.y < canvas.height + 40) {
           aliveCount++;
-          // High-speed direct affine matrix transform - ZERO save/restore stack allocation!
           const cos = Math.cos(p.rot);
           const sin = Math.sin(p.rot);
           ctx.setTransform(cos, sin, -sin, cos, p.x, p.y);
           ctx.fillStyle = p.color;
           ctx.fillRect(-p.w * 0.5, -p.h * 0.5, p.w, p.h);
         } else {
-          // Remove fallen particles
           confettiParticles.splice(i, 1);
         }
       }
 
       frame++;
-      if (aliveCount > 0 && frame < 150) {
+      if (aliveCount > 0 && frame < 120) {
         confettiAnimId = requestAnimationFrame(step);
       } else {
         ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -366,6 +382,7 @@ let isTouchJoystickActive = false;
 // Process keyboard and touch virtual joystick controls for carriage flat XZ movement and tilt 3D joystick
 function handleKeyboardMove(dt: number) {
   if (claw.state !== 'IDLE') {
+    claw.moveCarriage(0, 0, dt);
     cabinet.setJoystickTilt(0, 0);
     return;
   }
@@ -390,11 +407,16 @@ function handleKeyboardMove(dt: number) {
     vz = joystickTouchVz;
   }
 
+  if (isMouseDraggingJoystick) {
+    return;
+  }
+
+  claw.moveCarriage(vx, vz, dt);
+
   if (vx !== 0 || vz !== 0) {
-    claw.moveCarriage(vx, vz, dt);
     cabinet.setJoystickTilt(vx, vz);
     soundEngine.playMotorStepSFX();
-  } else if (!isMouseDraggingJoystick) {
+  } else {
     cabinet.setJoystickTilt(0, 0);
   }
 }
@@ -415,7 +437,7 @@ function applyDIPSettings() {
   const heightPercent = getVal('setting-height', 76);
   const tophitPercent = getVal('setting-tophit', 13);
   const antiswing = getStr('setting-antiswing', 'disabled');
-  const speed = getVal('setting-speed', 2.0);
+  const speed = getVal('setting-speed', 1.8);
   const dropSpeed = getVal('setting-dropspeed', 2.0);
   const swayScale = getVal('setting-sway', 1.4);
   const length = getVal('setting-length', 9.0);
@@ -1186,19 +1208,19 @@ function setupUIEventListeners() {
     };
 
     if (mode === 'small') {
-      // 小型機台 (第三關：潮玩盲盒 8分鐘清台戰 - 嚴格按照照片參數)
+      // 小型機台 (第三關：潮玩盲盒 8分鐘清台戰 - 嚴格按照用戶設定參數)
       claw.setClawScale(0.85);
       claw.setMachineBounds(chuteHomeX, chuteHomeZ, 2.35, cabinet.height);
 
       syncDIPPanelUI({
-        strong: '95',
+        strong: '87',
         height: '65',
         weak: '50',
         tophit: '14',
-        speed: '2.4',
+        speed: '2.0',
         dropspeed: '2.0',
-        sway: '1.4',
-        length: '8.5',
+        sway: '1.1',
+        length: '10.5',
         baffle: '0.5',
         dolls: '5',
         antiswing: 'disabled',
@@ -1265,7 +1287,7 @@ function setupUIEventListeners() {
         height: '76',
         weak: '69',
         tophit: '13',
-        speed: '2.0',
+        speed: '1.8',
         dropspeed: '2.0',
         sway: '1.4',
         length: '9.0',
