@@ -4,14 +4,21 @@ import fs from 'node:fs/promises';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { isDelivered } from '../src/delivery.ts';
+import { LEVEL_CONFIGS } from '../src/levelSystem.ts';
 
-for (const type of ['pikachu','eevee','gengar','snorlax','psyduck']) {
+test('first stage stocks 42 Pokemon without changing later stage counts', () => {
+  assert.equal(LEVEL_CONFIGS[0].prizeType,'pokemon');
+  assert.deepEqual(LEVEL_CONFIGS.map(level=>level.dollCount),[42,25,5,12]);
+});
+
+for (const type of ['pikachu','eevee','gengar','snorlax','psyduck','charizard','squirtle','bulbasaur']) {
   test(`${type} exports embedded textures and matte materials without Draco dependency`,async () => {
     const bytes = await fs.readFile(new URL(`../public/models/pokemon/${type}.glb`,import.meta.url));
     assert.equal(bytes.readUInt32LE(0),0x46546c67);
     assert.equal(bytes.readUInt32LE(8),bytes.length);
     const data=JSON.parse(bytes.subarray(20,20+bytes.readUInt32LE(12)).toString());
     assert.ok(data.meshes.length);
+    if (['pikachu','charizard','squirtle','bulbasaur'].includes(type)) assert.ok(!data.skins?.length,'prize bounds must not depend on an unevaluated armature');
     assert.ok(data.images.every(image=>Number.isInteger(image.bufferView)));
     assert.ok(!data.extensionsRequired?.includes('KHR_draco_mesh_compression'));
     assert.ok(data.materials.every(material=>material.pbrMetallicRoughness.roughnessFactor>0.8));

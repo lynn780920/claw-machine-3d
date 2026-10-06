@@ -1,7 +1,7 @@
 # Pokemon Model Sources
 
 Downloaded from https://github.com/Pokemon-3D-api/assets on 2026-10-06:
-`models/opt/regular/{25,54,94,133,143}.glb`.
+`models/opt/regular/{1,6,7,25,54,94,133,143}.glb`.
 
 Characters and source assets belong to Nintendo / Creatures Inc. / GAME FREAK inc.
 Availability in the source repository is not a commercial-use license.

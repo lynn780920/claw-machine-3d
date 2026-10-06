@@ -4,7 +4,7 @@ import { clone } from 'three/addons/utils/SkeletonUtils.js';
 
 export const PRIZE_TYPES = ['blindbox', 'capybara', 'chiikawa', 'cookie_box', 'dragonball', 'dyson', 'giant_bear', 'kirby', 'lego', 'marshall', 'mug_box', 'my_cat', 'onepiece', 'ps5', 'sanrio_bottle', 'snack_pack', 'ssr_glowing_labubu', 'ssr_golden_capybara', 'switch', 'tea_box', 'fruit_box', 'milk_box'] as const;
 const reference = new Set(['tea_box', 'fruit_box', 'milk_box']);
-const pokemon = ['pikachu', 'eevee', 'gengar', 'snorlax', 'psyduck'];
+const pokemon = ['pikachu', 'eevee', 'gengar', 'snorlax', 'psyduck', 'charizard', 'squirtle', 'bulbasaur'];
 const templates = new Map<string, THREE.Group>();
 const labels = new Map<string, THREE.Texture>();
 let loading: Promise<void> | undefined;
