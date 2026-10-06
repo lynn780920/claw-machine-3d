@@ -21,9 +21,9 @@ export class PrizesManager {
       case 'charizard': return { radius: 1.0, height: 2.2 };
       case 'squirtle': return { radius: 0.82, height: 1.7 };
       case 'bulbasaur': return { radius: 0.88, height: 1.65 };
-      case 'tea_box': return { radius: 0.58, height: 1.45 };
-      case 'fruit_box': return { radius: 0.65, height: 1.6 };
-      case 'milk_box': return { radius: 0.54, height: 1.65 };
+      case 'tea_box': return { radius: 0.87, height: 2.18 };
+      case 'fruit_box': return { radius: 0.98, height: 2.4 };
+      case 'milk_box': return { radius: 0.81, height: 2.48 };
       case 'chiikawa':
         return { radius: 0.68, height: 1.4 };
       case 'kirby':
@@ -35,16 +35,16 @@ export class PrizesManager {
         return { radius: 0.58, height: 0.9 };
       case 'dragonball':
       case 'onepiece':
-        return { radius: 0.65, height: 1.5 };
+        return { radius: 0.85, height: 1.95 };
       case 'mug_box':
-        return { radius: 0.65, height: 1.25 };
+        return { radius: 0.85, height: 1.63 };
       case 'cookie_box':
-        return { radius: 0.68, height: 0.65 };
+        return { radius: 0.88, height: 0.85 };
       case 'sanrio_bottle':
         return { radius: 0.45, height: 1.2 };
       case 'blindbox':
       case 'ssr_glowing_labubu':
-        return { radius: 0.40, height: 0.85 };
+        return { radius: 0.55, height: 1.17 };
       case 'snack_pack':
         return { radius: 0.46, height: 0.95 };
       case 'ps5':
@@ -88,15 +88,20 @@ export class PrizesManager {
       // A low, staggered plush pile keeps 42 prizes below the carriage and away from the chute.
       const slots: {x:number;z:number}[] = [];
       for (let row=0;row<4;row++) for(let col=0;col<4;col++) {
-        const x=-2.55+col*1.7, z=-2.1+row*1.4;
+        const x=-2.4+col*1.6, z=-1.9+row*1.25;
         if (x < -0.7 && z > 0) continue;
         slots.push({x,z});
       }
       for(let i=0;i<count;i++) {
         const slot=slots[i%slots.length], layer=Math.floor(i/slots.length);
-        this.spawnModelPrize(slot.x,0.65+layer*1.15,slot.z,types[i%4],new THREE.Euler(0,0,0),true);
+        this.spawnModelPrize(slot.x,0.8+layer*1.5,slot.z,types[(i+layer)%4],new THREE.Euler(0,(i%3-1)*0.08,0),true);
       }
       this.physics.prewarmSimulation(120);
+      this.bodies.forEach(body => {
+        body.setLinvel({x:0,y:0,z:0},false);
+        body.setAngvel({x:0,y:0,z:0},false);
+        body.sleep();
+      });
       return;
     }
     if (typeFilter === 'blindbox') {
@@ -249,12 +254,12 @@ export class PrizesManager {
   private spawnModelPrize(x: number, y: number, z: number, type: string, rotation = new THREE.Euler(0,(Math.random()-0.5)*0.5,0), lying = false) {
     const visual = instantiateModel(type);
     if (['pikachu','eevee','gengar','snorlax','psyduck','charizard','squirtle','bulbasaur'].includes(type)) visual.rotation.y = Math.PI;
-    if (lying) visual.rotation.x = -Math.PI/2;
+    if (lying) visual.rotation.set(-Math.PI/2,0,0);
     const originalBounds = new THREE.Box3().setFromObject(visual);
     const size = originalBounds.getSize(new THREE.Vector3());
     const center = originalBounds.getCenter(new THREE.Vector3());
     const dims = this.getPrizeDimensions(type);
-    const ratio = Math.min((lying ? 1.05 : dims.height) / size.y, dims.radius * 2 / Math.max(size.x,size.z));
+    const ratio = Math.min((lying ? 1.45 : dims.height) / size.y, dims.radius * (lying ? 2.6 : 2) / Math.max(size.x,size.z));
     visual.scale.setScalar(ratio);
     visual.position.copy(center).multiplyScalar(-ratio);
     const group = new THREE.Group();
@@ -276,7 +281,9 @@ export class PrizesManager {
     const half = size.multiplyScalar(ratio/2);
     const plush = ['pikachu','eevee','gengar','snorlax','psyduck','charizard','squirtle','bulbasaur','ssr_golden_capybara'].includes(type);
     const capsuleRadius = Math.min(half.x,half.y,half.z);
-    const shape = plush
+    const shape = lying
+      ? RAPIER.ColliderDesc.cuboid(Math.min(half.x,0.72),Math.min(half.y,0.65),Math.min(half.z,0.54))
+      : plush
       ? RAPIER.ColliderDesc.capsule(Math.max(0,half.y-capsuleRadius),capsuleRadius)
       : RAPIER.ColliderDesc.cuboid(half.x,half.y,half.z);
     shape.setMass(type === 'giant_bear' ? 0.6 : 0.35).setFriction(plush ? 0.65 : 0.42).setRestitution(0.03).setContactSkin(0.008);

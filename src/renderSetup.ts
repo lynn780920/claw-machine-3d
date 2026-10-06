@@ -26,12 +26,12 @@ export function setupStudio(scene: THREE.Scene, renderer: THREE.WebGLRenderer) {
 
 export function fitMachineCamera(camera: THREE.PerspectiveCamera, controls: {target:THREE.Vector3;update:()=>void}, dimensions: {width:number;height:number;depth:number}, side = false) {
   const {width,height,depth} = dimensions;
-  const targetY = height * 0.35;
+  const targetY = height * 0.38;
   const fov = THREE.MathUtils.degToRad(camera.fov);
-  const verticalDistance = height * 1.55 / (2*Math.tan(fov/2));
-  const horizontalDistance = width * 1.25 / (2*Math.tan(fov/2)*camera.aspect);
-  const distance = Math.max(verticalDistance,horizontalDistance) + depth/2;
+  const verticalDistance = height * 1.12 / (2*Math.tan(fov/2));
+  const horizontalDistance = width * 1.08 / (2*Math.tan(fov/2)*camera.aspect);
+  const distance = Math.max(height * 1.59, camera.aspect < 1 ? horizontalDistance + depth/2 : verticalDistance);
   controls.target.set(0,targetY,0);
-  camera.position.set(side ? -distance*0.65 : 0,targetY + height*0.12,side ? distance*0.78 : distance);
+  camera.position.set(side ? -distance*0.65 : 0,targetY + height*0.29,side ? distance*0.78 : distance);
   controls.update();
 }

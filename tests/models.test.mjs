@@ -5,6 +5,14 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { isDelivered } from '../src/delivery.ts';
 import { LEVEL_CONFIGS } from '../src/levelSystem.ts';
+import { fitMachineCamera } from '../src/renderSetup.ts';
+
+test('desktop camera frames the playfield at the original arcade distance', () => {
+  const camera=new THREE.PerspectiveCamera(40,16/9,0.1,100);
+  const controls={target:new THREE.Vector3(),update:()=>{}};
+  fitMachineCamera(camera,controls,{width:7.4,height:6.6,depth:6.4});
+  assert.ok(camera.position.z>10 && camera.position.z<11);
+});
 
 test('first stage stocks 42 Pokemon without changing later stage counts', () => {
   assert.equal(LEVEL_CONFIGS[0].prizeType,'pokemon');
