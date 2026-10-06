@@ -7,8 +7,13 @@ import { isDelivered } from '../src/delivery.ts';
 import { LEVEL_CONFIGS } from '../src/levelSystem.ts';
 import { fitMachineCamera } from '../src/renderSetup.ts';
 import { withTimeout } from '../src/modelAssets.ts';
+import { PRIZE_TYPES } from '../src/modelAssets.ts';
 import { collectHullPoints } from '../src/prizeGeometry.ts';
 import * as RAPIER from '@dimforge/rapier3d-compat';
+
+test('legacy bear and capybara models are not selectable or stocked',()=> {
+  for(const type of ['giant_bear','capybara','ssr_golden_capybara','chiikawa','kirby','my_cat']) assert.ok(!PRIZE_TYPES.includes(type));
+});
 
 test('a model-shaped prize falls onto the floor without an invisible support gap',async ()=> {
   await RAPIER.init();

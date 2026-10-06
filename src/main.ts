@@ -163,6 +163,7 @@ async function init() {
   let lastFrameTime = 0;
   const targetFPS = 60;
   const frameInterval = 1000 / targetFPS;
+  let simulationSteps=0;
   
   function animate(now: number) {
     requestAnimationFrame(animate);
@@ -180,6 +181,7 @@ async function init() {
       handleKeyboardMove(fixedDt);
       claw.update(fixedDt, physics, prizesManager);
       physics.step();
+      simulationSteps++;
       accumulator -= fixedDt;
       checkWinCondition();
     }
@@ -202,6 +204,7 @@ async function init() {
       renderer.domElement.dataset.prizeCount = String(prizesManager.prizes.length);
       renderer.domElement.dataset.geometries = String(renderer.info.memory.geometries);
       renderer.domElement.dataset.textures = String(renderer.info.memory.textures);
+      renderer.domElement.dataset.physicsSteps = String(simulationSteps);
     }
   }
   

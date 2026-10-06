@@ -26,7 +26,7 @@ export class PrizesManager {
       case 'bulbasaur': return { radius: 0.88, height: 1.65 };
       case 'tea_box': return { radius: 0.87, height: 2.18 };
       case 'fruit_box': return { radius: 0.98, height: 2.4 };
-      case 'milk_box': return { radius: 0.81, height: 2.48 };
+      case 'milk_box': return { radius: 0.52, height: 1.6 };
       case 'chiikawa':
         return { radius: 0.68, height: 1.4 };
       case 'kirby':
@@ -70,7 +70,7 @@ export class PrizesManager {
       ];
       return types[Math.floor(Math.random() * types.length)];
     } else if (typeFilter === 'giant_appliances') {
-      const types = ['ps5', 'switch', 'dyson', 'marshall', 'lego', 'giant_bear'];
+      const types = ['ps5', 'switch', 'dyson', 'marshall', 'lego'];
       return types[Math.floor(Math.random() * types.length)];
     } else if (typeFilter === 'anime') {
       const types = ['dragonball', 'onepiece', 'blindbox', 'ssr_glowing_labubu'];
@@ -98,9 +98,10 @@ export class PrizesManager {
       for(let i=0;i<count;i++) {
         const slot=slots[i%slots.length], layer=Math.floor(i/slots.length);
         const type=types[i%types.length];
-        this.spawnModelPrize(slot.x,1.15+layer*1.85,slot.z,type,new THREE.Euler(0,(i%3-1)*0.12,0));
+        const tilt=-0.85-(i%4)*0.16;
+        this.spawnModelPrize(slot.x,0.9+layer*1.15,slot.z,type,new THREE.Euler(tilt,(i%5-2)*0.16,(i%3-1)*0.12));
       }
-      this.physics.prewarmSimulation(300);
+      this.physics.prewarmSimulation(600);
       return;
     }
     if (typeFilter === 'blindbox') {
