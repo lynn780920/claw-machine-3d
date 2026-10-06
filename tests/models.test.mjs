@@ -6,6 +6,12 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { isDelivered } from '../src/delivery.ts';
 import { LEVEL_CONFIGS } from '../src/levelSystem.ts';
 import { fitMachineCamera } from '../src/renderSetup.ts';
+import { withTimeout } from '../src/modelAssets.ts';
+
+test('asset watchdog returns completed work and rejects a stalled operation',async () => {
+  assert.equal(await withTimeout(Promise.resolve('ready'),100,'Model'),'ready');
+  await assert.rejects(withTimeout(new Promise(()=>{}),10,'Model'),/Model: timeout/);
+});
 
 test('desktop camera frames the playfield at the original arcade distance', () => {
   const camera=new THREE.PerspectiveCamera(40,16/9,0.1,100);

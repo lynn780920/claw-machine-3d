@@ -9,20 +9,43 @@ const templates = new Map<string, THREE.Group>();
 const labels = new Map<string, THREE.Texture>();
 let loading: Promise<void> | undefined;
 
+export async function withTimeout<T>(operation: Promise<T>, milliseconds: number, label: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout>;
+  try {
+    return await Promise.race([operation,new Promise<never>((_,reject)=> {
+      timer=setTimeout(()=>reject(new Error(`${label}: timeout`)),milliseconds);
+    })]);
+  } finally { clearTimeout(timer!); }
+}
+
 export function preloadModels(progress: (loaded: number, total: number) => void): Promise<void> {
   if (loading) return loading;
-  const loader = new GLTFLoader();
   const entries = [
     ['cabinet', 'reference/cabinet.glb'], ['claw', 'reference/claw.glb'],
     ...pokemon.map(type => [type, `pokemon/${type}.glb`]),
     ...PRIZE_TYPES.map(type => [type, `${reference.has(type) ? 'reference' : 'prizes'}/${type}.glb`])
   ];
-  let loaded = 0;
-  loading = Promise.all(entries.map(async ([key, path]) => {
-    const gltf = await loader.loadAsync(`${import.meta.env.BASE_URL}models/${path}`);
-    templates.set(key, gltf.scene);
-    progress(++loaded, entries.length);
-  })).then(() => undefined);
+  let loaded = 0, next = 0;
+  progress(0,entries.length);
+  const worker = async () => {
+    while (next < entries.length) {
+      const [key,path] = entries[next++];
+      if (!templates.has(key)) {
+        const url = `${import.meta.env.BASE_URL}models/${path}`;
+        const response = await fetch(url,{signal:AbortSignal.timeout(20000)});
+        if (!response.ok) throw new Error(`${path}: HTTP ${response.status}`);
+        const bytes = await response.arrayBuffer();
+        const gltf = await withTimeout(new GLTFLoader().parseAsync(bytes,url.slice(0,url.lastIndexOf('/')+1)),20000,path);
+        templates.set(key,gltf.scene);
+      }
+      progress(++loaded,entries.length);
+      await new Promise(resolve=>setTimeout(resolve,0));
+    }
+  };
+  loading = Promise.all([worker(),worker(),worker()]).then(() => undefined).catch(error => {
+    loading = undefined;
+    throw error;
+  });
   return loading;
 }
 

@@ -1830,7 +1830,7 @@ input:checked + .slider.round:before {
   font-family: system-ui, sans-serif;
 }
 .loading-title { font-size: 28px; font-weight: 600; }
-#asset-progress { font-variant-numeric: tabular-nums; color: #b1c6b4; }
+#asset-progress { font-variant-numeric: tabular-nums; color: #b1c6b4; max-width: calc(100% - 40px); overflow-wrap: anywhere; text-align: center; }
 #asset-retry { padding: 10px 18px; border: 1px solid #90ab94; border-radius: 4px; background: #3a493e; color: white; cursor: pointer; }
 #asset-retry[hidden] { display: none; }
 

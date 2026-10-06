@@ -8,9 +8,10 @@ import { PrizesManager } from './prizes';
 import { soundEngine } from './audio';
 import { LevelSystem, LevelConfig, LEVEL_CONFIGS } from './levelSystem';
 import { LeaderboardManager } from './leaderboard';
-import { preloadModels, disposeModel } from './modelAssets';
+import { preloadModels, disposeModel, withTimeout } from './modelAssets';
 import { setupStudio, fitMachineCamera } from './renderSetup';
 import { isDelivered } from './delivery';
+import { buildArcadeEnvironment } from './arcadeEnvironment';
 
 // Game Statistics
 let coins = 0;
@@ -60,9 +61,12 @@ async function init() {
   await preloadModels((loaded,total) => {
     document.getElementById('asset-progress')!.textContent = `${Math.round(loaded/total*100)}%`;
   });
+  document.getElementById('asset-progress')!.textContent = '初始化物理引擎';
   // 1. Initialize physics compat environment
   physics = new PhysicsSystem();
-  await physics.init();
+  await withTimeout(physics.init(),20000,'Physics');
+  document.getElementById('asset-progress')!.textContent = '建立街機廳';
+  await new Promise(resolve=>requestAnimationFrame(resolve));
 
   // 2. Setup Three.js scene with 3D Arcade Game Room Environment
   scene = new THREE.Scene();
@@ -82,6 +86,7 @@ async function init() {
   renderer.shadowMap.enabled = !powerSaverMode;
   renderer.shadowMap.type = THREE.PCFShadowMap;
   setupStudio(scene,renderer);
+  buildArcadeEnvironment(scene);
 
   // Global Power Saver Toggle
   (window as any).togglePowerSaver = (enable?: boolean) => {
@@ -146,6 +151,9 @@ async function init() {
   // 5. Connect UI settings, level progression and keyboard event listeners
   setupUIEventListeners();
   setupKeyboardListeners();
+  document.getElementById('asset-progress')!.textContent = '準備畫面';
+  await new Promise(resolve=>requestAnimationFrame(resolve));
+  await withTimeout(renderer.compileAsync(scene,camera),30000,'Graphics');
 
   // 6. Game loop with FPS Throttling for battery saving
   const clock = new THREE.Timer();
@@ -165,7 +173,7 @@ async function init() {
     
     clock.update(now);
     const dt = Math.min(clock.getDelta(), 0.1);
-    accumulator += dt;
+    accumulator = Math.min(accumulator + dt, fixedDt*3);
     
     // Move carriage horizontally
     while (accumulator >= fixedDt) {
@@ -1827,7 +1835,7 @@ init().catch(error => {
   const loading = document.getElementById('asset-loading');
   if (loading) {
     loading.classList.add('failed');
-    document.getElementById('asset-progress')!.textContent = '載入失敗';
+    document.getElementById('asset-progress')!.textContent = `載入失敗：${error instanceof Error ? error.message : String(error)}`;
     document.getElementById('asset-retry')!.hidden = false;
   }
 });

@@ -367,6 +367,13 @@ export class Cabinet {
         return;
       }
       const material = object.material as THREE.MeshStandardMaterial;
+      if(object.name.startsWith('Floor')) {
+        material.color.set(0x636970);
+        material.map=this.floorMatTex;
+        material.bumpMap=this.floorMatTex;
+        material.bumpScale=0.012;
+        material.roughness=0.82;
+      }
       if (material.name === 'PowderCoatedSteel') {
         material.bumpMap = steelTexture;
         material.bumpScale = 0.018;

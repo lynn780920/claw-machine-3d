@@ -96,12 +96,7 @@ export class PrizesManager {
         const slot=slots[i%slots.length], layer=Math.floor(i/slots.length);
         this.spawnModelPrize(slot.x,0.8+layer*1.5,slot.z,types[(i+layer)%4],new THREE.Euler(0,(i%3-1)*0.08,0),true);
       }
-      this.physics.prewarmSimulation(120);
-      this.bodies.forEach(body => {
-        body.setLinvel({x:0,y:0,z:0},false);
-        body.setAngvel({x:0,y:0,z:0},false);
-        body.sleep();
-      });
+      this.physics.prewarmSimulation(300);
       return;
     }
     if (typeFilter === 'blindbox') {
