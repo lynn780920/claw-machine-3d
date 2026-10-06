@@ -19,11 +19,16 @@
     <link rel="apple-touch-icon" sizes="180x180" href="./assets/apple-touch-icon-180x180-D0xw-ZwL.png" />
     <link rel="apple-touch-icon" href="./assets/apple-touch-icon-96QgC70_.png" />
     <link rel="manifest" href="./assets/manifest-DWV-rB2U.json" />
-    <script type="module" crossorigin src="./assets/index-D91QK1mC.js"></script>
-    <link rel="stylesheet" crossorigin href="./assets/index-CqAUFBTW.css">
+    <script type="module" crossorigin src="./assets/index-cDowWG3v.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-th715VK1.css">
   </head>
   <body>
     <div id="app">
+      <div id="asset-loading" role="status" aria-live="polite">
+        <span class="loading-title">夾樂機台</span>
+        <span id="asset-progress">0%</span>
+        <button id="asset-retry" hidden>重新載入</button>
+      </div>
       <!-- 3D Viewport -->
       <div id="canvas-container">
         <canvas id="three-canvas"></canvas>
@@ -287,8 +292,8 @@
         </div>
 
         <div class="setting-group">
-          <label>下爪下探極限線長 <span class="value" id="val-length">9.0</span></label>
-          <input type="range" id="setting-length" min="1.0" max="15.0" step="0.5" value="9.0">
+          <label>下爪下探極限線長 <span class="value" id="val-length">9.5</span></label>
+          <input type="range" id="setting-length" min="1.0" max="15.0" step="0.5" value="9.5">
         </div>
 
         <div class="setting-group">
@@ -297,15 +302,15 @@
         </div>
 
         <div class="setting-group">
-          <label>鋪貨娃娃數量 <span class="value" id="val-dolls">40</span></label>
-          <input type="range" id="setting-dolls" min="5" max="100" step="1" value="40">
+          <label>鋪貨娃娃數量 <span class="value" id="val-dolls">42</span></label>
+          <input type="range" id="setting-dolls" min="5" max="100" step="1" value="42">
         </div>
 
         <div class="setting-group" style="flex-direction: column; align-items: stretch; background: rgba(124, 58, 237, 0.12); padding: 12px; border-radius: 10px; border: 1px solid #7c3aed; margin-bottom: 12px; width: 100%; box-sizing: border-box;">
           <label style="margin-bottom: 6px; color: #5b21b6; font-weight: 800; font-size: 0.95rem;">當前機台模式 (Machine Mode)</label>
           <select id="setting-machinemode" style="width: 100%; box-sizing: border-box; padding: 10px 12px; border: 2px solid #7c3aed; background: #ffffff; color: #1e1b4b; border-radius: 8px; font-weight: bold; font-size: 0.9rem; outline: none; cursor: pointer;">
             <option value="small" selected>機台 #01 小型機台 (POP MART 潮玩盲盒精品台)</option>
-            <option value="medium">機台 #02 中型機台 (經典黃色街機)</option>
+            <option value="medium">機台 #02 中型機台 (黑框經典街機)</option>
             <option value="large">機台 #03 中大機台 (動漫模型/潮玩大盒)</option>
             <option value="kbasket">機台 #04 K霸機台 (巨型家電/1.35x霸王爪)</option>
           </select>
@@ -314,13 +319,20 @@
         <div class="setting-group" style="flex-direction: column; align-items: stretch; background: rgba(234, 179, 8, 0.12); padding: 12px; border-radius: 10px; border: 1px solid #d97706; margin-bottom: 12px; width: 100%; box-sizing: border-box;">
           <label style="margin-bottom: 6px; color: #92400e; font-weight: 800; font-size: 0.95rem;">鋪貨形狀種類 (Prize Type)</label>
           <select id="setting-prizetype" style="width: 100%; box-sizing: border-box; padding: 10px 12px; border: 2px solid #d97706; background: #ffffff; color: #1e1b4b; border-radius: 8px; font-weight: bold; font-size: 0.9rem; outline: none; cursor: pointer;">
-            <option value="mixed" selected>繽紛混合 (水豚君/卡比/吉依卡哇/潮玩盲盒/零食包/動漫盒)</option>
-            <option value="ssr_golden_capybara">SSR 24K 純金招財水豚君 (金屬反光+吉利御守)</option>
+            <option value="tea_box">山霧綠茶盒</option>
+            <option value="fruit_box">草莓果飲盒</option>
+            <option value="milk_box">牧場鮮奶盒</option>
+            <option value="mixed" selected>所有物品綜合（寶可夢／飲品盒／公仔盒／盲盒）</option>
+            <option value="pokemon">皮卡丘／噴火龍／傑尼龜／妙蛙種子</option>
+            <option value="charizard">噴火龍玩偶</option>
+            <option value="squirtle">傑尼龜玩偶</option>
+            <option value="bulbasaur">妙蛙種子玩偶</option>
+            <option value="pikachu">皮卡丘玩偶</option>
+            <option value="eevee">伊布玩偶</option>
+            <option value="gengar">耿鬼玩偶</option>
+            <option value="snorlax">卡比獸玩偶</option>
+            <option value="psyduck">可達鴨玩偶</option>
             <option value="ssr_glowing_labubu">SSR 夜光拉布布潮玩盲盒 (自發光霓虹流光)</option>
-            <option value="capybara">頂橘子水豚君娃娃</option>
-            <option value="kirby">星之卡比娃娃</option>
-            <option value="chiikawa">吉依卡哇娃娃</option>
-            <option value="my_cat">手作圍巾三花貓</option>
             <option value="blindbox">泡泡瑪特潮玩盲盒 (拉布布/Skullpanda)</option>
             <option value="snack_pack">膨脹洋芋片大零食包</option>
             <option value="dragonball">七龍珠公仔盒 (日版吊把)</option>
@@ -329,7 +341,6 @@
             <option value="cookie_box">丹麥曲奇餅乾鐵盒</option>
             <option value="mug_box">三麗鷗馬克杯禮盒</option>
             <option value="giant_appliances">K-霸 巨型家電玩具大盒 (PS5/Switch/Dyson/Marshall/Lego)</option>
-            <option value="giant_bear">1.5M 巨型泰迪熊娃娃</option>
             <option value="ps5">PS5 主機大盒</option>
             <option value="switch">Switch OLED 遊戲機盒</option>
             <option value="dyson">Dyson 吸塵器大盒</option>
