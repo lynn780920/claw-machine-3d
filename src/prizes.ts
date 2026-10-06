@@ -1,10 +1,8 @@
 import * as THREE from 'three';
 import * as RAPIER from '@dimforge/rapier3d-compat';
 import { PhysicsSystem } from './physics';
-import { instantiateModel, disposeModel, cartonLabel, PRIZE_TYPES } from './modelAssets';
+import { instantiateModel, disposeModel, cartonLabel, APPLIANCE_TYPES, MIXED_PRIZE_TYPES, prizeStockScale } from './modelAssets';
 import { collectHullPoints } from './prizeGeometry';
-
-const mixedTypes = [...PRIZE_TYPES,'pikachu','charizard','squirtle','bulbasaur','eevee','gengar','snorlax','psyduck'];
 
 export class PrizesManager {
   public prizes: THREE.Object3D[] = [];
@@ -64,13 +62,10 @@ export class PrizesManager {
 
   private resolvePrizeType(typeFilter: string): string {
     if (typeFilter === 'mixed') {
-      const types = [
-        'pikachu', 'eevee', 'gengar', 'snorlax', 'psyduck',
-        'tea_box', 'fruit_box', 'milk_box'
-      ];
+      const types = MIXED_PRIZE_TYPES;
       return types[Math.floor(Math.random() * types.length)];
     } else if (typeFilter === 'giant_appliances') {
-      const types = ['ps5', 'switch', 'dyson', 'marshall', 'lego'];
+      const types = APPLIANCE_TYPES;
       return types[Math.floor(Math.random() * types.length)];
     } else if (typeFilter === 'anime') {
       const types = ['dragonball', 'onepiece', 'blindbox', 'ssr_glowing_labubu'];
@@ -87,7 +82,7 @@ export class PrizesManager {
   ) {
     this.clearPrizes();
     if (typeFilter === 'pokemon' || typeFilter === 'mixed') {
-      const types = typeFilter === 'mixed' ? mixedTypes : ['pikachu','charizard','squirtle','bulbasaur'];
+      const types = typeFilter === 'mixed' ? MIXED_PRIZE_TYPES : ['pikachu','charizard','squirtle','bulbasaur'];
       // Spread the mixed stock across the floor before letting physics settle the pile.
       const slots: {x:number;z:number}[] = [];
       for (let row=0;row<4;row++) for(let col=0;col<5;col++) {
@@ -99,7 +94,7 @@ export class PrizesManager {
         const slot=slots[i%slots.length], layer=Math.floor(i/slots.length);
         const type=types[i%types.length];
         const tilt=-0.85-(i%4)*0.16;
-        this.spawnModelPrize(slot.x,0.9+layer*1.15,slot.z,type,new THREE.Euler(tilt,(i%5-2)*0.16,(i%3-1)*0.12));
+        this.spawnModelPrize(slot.x,0.9+layer*1.15,slot.z,type,new THREE.Euler(tilt,(i%5-2)*0.16,(i%3-1)*0.12),prizeStockScale(type,typeFilter));
       }
       this.physics.prewarmSimulation(600);
       return;
@@ -249,13 +244,13 @@ export class PrizesManager {
     this.spawnModelPrize(x,y,z,aliases[prizeType] ?? prizeType);
   }
 
-  private spawnModelPrize(x: number, y: number, z: number, type: string, rotation = new THREE.Euler(0,(Math.random()-0.5)*0.5,0)) {
+  private spawnModelPrize(x: number, y: number, z: number, type: string, rotation = new THREE.Euler(0,(Math.random()-0.5)*0.5,0), scale = 1) {
     const visual = instantiateModel(type);
     const originalBounds = new THREE.Box3().setFromObject(visual);
     const size = originalBounds.getSize(new THREE.Vector3());
     const center = originalBounds.getCenter(new THREE.Vector3());
     const dims = this.getPrizeDimensions(type);
-    const ratio = Math.min(dims.height / size.y, dims.radius * 2 / Math.max(size.x,size.z));
+    const ratio = Math.min(dims.height / size.y, dims.radius * 2 / Math.max(size.x,size.z)) * scale;
     visual.scale.setScalar(ratio);
     visual.position.copy(center).multiplyScalar(-ratio);
     const group = new THREE.Group();

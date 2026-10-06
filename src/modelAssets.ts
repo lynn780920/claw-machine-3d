@@ -5,6 +5,13 @@ import { clone } from 'three/addons/utils/SkeletonUtils.js';
 export const PRIZE_TYPES = ['blindbox', 'cookie_box', 'dragonball', 'dyson', 'lego', 'marshall', 'mug_box', 'onepiece', 'ps5', 'sanrio_bottle', 'snack_pack', 'ssr_glowing_labubu', 'switch', 'tea_box', 'fruit_box', 'milk_box'] as const;
 const reference = new Set(['tea_box', 'fruit_box', 'milk_box']);
 const pokemon = ['pikachu', 'eevee', 'gengar', 'snorlax', 'psyduck', 'charizard', 'squirtle', 'bulbasaur'];
+export const APPLIANCE_TYPES = ['ps5', 'switch', 'dyson', 'marshall', 'lego'];
+export const MIXED_PRIZE_TYPES = [...PRIZE_TYPES.filter(type => !APPLIANCE_TYPES.includes(type)), ...pokemon];
+const boxedPrizes = new Set(['blindbox', 'cookie_box', 'dragonball', 'mug_box', 'onepiece', 'ssr_glowing_labubu', 'tea_box', 'fruit_box', 'milk_box']);
+
+export function prizeStockScale(type: string, stock: string): number {
+  return stock === 'mixed' && boxedPrizes.has(type) ? 0.75 : 1;
+}
 const templates = new Map<string, THREE.Group>();
 const labels = new Map<string, THREE.Texture>();
 let loading: Promise<void> | undefined;

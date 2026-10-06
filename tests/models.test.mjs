@@ -8,8 +8,29 @@ import { LEVEL_CONFIGS } from '../src/levelSystem.ts';
 import { fitMachineCamera } from '../src/renderSetup.ts';
 import { withTimeout } from '../src/modelAssets.ts';
 import { PRIZE_TYPES } from '../src/modelAssets.ts';
+import { APPLIANCE_TYPES, MIXED_PRIZE_TYPES, prizeStockScale } from '../src/modelAssets.ts';
 import { collectHullPoints } from '../src/prizeGeometry.ts';
 import * as RAPIER from '@dimforge/rapier3d-compat';
+
+test('first-stage mixed stock excludes appliances and retains all Pokemon', () => {
+  for (const type of APPLIANCE_TYPES) {
+    assert.ok(!MIXED_PRIZE_TYPES.includes(type));
+    assert.ok(PRIZE_TYPES.includes(type));
+  }
+  for (const type of ['pikachu','charizard','squirtle','bulbasaur','eevee','gengar','snorlax','psyduck']) {
+    assert.ok(MIXED_PRIZE_TYPES.includes(type));
+    assert.equal(prizeStockScale(type,'mixed'),1);
+  }
+});
+
+test('mixed stock boxes are 25 percent smaller without changing other stages', () => {
+  for (const type of ['tea_box','fruit_box','milk_box','dragonball','onepiece','mug_box','cookie_box','blindbox','ssr_glowing_labubu']) {
+    assert.equal(prizeStockScale(type,'mixed'),0.75);
+    assert.equal(prizeStockScale(type,'blindbox'),1);
+    assert.equal(prizeStockScale(type,'anime'),1);
+  }
+  for (const type of APPLIANCE_TYPES) assert.equal(prizeStockScale(type,'giant_appliances'),1);
+});
 
 test('legacy bear and capybara models are not selectable or stocked',()=> {
   for(const type of ['giant_bear','capybara','ssr_golden_capybara','chiikawa','kirby','my_cat']) assert.ok(!PRIZE_TYPES.includes(type));
