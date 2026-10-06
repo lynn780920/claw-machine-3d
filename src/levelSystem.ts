@@ -38,7 +38,7 @@ export const LEVEL_CONFIGS: LevelConfig[] = [
     targetWins: 8,
     isClearAll: false,
     dollCount: 42,
-    prizeType: 'pokemon',
+    prizeType: 'mixed',
     difficulty: '簡單',
     difficultyColor: '#10b981',
     description: '最容易上手的暖身關卡！機台容錯率高，請在 15 分鐘內夾出 8 樣物品即可晉級！',

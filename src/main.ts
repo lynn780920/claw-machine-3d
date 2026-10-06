@@ -954,7 +954,7 @@ function setupUIEventListeners() {
 
     applyDIPSettings();
     document.getElementById('val-dolls')!.textContent = '42';
-    (document.getElementById('setting-prizetype') as HTMLSelectElement).value = 'pokemon';
+    (document.getElementById('setting-prizetype') as HTMLSelectElement).value = 'mixed';
     respawnCurrentPrizes();
   });
 
@@ -1218,10 +1218,10 @@ function setupUIEventListeners() {
         baffle: '0.7',
         dolls: '42',
         antiswing: 'disabled',
-        prizetype: 'pokemon'
+        prizetype: 'mixed'
       });
 
-      prizesManager.spawnPrizes(42, 'pokemon', 4.8, chuteBounds);
+      prizesManager.spawnPrizes(42, 'mixed', 4.8, chuteBounds);
       applyCameraView('medium', cameraViewMode);
     }
   }

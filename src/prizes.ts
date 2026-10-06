@@ -1,7 +1,10 @@
 import * as THREE from 'three';
 import * as RAPIER from '@dimforge/rapier3d-compat';
 import { PhysicsSystem } from './physics';
-import { instantiateModel, disposeModel, cartonLabel } from './modelAssets';
+import { instantiateModel, disposeModel, cartonLabel, PRIZE_TYPES } from './modelAssets';
+import { collectHullPoints } from './prizeGeometry';
+
+const mixedTypes = [...PRIZE_TYPES,'pikachu','charizard','squirtle','bulbasaur','eevee','gengar','snorlax','psyduck'];
 
 export class PrizesManager {
   public prizes: THREE.Object3D[] = [];
@@ -83,18 +86,19 @@ export class PrizesManager {
     chuteBounds?: { minX: number; maxX: number; minZ: number; maxZ: number }
   ) {
     this.clearPrizes();
-    if (typeFilter === 'pokemon') {
-      const types = ['pikachu','charizard','squirtle','bulbasaur'];
-      // A low, staggered plush pile keeps 42 prizes below the carriage and away from the chute.
+    if (typeFilter === 'pokemon' || typeFilter === 'mixed') {
+      const types = typeFilter === 'mixed' ? mixedTypes : ['pikachu','charizard','squirtle','bulbasaur'];
+      // Spread the mixed stock across the floor before letting physics settle the pile.
       const slots: {x:number;z:number}[] = [];
-      for (let row=0;row<4;row++) for(let col=0;col<4;col++) {
-        const x=-2.4+col*1.6, z=-1.9+row*1.25;
+      for (let row=0;row<4;row++) for(let col=0;col<5;col++) {
+        const x=-2.7+col*1.35, z=-2.1+row*1.4;
         if (x < -0.7 && z > 0) continue;
         slots.push({x,z});
       }
       for(let i=0;i<count;i++) {
         const slot=slots[i%slots.length], layer=Math.floor(i/slots.length);
-        this.spawnModelPrize(slot.x,0.8+layer*1.5,slot.z,types[(i+layer)%4],new THREE.Euler(0,(i%3-1)*0.08,0),true);
+        const type=types[i%types.length];
+        this.spawnModelPrize(slot.x,1.15+layer*1.85,slot.z,type,new THREE.Euler(0,(i%3-1)*0.12,0));
       }
       this.physics.prewarmSimulation(300);
       return;
@@ -117,9 +121,7 @@ export class PrizesManager {
     const halfSpanZ = spreadRadius * 0.70;
 
     for (let i = 0; i < count; i++) {
-      const prizeType = typeFilter === 'pokemon'
-        ? ['pikachu','charizard','squirtle','bulbasaur'][i % 4]
-        : this.resolvePrizeType(typeFilter);
+      const prizeType = this.resolvePrizeType(typeFilter);
       const { radius, height } = this.getPrizeDimensions(prizeType);
 
       let bestX = 0;
@@ -246,15 +248,13 @@ export class PrizesManager {
     this.spawnModelPrize(x,y,z,aliases[prizeType] ?? prizeType);
   }
 
-  private spawnModelPrize(x: number, y: number, z: number, type: string, rotation = new THREE.Euler(0,(Math.random()-0.5)*0.5,0), lying = false) {
+  private spawnModelPrize(x: number, y: number, z: number, type: string, rotation = new THREE.Euler(0,(Math.random()-0.5)*0.5,0)) {
     const visual = instantiateModel(type);
-    if (['pikachu','eevee','gengar','snorlax','psyduck','charizard','squirtle','bulbasaur'].includes(type)) visual.rotation.y = Math.PI;
-    if (lying) visual.rotation.set(-Math.PI/2,0,0);
     const originalBounds = new THREE.Box3().setFromObject(visual);
     const size = originalBounds.getSize(new THREE.Vector3());
     const center = originalBounds.getCenter(new THREE.Vector3());
     const dims = this.getPrizeDimensions(type);
-    const ratio = Math.min((lying ? 1.45 : dims.height) / size.y, dims.radius * (lying ? 2.6 : 2) / Math.max(size.x,size.z));
+    const ratio = Math.min(dims.height / size.y, dims.radius * 2 / Math.max(size.x,size.z));
     visual.scale.setScalar(ratio);
     visual.position.copy(center).multiplyScalar(-ratio);
     const group = new THREE.Group();
@@ -276,11 +276,10 @@ export class PrizesManager {
     const half = size.multiplyScalar(ratio/2);
     const plush = ['pikachu','eevee','gengar','snorlax','psyduck','charizard','squirtle','bulbasaur','ssr_golden_capybara'].includes(type);
     const capsuleRadius = Math.min(half.x,half.y,half.z);
-    const shape = lying
-      ? RAPIER.ColliderDesc.cuboid(Math.min(half.x,0.72),Math.min(half.y,0.65),Math.min(half.z,0.54))
-      : plush
-      ? RAPIER.ColliderDesc.capsule(Math.max(0,half.y-capsuleRadius),capsuleRadius)
-      : RAPIER.ColliderDesc.cuboid(half.x,half.y,half.z);
+    let shape = RAPIER.ColliderDesc.cuboid(half.x,half.y,half.z);
+    if (plush) {
+      shape=RAPIER.ColliderDesc.convexHull(collectHullPoints(group)) ?? RAPIER.ColliderDesc.capsule(Math.max(0,half.y-capsuleRadius),capsuleRadius);
+    }
     shape.setMass(type === 'giant_bear' ? 0.6 : 0.35).setFriction(plush ? 0.65 : 0.42).setRestitution(0.03).setContactSkin(0.008);
     this.physics.world.createCollider(shape,body);
     this.physics.registerBody(body,group);

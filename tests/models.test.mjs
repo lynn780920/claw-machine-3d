@@ -7,6 +7,39 @@ import { isDelivered } from '../src/delivery.ts';
 import { LEVEL_CONFIGS } from '../src/levelSystem.ts';
 import { fitMachineCamera } from '../src/renderSetup.ts';
 import { withTimeout } from '../src/modelAssets.ts';
+import { collectHullPoints } from '../src/prizeGeometry.ts';
+import * as RAPIER from '@dimforge/rapier3d-compat';
+
+test('a model-shaped prize falls onto the floor without an invisible support gap',async ()=> {
+  await RAPIER.init();
+  const world=new RAPIER.World({x:0,y:-22,z:0});
+  try {
+    world.createCollider(RAPIER.ColliderDesc.cuboid(10,0.1,10).setTranslation(0,-0.1,0));
+    const root=new THREE.Group(); root.add(new THREE.Mesh(new THREE.TetrahedronGeometry(1)));
+    const points=collectHullPoints(root);
+    const body=world.createRigidBody(RAPIER.RigidBodyDesc.dynamic().setTranslation(0,5,0));
+    world.createCollider(RAPIER.ColliderDesc.convexHull(points),body);
+    for(let i=0;i<400;i++) world.step();
+    const q=body.rotation(),p=body.translation();
+    const quaternion=new THREE.Quaternion(q.x,q.y,q.z,q.w);
+    let bottom=Infinity;
+    for(let i=0;i<points.length;i+=3) {
+      const vertex=new THREE.Vector3(points[i],points[i+1],points[i+2]).applyQuaternion(quaternion);
+      bottom=Math.min(bottom,vertex.y+p.y);
+    }
+    assert.ok(Math.abs(bottom)<0.03,`prize bottom is ${bottom} above the floor`);
+  } finally { world.free(); }
+});
+
+test('prize hull vertices are body-local, independent of spawn position and rotation',()=> {
+  const root=new THREE.Group();
+  const mesh=new THREE.Mesh(new THREE.BoxGeometry(2,4,6));
+  root.add(mesh);
+  root.position.set(20,30,40); root.rotation.set(0.3,1.2,0.4);
+  const bounds=new THREE.Box3().setFromBufferAttribute(new THREE.BufferAttribute(collectHullPoints(root),3));
+  assert.ok(bounds.min.distanceTo(new THREE.Vector3(-1,-2,-3))<0.0001);
+  assert.ok(bounds.max.distanceTo(new THREE.Vector3(1,2,3))<0.0001);
+});
 
 test('asset watchdog returns completed work and rejects a stalled operation',async () => {
   assert.equal(await withTimeout(Promise.resolve('ready'),100,'Model'),'ready');
@@ -20,8 +53,8 @@ test('desktop camera frames the playfield at the original arcade distance', () =
   assert.ok(camera.position.z>10 && camera.position.z<11);
 });
 
-test('first stage stocks 42 Pokemon without changing later stage counts', () => {
-  assert.equal(LEVEL_CONFIGS[0].prizeType,'pokemon');
+test('first stage stocks 42 mixed prizes without changing later stage counts', () => {
+  assert.equal(LEVEL_CONFIGS[0].prizeType,'mixed');
   assert.deepEqual(LEVEL_CONFIGS.map(level=>level.dollCount),[42,25,5,12]);
 });
 
