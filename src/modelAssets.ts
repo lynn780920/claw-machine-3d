@@ -4,13 +4,14 @@ import { clone } from 'three/addons/utils/SkeletonUtils.js';
 
 export const PRIZE_TYPES = ['blindbox', 'cookie_box', 'dragonball', 'dyson', 'lego', 'marshall', 'mug_box', 'onepiece', 'ps5', 'sanrio_bottle', 'snack_pack', 'ssr_glowing_labubu', 'switch', 'tea_box', 'fruit_box', 'milk_box'] as const;
 const reference = new Set(['tea_box', 'fruit_box', 'milk_box']);
-const pokemon = ['pikachu', 'eevee', 'gengar', 'snorlax', 'psyduck', 'charizard', 'squirtle', 'bulbasaur'];
+export const FEATURED_POKEMON_TYPES = ['pikachu', 'eevee', 'squirtle', 'bulbasaur'];
+export const POKEMON_TYPES = [...FEATURED_POKEMON_TYPES, 'gengar', 'snorlax', 'psyduck'];
 export const APPLIANCE_TYPES = ['ps5', 'switch', 'dyson', 'marshall', 'lego'];
 export const LARGE_POKEMON_DIMENSIONS: Record<string,{radius:number;height:number}> = {
-  charizard: {radius:1.5,height:2.8},
+  eevee: {radius:0.9,height:2.0},
   snorlax: {radius:0.95,height:2.15}
 };
-export const MIXED_PRIZE_TYPES = [...PRIZE_TYPES.filter(type => !APPLIANCE_TYPES.includes(type)), ...pokemon];
+export const MIXED_PRIZE_TYPES = [...PRIZE_TYPES.filter(type => !APPLIANCE_TYPES.includes(type)), ...POKEMON_TYPES];
 const boxedPrizes = new Set(['blindbox', 'cookie_box', 'dragonball', 'mug_box', 'onepiece', 'ssr_glowing_labubu', 'tea_box', 'fruit_box', 'milk_box']);
 
 export function prizeStockScale(type: string, stock: string): number {
@@ -18,7 +19,40 @@ export function prizeStockScale(type: string, stock: string): number {
 }
 const templates = new Map<string, THREE.Group>();
 const labels = new Map<string, THREE.Texture>();
+let fabricBump: THREE.DataTexture | undefined;
 let loading: Promise<void> | undefined;
+
+function plushFabricBump(): THREE.DataTexture {
+  if (fabricBump) return fabricBump;
+  const size = 128, pixels = new Uint8Array(size*size*4);
+  for (let y=0;y<size;y++) for (let x=0;x<size;x++) {
+    const offset = (y*size+x)*4;
+    const grain = ((x*1973+y*9277) ^ (x*y*26699)) & 31;
+    const value = 105+grain+((x+y)%2)*28;
+    pixels[offset] = pixels[offset+1] = pixels[offset+2] = value;
+    pixels[offset+3] = 255;
+  }
+  fabricBump = new THREE.DataTexture(pixels,size,size);
+  fabricBump.wrapS = fabricBump.wrapT = THREE.RepeatWrapping;
+  fabricBump.repeat.set(18,18);
+  fabricBump.magFilter = fabricBump.minFilter = THREE.LinearFilter;
+  fabricBump.needsUpdate = true;
+  return fabricBump;
+}
+
+export function applyPlushMaterial(material: THREE.MeshStandardMaterial) {
+  material.metalness = 0;
+  material.roughness = 0.94;
+  material.envMapIntensity = 0.45;
+  material.bumpMap = plushFabricBump();
+  material.bumpScale = 0.006;
+  if (material instanceof THREE.MeshPhysicalMaterial) {
+    material.sheen = 0.12;
+    material.sheenColor.setRGB(0.5,0.5,0.5);
+    material.sheenRoughness = 0.9;
+    material.specularIntensity = 0.25;
+  }
+}
 
 export async function withTimeout<T>(operation: Promise<T>, milliseconds: number, label: string): Promise<T> {
   let timer: ReturnType<typeof setTimeout>;
@@ -33,7 +67,7 @@ export function preloadModels(progress: (loaded: number, total: number) => void)
   if (loading) return loading;
   const entries = [
     ['cabinet', 'reference/cabinet.glb'], ['claw', 'reference/claw.glb'],
-    ...pokemon.map(type => [type, `pokemon/${type}.glb`]),
+    ...POKEMON_TYPES.map(type => [type, `pokemon/${type}.glb`]),
     ...PRIZE_TYPES.map(type => [type, `${reference.has(type) ? 'reference' : 'prizes'}/${type}.glb`])
   ];
   let loaded = 0, next = 0;
@@ -68,6 +102,12 @@ export function instantiateModel(key: string): THREE.Group {
   instance.traverse(object => {
     if (!(object instanceof THREE.Mesh)) return;
     object.material = Array.isArray(object.material) ? object.material.map(m => m.clone()) : object.material.clone();
+    if (POKEMON_TYPES.includes(key)) {
+      const materials = Array.isArray(object.material) ? object.material : [object.material];
+      materials.forEach(material => {
+        if (material instanceof THREE.MeshStandardMaterial) applyPlushMaterial(material);
+      });
+    }
     object.castShadow = !object.name.startsWith('Glass');
     object.receiveShadow = !object.name.startsWith('Glass');
   });

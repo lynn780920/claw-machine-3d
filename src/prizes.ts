@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import * as RAPIER from '@dimforge/rapier3d-compat';
 import { PhysicsSystem } from './physics';
-import { instantiateModel, disposeModel, cartonLabel, APPLIANCE_TYPES, MIXED_PRIZE_TYPES, prizeStockScale, LARGE_POKEMON_DIMENSIONS } from './modelAssets';
+import { instantiateModel, disposeModel, cartonLabel, APPLIANCE_TYPES, MIXED_PRIZE_TYPES, prizeStockScale, LARGE_POKEMON_DIMENSIONS, FEATURED_POKEMON_TYPES, POKEMON_TYPES } from './modelAssets';
 import { collectHullPoints } from './prizeGeometry';
 
 export class PrizesManager {
@@ -61,6 +61,7 @@ export class PrizesManager {
   }
 
   private resolvePrizeType(typeFilter: string): string {
+    if (typeFilter === 'charizard') return 'eevee';
     if (typeFilter === 'mixed') {
       const types = MIXED_PRIZE_TYPES;
       return types[Math.floor(Math.random() * types.length)];
@@ -82,7 +83,7 @@ export class PrizesManager {
   ) {
     this.clearPrizes();
     if (typeFilter === 'pokemon' || typeFilter === 'mixed') {
-      const types = typeFilter === 'mixed' ? MIXED_PRIZE_TYPES : ['pikachu','charizard','squirtle','bulbasaur'];
+      const types = typeFilter === 'mixed' ? MIXED_PRIZE_TYPES : FEATURED_POKEMON_TYPES;
       // Spread the mixed stock across the floor before letting physics settle the pile.
       const slots: {x:number;z:number}[] = [];
       for (let row=0;row<4;row++) for(let col=0;col<5;col++) {
@@ -270,7 +271,7 @@ export class PrizesManager {
     }
     const body = this.makeDynBodyWithRotation(x,y,z,rotation.x,rotation.y,rotation.z);
     const half = size.multiplyScalar(ratio/2);
-    const plush = ['pikachu','eevee','gengar','snorlax','psyduck','charizard','squirtle','bulbasaur','ssr_golden_capybara'].includes(type);
+    const plush = POKEMON_TYPES.includes(type);
     const capsuleRadius = Math.min(half.x,half.y,half.z);
     let shape = RAPIER.ColliderDesc.cuboid(half.x,half.y,half.z);
     if (plush) {

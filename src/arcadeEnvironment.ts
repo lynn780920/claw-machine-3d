@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { instantiateModel } from './modelAssets';
+import { instantiateModel, FEATURED_POKEMON_TYPES } from './modelAssets';
 
 function signTexture(title: string, color: string) {
   const canvas=document.createElement('canvas');
@@ -53,7 +53,7 @@ export function buildArcadeEnvironment(scene: THREE.Scene) {
     addBox('CeilingBeam',[0.14,0.14,30],[i*6,10,-5],metal);
     addBox('CeilingLight',[0.10,0.06,24],[i*6,9.8,-5],neon);
   }
-  const fill=new THREE.HemisphereLight(0xc7d6ec,0x51414d,1.1); room.add(fill);
+  const fill=new THREE.HemisphereLight(0xdce7ed,0x35303a,0.4); room.add(fill);
   for(const side of [-1,1]) {
     const lamp=new THREE.PointLight(side<0 ? 0xff408f : 0x3af2ed,100,30,2);
     lamp.position.set(side*10,6,-6); room.add(lamp);
@@ -72,7 +72,7 @@ export function buildArcadeEnvironment(scene: THREE.Scene) {
         }
       });
       for(let i=0;i<4;i++) {
-        const prize=instantiateModel(['pikachu','squirtle','bulbasaur','charizard'][i]);
+        const prize=instantiateModel(FEATURED_POKEMON_TYPES[i]);
         const bounds=new THREE.Box3().setFromObject(prize), size=bounds.getSize(new THREE.Vector3());
         const scale=1.3/Math.max(size.x,size.y,size.z);
         prize.scale.setScalar(scale); prize.position.copy(bounds.getCenter(new THREE.Vector3())).multiplyScalar(-scale);

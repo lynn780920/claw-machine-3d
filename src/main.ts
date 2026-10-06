@@ -115,17 +115,17 @@ async function init() {
   controls.maxDistance = 35;
   controls.target.set(0, 3.2, 0); // Focus camera on dolls playfield
 
-  // Studio High-Key Lighting matching Reference Photo
-  const ambient = new THREE.AmbientLight(0xffffff, 0.3);
+  // Directional cabinet lighting keeps fabric colors and contact shadows visible.
+  const ambient = new THREE.AmbientLight(0xffffff, 0.08);
   scene.add(ambient);
 
   // Warm Golden LED Ceiling Light (Matching Yellow Roof Light in Reference Photo)
-  const ceilingLight = new THREE.PointLight(0xfff1dc, 18.0, 15);
+  const ceilingLight = new THREE.PointLight(0xfff1dc, 24.0, 15);
   ceilingLight.position.set(0, 6.3, 0.3);
   scene.add(ceilingLight);
 
   // Main Overhead Spotlight
-  const mainSpot = new THREE.SpotLight(0xffffff, 50, 30, Math.PI / 2.5, 0.6, 1);
+  const mainSpot = new THREE.SpotLight(0xffffff, 85, 30, Math.PI / 2.5, 0.6, 2);
   mainSpot.position.set(0, 8.8, 2);
   mainSpot.castShadow = true;
   mainSpot.shadow.mapSize.width = 1024;
@@ -137,8 +137,8 @@ async function init() {
   scene.add(mainSpot);
 
   // Front Studio Fill Light illuminating colorful dolls
-  const frontFill = new THREE.DirectionalLight(0xf2f5f0, 1.2);
-  frontFill.position.set(0, 5, 8);
+  const frontFill = new THREE.DirectionalLight(0xf2f5f0, 0.45);
+  frontFill.position.set(-3, 5, 8);
   scene.add(frontFill);
 
   // 4. Instantiate machine components

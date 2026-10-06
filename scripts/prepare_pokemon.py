@@ -1,10 +1,14 @@
 import bpy
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT = ROOT / 'public/models/pokemon'
 OUTPUT.mkdir(parents=True, exist_ok=True)
-for number, name in [(25, 'pikachu'), (1, 'bulbasaur'), (6, 'charizard'), (7, 'squirtle')]:
+selected = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else []
+for number, name in [(25, 'pikachu'), (1, 'bulbasaur'), (133, 'eevee'), (7, 'squirtle')]:
+    if selected and name not in selected:
+        continue
     bpy.ops.wm.read_factory_settings(use_empty=True)
     bpy.ops.import_scene.gltf(filepath=str(ROOT / f'assets/sources/pokemon/{number}.glb'))
     originals = list(bpy.context.scene.objects)

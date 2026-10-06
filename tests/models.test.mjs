@@ -12,13 +12,13 @@ import { APPLIANCE_TYPES, MIXED_PRIZE_TYPES, prizeStockScale } from '../src/mode
 import { collectHullPoints } from '../src/prizeGeometry.ts';
 import * as RAPIER from '@dimforge/rapier3d-compat';
 import { ClawFinger } from '../src/clawCollisions.ts';
-import { LARGE_POKEMON_DIMENSIONS } from '../src/modelAssets.ts';
+import { LARGE_POKEMON_DIMENSIONS, POKEMON_TYPES, FEATURED_POKEMON_TYPES, applyPlushMaterial } from '../src/modelAssets.ts';
 
-test('Snorlax and Charizard have larger independent plush dimensions', () => {
+test('Snorlax and Eevee have independent full-size plush dimensions', () => {
   assert.ok(LARGE_POKEMON_DIMENSIONS.snorlax.height > 2);
   assert.ok(LARGE_POKEMON_DIMENSIONS.snorlax.radius > 0.9);
-  assert.ok(LARGE_POKEMON_DIMENSIONS.charizard.height > 2.2);
-  assert.ok(LARGE_POKEMON_DIMENSIONS.charizard.radius >= 1.5);
+  assert.equal(LARGE_POKEMON_DIMENSIONS.eevee.height,2);
+  assert.ok(LARGE_POKEMON_DIMENSIONS.eevee.radius >= 0.9);
 });
 
 test('first-stage mixed stock excludes appliances and retains all Pokemon', () => {
@@ -26,10 +26,34 @@ test('first-stage mixed stock excludes appliances and retains all Pokemon', () =
     assert.ok(!MIXED_PRIZE_TYPES.includes(type));
     assert.ok(PRIZE_TYPES.includes(type));
   }
-  for (const type of ['pikachu','charizard','squirtle','bulbasaur','eevee','gengar','snorlax','psyduck']) {
+  for (const type of POKEMON_TYPES) {
     assert.ok(MIXED_PRIZE_TYPES.includes(type));
     assert.equal(prizeStockScale(type,'mixed'),1);
   }
+});
+
+test('Eevee replaces Charizard in every selectable Pokemon stock pool', () => {
+  for (const pool of [POKEMON_TYPES,FEATURED_POKEMON_TYPES,MIXED_PRIZE_TYPES]) {
+    assert.ok(!pool.includes('charizard'));
+    assert.equal(pool.filter(type=>type==='eevee').length,1);
+  }
+});
+
+test('plush shading preserves the original color map and reduces white sheen', () => {
+  const map = new THREE.Texture();
+  const material = new THREE.MeshPhysicalMaterial({map,color:0x9c6030,sheen:1});
+  const originalColor = material.color.clone();
+  applyPlushMaterial(material);
+  assert.equal(material.map,map);
+  assert.ok(material.color.equals(originalColor));
+  assert.equal(material.sheen,0.12);
+  assert.equal(material.metalness,0);
+  assert.ok(material.roughness>0.9);
+  assert.ok(material.bumpMap);
+  assert.equal(material.bumpMap.colorSpace,THREE.NoColorSpace);
+  const second = new THREE.MeshPhysicalMaterial();
+  applyPlushMaterial(second);
+  assert.equal(second.bumpMap,material.bumpMap);
 });
 
 test('mixed stock boxes are 25 percent smaller without changing other stages', () => {
@@ -100,7 +124,7 @@ for (const type of ['pikachu','eevee','gengar','snorlax','psyduck','charizard','
     assert.equal(bytes.readUInt32LE(8),bytes.length);
     const data=JSON.parse(bytes.subarray(20,20+bytes.readUInt32LE(12)).toString());
     assert.ok(data.meshes.length);
-    if (['pikachu','charizard','squirtle','bulbasaur'].includes(type)) assert.ok(!data.skins?.length,'prize bounds must not depend on an unevaluated armature');
+    if (FEATURED_POKEMON_TYPES.includes(type)) assert.ok(!data.skins?.length,'prize bounds must not depend on an unevaluated armature');
     assert.ok(data.images.every(image=>Number.isInteger(image.bufferView)));
     assert.ok(!data.extensionsRequired?.includes('KHR_draco_mesh_compression'));
     assert.ok(data.materials.every(material=>material.pbrMetallicRoughness.roughnessFactor>0.8));

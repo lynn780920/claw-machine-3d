@@ -6,11 +6,11 @@ export function setupStudio(scene: THREE.Scene, renderer: THREE.WebGLRenderer) {
   const pmrem = new THREE.PMREMGenerator(renderer);
   const room = new RoomEnvironment();
   scene.environment = pmrem.fromScene(room,0.04).texture;
-  scene.environmentIntensity = 0.55;
+  scene.environmentIntensity = 0.28;
   room.dispose();
   pmrem.dispose();
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 0.85;
+  renderer.toneMappingExposure = 1.0;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
 }
 
