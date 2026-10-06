@@ -8,6 +8,9 @@ import { PrizesManager } from './prizes';
 import { soundEngine } from './audio';
 import { LevelSystem, LevelConfig, LEVEL_CONFIGS } from './levelSystem';
 import { LeaderboardManager } from './leaderboard';
+import { preloadModels, disposeModel } from './modelAssets';
+import { setupStudio, fitMachineCamera } from './renderSetup';
+import { isDelivered } from './delivery';
 
 // Game Statistics
 let coins = 0;
@@ -53,13 +56,16 @@ const dropBtn = document.getElementById('drop-btn') as HTMLButtonElement;
 const insertCoinBtn = document.getElementById('insert-coin-btn') as HTMLButtonElement;
 
 async function init() {
+  const loading = document.getElementById('asset-loading')!;
+  await preloadModels((loaded,total) => {
+    document.getElementById('asset-progress')!.textContent = `${Math.round(loaded/total*100)}%`;
+  });
   // 1. Initialize physics compat environment
   physics = new PhysicsSystem();
   await physics.init();
 
   // 2. Setup Three.js scene with 3D Arcade Game Room Environment
   scene = new THREE.Scene();
-  createArcadeEnvironment(scene);
 
   // Camera settings matching Kujiflip 40-degree low distortion perspective
   camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 100);
@@ -67,19 +73,20 @@ async function init() {
 
   // Auto-detect Mobile Device & Power Saver Defaults
   const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
-  let powerSaverMode = isMobileDevice;
+  let powerSaverMode = false;
 
   // Mobile-optimized Renderer setup (capped pixel ratio 1.0 on mobile to stop battery drain)
-  renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('three-canvas') as HTMLCanvasElement, antialias: !isMobileDevice, powerPreference: 'low-power' });
+  renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('three-canvas') as HTMLCanvasElement, antialias: true, powerPreference: 'high-performance' });
   renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.setPixelRatio(powerSaverMode ? 1.0 : Math.min(window.devicePixelRatio, 1.25));
+  renderer.setPixelRatio(powerSaverMode ? 1.0 : Math.min(Math.max(window.devicePixelRatio, 1.5), 2));
   renderer.shadowMap.enabled = !powerSaverMode;
   renderer.shadowMap.type = THREE.PCFShadowMap;
+  setupStudio(scene,renderer);
 
   // Global Power Saver Toggle
   (window as any).togglePowerSaver = (enable?: boolean) => {
     powerSaverMode = (enable !== undefined) ? enable : !powerSaverMode;
-    renderer.setPixelRatio(powerSaverMode ? 1.0 : Math.min(window.devicePixelRatio, 1.25));
+    renderer.setPixelRatio(powerSaverMode ? 1.0 : Math.min(Math.max(window.devicePixelRatio, 1.5), 2));
     renderer.shadowMap.enabled = !powerSaverMode;
     scene.traverse((obj) => {
       if (obj instanceof THREE.Mesh) {
@@ -104,16 +111,16 @@ async function init() {
   controls.target.set(0, 3.2, 0); // Focus camera on dolls playfield
 
   // Studio High-Key Lighting matching Reference Photo
-  const ambient = new THREE.AmbientLight(0xffffff, 1.4);
+  const ambient = new THREE.AmbientLight(0xffffff, 0.3);
   scene.add(ambient);
 
   // Warm Golden LED Ceiling Light (Matching Yellow Roof Light in Reference Photo)
-  const ceilingLight = new THREE.PointLight(0xffb703, 6.0, 15);
-  ceilingLight.position.set(0, 7.8, 0);
+  const ceilingLight = new THREE.PointLight(0xfff1dc, 18.0, 15);
+  ceilingLight.position.set(0, 6.3, 0.3);
   scene.add(ceilingLight);
 
   // Main Overhead Spotlight
-  const mainSpot = new THREE.SpotLight(0xffffff, 3.5, 25, Math.PI / 2.5, 0.6, 1);
+  const mainSpot = new THREE.SpotLight(0xffffff, 50, 30, Math.PI / 2.5, 0.6, 1);
   mainSpot.position.set(0, 8.8, 2);
   mainSpot.castShadow = true;
   mainSpot.shadow.mapSize.width = 1024;
@@ -125,7 +132,7 @@ async function init() {
   scene.add(mainSpot);
 
   // Front Studio Fill Light illuminating colorful dolls
-  const frontFill = new THREE.DirectionalLight(0xffffff, 1.6);
+  const frontFill = new THREE.DirectionalLight(0xf2f5f0, 1.2);
   frontFill.position.set(0, 5, 8);
   scene.add(frontFill);
 
@@ -134,13 +141,17 @@ async function init() {
   claw = new Claw(scene, physics);
   
   prizesManager = new PrizesManager(scene, physics);
+  prizesManager.onBeforeClear = () => claw.reset();
 
   // 5. Connect UI settings, level progression and keyboard event listeners
   setupUIEventListeners();
   setupKeyboardListeners();
 
   // 6. Game loop with FPS Throttling for battery saving
-  const clock = new THREE.Clock();
+  const clock = new THREE.Timer();
+  clock.connect(document);
+  let accumulator = 0;
+  const fixedDt = 1/60;
   let lastFrameTime = 0;
   const targetFPS = 60;
   const frameInterval = 1000 / targetFPS;
@@ -152,23 +163,24 @@ async function init() {
     if (elapsed < frameInterval - 1) return; // Skip extra frames for battery saving
     lastFrameTime = now - (elapsed % frameInterval);
     
-    const dt = Math.min(clock.getDelta(), 0.03); // cap delta to keep physics stable
+    clock.update(now);
+    const dt = Math.min(clock.getDelta(), 0.1);
+    accumulator += dt;
     
     // Move carriage horizontally
-    handleKeyboardMove(dt);
-
-    // Update claw state machine
-    claw.update(dt, physics, prizesManager);
-    
-    // Step Rapier3D physics simulation
-    physics.step();
+    while (accumulator >= fixedDt) {
+      handleKeyboardMove(fixedDt);
+      claw.update(fixedDt, physics, prizesManager);
+      physics.step();
+      accumulator -= fixedDt;
+      checkWinCondition();
+    }
 
     // Sync helper guides / indicator ring
     const clawPos = claw.baseMesh.position;
     cabinet.updateIndicator(clawPos.x, clawPos.z, clawPos.y);
 
     // Check if dolls fell into chute
-    checkWinCondition();
 
     // Update state text
     updateClawStateUI();
@@ -177,9 +189,16 @@ async function init() {
     controls.update();
     
     renderer.render(scene, camera);
+    if (import.meta.env.DEV) {
+      renderer.domElement.dataset.clawState = claw.state;
+      renderer.domElement.dataset.prizeCount = String(prizesManager.prizes.length);
+      renderer.domElement.dataset.geometries = String(renderer.info.memory.geometries);
+      renderer.domElement.dataset.textures = String(renderer.info.memory.textures);
+    }
   }
   
   animate(0);
+  loading.remove();
 }
 
 // Check if any dolls fell down the exit chute
@@ -194,21 +213,23 @@ function checkWinCondition() {
     const pos = body.translation();
     
     // Generous chute & slide ramp footprint detection (Never misses prizes falling into hole or down the delivery ramp)
-    const isEnteringChuteHole = (pos.x >= minX - 0.35 && pos.x <= maxX + 0.35 && pos.z >= minZ - 0.35 && pos.y < -0.15);
-    const isFallenBelowFloor = (pos.y < -0.45); // Any prize falling down the pit/void below the playfield
+    const isEnteringChuteHole = isDelivered(pos,{minX,maxX,minZ,maxZ});
+    const isFallenBelowFloor = pos.y < -12;
 
     if (isEnteringChuteHole || isFallenBelowFloor) {
       const prizeMesh = prizesManager.prizes[idx];
       
       // Visual shrink-and-delete animation
       let scale = 1.0;
+      const initialScale = prizeMesh.scale.clone();
       const shrink = setInterval(() => {
         scale -= 0.1;
         if (scale <= 0.1) {
           clearInterval(shrink);
           scene.remove(prizeMesh);
+          disposeModel(prizeMesh);
         } else {
-          prizeMesh.scale.set(scale, scale, scale);
+          prizeMesh.scale.copy(initialScale).multiplyScalar(scale);
         }
       }, 50);
 
@@ -217,6 +238,8 @@ function checkWinCondition() {
 
       prizesManager.bodies.splice(idx, 1);
       prizesManager.prizes.splice(idx, 1);
+
+      if (!isEnteringChuteHole) continue;
 
       wins++;
       updateStatsUI();
@@ -918,13 +941,13 @@ function setupUIEventListeners() {
     (document.getElementById('setting-sway') as HTMLInputElement).value = '1.4';
     (document.getElementById('setting-length') as HTMLInputElement).value = '9.0';
     (document.getElementById('setting-baffle') as HTMLInputElement).value = '0.7';
-    (document.getElementById('setting-dolls') as HTMLInputElement).value = '40';
+    (document.getElementById('setting-dolls') as HTMLInputElement).value = '16';
     (document.getElementById('setting-antiswing') as HTMLSelectElement).value = 'disabled';
 
     applyDIPSettings();
-    document.getElementById('val-dolls')!.textContent = '40';
+    document.getElementById('val-dolls')!.textContent = '16';
     const prizeType = (document.getElementById('setting-prizetype') as HTMLSelectElement)?.value || 'mixed';
-    prizesManager.spawnPrizes(40, prizeType);
+    prizesManager.spawnPrizes(16, prizeType);
   });
 
   // 🟢 佛心天使台 (100% 強爪、85% 爬升維持、65% 弱爪、0 撞頂、0.3m 擋板)
@@ -1069,90 +1092,7 @@ function setupUIEventListeners() {
   let cameraViewMode: 'front' | 'side' = 'front';
 
   function applyCameraView(mode = currentMachineMode, view = cameraViewMode) {
-    const aspect = window.innerWidth / window.innerHeight;
-    const isMobilePortrait = aspect < 1.0;
-
-    if (view === 'front') {
-      if (mode === 'small') {
-        if (isMobilePortrait) {
-          // 精準匹配用戶第 2 張截圖：提升目標高度並適當推遠，讓屋頂立式大燈箱「賭博就是不歸路」完完整整出現在頂部按鈕下方
-          const distFactor = Math.max(2.15, 1.36 / aspect);
-          controls.target.set(0, 2.3, 0.2);
-          camera.position.set(0, 4.6, 9.2 * distFactor);
-        } else {
-          controls.target.set(0, 2.2, 0.2);
-          camera.position.set(0, 3.8, 9.2);
-        }
-      } else if (mode === 'large') {
-        if (isMobilePortrait) {
-          const distFactor = Math.max(2.15, 1.36 / aspect);
-          controls.target.set(0, 2.6, 0.2);
-          camera.position.set(0, 5.2, 12.2 * distFactor);
-        } else {
-          controls.target.set(0, 2.8, 0.2);
-          camera.position.set(0, 5.0, 12.2);
-        }
-      } else if (mode === 'kbasket') {
-        if (isMobilePortrait) {
-          const distFactor = Math.max(2.15, 1.36 / aspect);
-          controls.target.set(0, 3.0, 0.2);
-          camera.position.set(0, 5.6, 14.5 * distFactor);
-        } else {
-          controls.target.set(0, 3.2, 0.2);
-          camera.position.set(0, 5.6, 14.5);
-        }
-      } else {
-        // medium
-        if (isMobilePortrait) {
-          const distFactor = Math.max(2.15, 1.36 / aspect);
-          controls.target.set(0, 2.4, 0.2);
-          camera.position.set(0, 4.8, 10.5 * distFactor);
-        } else {
-          controls.target.set(0, 2.5, 0.2);
-          camera.position.set(0, 4.4, 10.5);
-        }
-      }
-    } else {
-      // 側面視角 (side view)
-      if (mode === 'small') {
-        if (isMobilePortrait) {
-          const distFactor = Math.max(1.35, 0.88 / aspect);
-          controls.target.set(-0.9, 1.6, 1.2);
-          camera.position.set(-4.6 * distFactor, 3.6, 3.6 * distFactor);
-        } else {
-          controls.target.set(-0.9, 1.6, 1.2);
-          camera.position.set(-4.6, 3.6, 3.6);
-        }
-      } else if (mode === 'large') {
-        if (isMobilePortrait) {
-          const distFactor = Math.max(1.35, 0.88 / aspect);
-          controls.target.set(-1.4, 2.0, 1.8);
-          camera.position.set(-6.5 * distFactor, 4.8, 4.8 * distFactor);
-        } else {
-          controls.target.set(-1.4, 2.0, 1.8);
-          camera.position.set(-6.5, 4.8, 4.8);
-        }
-      } else if (mode === 'kbasket') {
-        if (isMobilePortrait) {
-          const distFactor = Math.max(1.35, 0.88 / aspect);
-          controls.target.set(-1.8, 2.4, 2.4);
-          camera.position.set(-8.2 * distFactor, 5.5, 5.8 * distFactor);
-        } else {
-          controls.target.set(-1.8, 2.4, 2.4);
-          camera.position.set(-8.2, 5.5, 5.8);
-        }
-      } else {
-        if (isMobilePortrait) {
-          const distFactor = Math.max(1.35, 0.88 / aspect);
-          controls.target.set(-1.1, 1.8, 1.5);
-          camera.position.set(-5.4 * distFactor, 4.2, 4.2 * distFactor);
-        } else {
-          controls.target.set(-1.1, 1.8, 1.5);
-          camera.position.set(-5.4, 4.2, 4.2);
-        }
-      }
-    }
-    controls.update();
+    fitMachineCamera(camera,controls,cabinet,view === 'side');
   }
 
   function switchMachineMode(mode: string) {
@@ -1268,12 +1208,12 @@ function setupUIEventListeners() {
         sway: '1.4',
         length: '9.0',
         baffle: '0.7',
-        dolls: '40',
+        dolls: '16',
         antiswing: 'disabled',
         prizetype: 'mixed'
       });
 
-      prizesManager.spawnPrizes(40, 'mixed', 3.8, chuteBounds);
+      prizesManager.spawnPrizes(16, 'mixed', 3.8, chuteBounds);
       applyCameraView('medium', cameraViewMode);
     }
   }
@@ -1406,7 +1346,7 @@ function setupUIEventListeners() {
         claw.config.topHitProbability = 0;
         claw.config.weakHeightThreshold = 0.99;
       } else {
-        applyMachineSettings();
+        applyDIPSettings();
       }
     });
   }
@@ -1881,360 +1821,14 @@ function setupKeyboardListeners() {
   });
 }
 
-function createArcadeEnvironment(scene: THREE.Scene) {
-  // Deep Nightclub Cyberpunk Ambient Atmosphere
-  scene.background = new THREE.Color(0x04020a);
-  scene.fog = new THREE.FogExp2(0x04020a, 0.004);
-
-  // ===== 1. REFLECTIVE NIGHTCLUB FLOOR: Glossy Mirror Steel Tiles with Neon Grids =====
-  const floorCanvas = document.createElement('canvas');
-  floorCanvas.width = 512;
-  floorCanvas.height = 512;
-  const fctx = floorCanvas.getContext('2d')!;
-
-  // Dark obsidian mirror tile base
-  fctx.fillStyle = '#0a0614';
-  fctx.fillRect(0, 0, 512, 512);
-
-  // Diagonal laser grid lines
-  fctx.strokeStyle = 'rgba(170, 0, 255, 0.15)';
-  fctx.lineWidth = 1.5;
-  for (let x = -512; x < 1024; x += 32) {
-    fctx.beginPath(); fctx.moveTo(x, 0); fctx.lineTo(x + 512, 512); fctx.stroke();
-    fctx.beginPath(); fctx.moveTo(x, 512); fctx.lineTo(x + 512, 0); fctx.stroke();
-  }
-
-  // Large Nightclub Floor Tiles (128x128)
-  for (let r = 0; r < 4; r++) {
-    for (let c = 0; c < 4; c++) {
-      fctx.strokeStyle = '#1a1030';
-      fctx.lineWidth = 4;
-      fctx.strokeRect(c * 128 + 4, r * 128 + 4, 120, 120);
-
-      // Soft reflection sheen on tile corners
-      fctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
-      fctx.fillRect(c * 128 + 8, r * 128 + 8, 45, 20);
-    }
-  }
-
-  // Glowing Cyberpunk Seam Lines (Cyan & Hot Pink)
-  for (let i = 0; i <= 512; i += 128) {
-    fctx.shadowColor = '#00f0ff';
-    fctx.shadowBlur = 10;
-    fctx.strokeStyle = '#00f0ff';
-    fctx.lineWidth = 3;
-    fctx.beginPath(); fctx.moveTo(i, 0); fctx.lineTo(i, 512); fctx.stroke();
-
-    fctx.shadowColor = '#ff0075';
-    fctx.shadowBlur = 10;
-    fctx.strokeStyle = '#ff0075';
-    fctx.beginPath(); fctx.moveTo(0, i); fctx.lineTo(512, i); fctx.stroke();
-  }
-  fctx.shadowBlur = 0;
-
-  const floorTex = new THREE.CanvasTexture(floorCanvas);
-  floorTex.wrapS = THREE.RepeatWrapping;
-  floorTex.wrapT = THREE.RepeatWrapping;
-  floorTex.repeat.set(12, 12);
-
-  // Ultra-reflective nightclub polished floor
-  const floorMat = new THREE.MeshStandardMaterial({
-    map: floorTex,
-    roughness: 0.10, // Glossy mirror-like finish
-    metalness: 0.85  // High metallic reflection for glowing neon machines
-  });
-  const floorMesh = new THREE.Mesh(new THREE.PlaneGeometry(90, 90), floorMat);
-  floorMesh.rotation.x = -Math.PI / 2;
-  floorMesh.position.y = -7.5;
-  floorMesh.receiveShadow = true;
-  scene.add(floorMesh);
-
-  // ===== 2. NIGHTCLUB DJ SOUNDPROOF BACK WALL =====
-  const wallCanvas = document.createElement('canvas');
-  wallCanvas.width = 2048;
-  wallCanvas.height = 1024;
-  const wctx = wallCanvas.getContext('2d')!;
-
-  // Deep Violet Nightclub Gradient
-  const wallGrad = wctx.createLinearGradient(0, 0, 0, 1024);
-  wallGrad.addColorStop(0, '#04020a');
-  wallGrad.addColorStop(0.5, '#120524');
-  wallGrad.addColorStop(1, '#080312');
-  wctx.fillStyle = wallGrad;
-  wctx.fillRect(0, 0, 2048, 1024);
-
-  // Soundproof acoustic wall panels pattern
-  wctx.strokeStyle = 'rgba(0, 240, 255, 0.12)';
-  wctx.lineWidth = 2;
-  for (let gx = 0; gx <= 2048; gx += 128) {
-    wctx.beginPath(); wctx.moveTo(gx, 0); wctx.lineTo(gx, 1024); wctx.stroke();
-  }
-  for (let gy = 0; gy <= 1024; gy += 128) {
-    wctx.beginPath(); wctx.moveTo(0, gy); wctx.lineTo(2048, gy); wctx.stroke();
-  }
-
-  // Neon Nightclub Art & Typography (夜店龐克霓虹藝術)
-  wctx.shadowColor = '#ff0075';
-  wctx.shadowBlur = 25;
-  wctx.fillStyle = '#ff0075';
-  wctx.font = '900 100px sans-serif';
-  wctx.fillText('CLUB CLAW 2077', 120, 380);
-
-  wctx.shadowColor = '#00f0ff';
-  wctx.shadowBlur = 25;
-  wctx.fillStyle = '#00f0ff';
-  wctx.font = '900 105px sans-serif';
-  wctx.fillText('VIP NIGHT PUNK', 1050, 420);
-
-  wctx.shadowColor = '#ffe600';
-  wctx.shadowBlur = 18;
-  wctx.fillStyle = '#ffe600';
-  wctx.font = '800 65px sans-serif';
-  wctx.fillText('BASS BOOST ARCADE', 300, 850);
-  wctx.fillText('NO SLEEP TILL DAWN', 1200, 850);
-
-  wctx.shadowBlur = 0;
-
-  const wallTex = new THREE.CanvasTexture(wallCanvas);
-  const wallMat = new THREE.MeshStandardMaterial({ map: wallTex, roughness: 0.5, metalness: 0.4 });
-  const wallMesh = new THREE.Mesh(new THREE.PlaneGeometry(90, 42), wallMat);
-  wallMesh.position.set(0, 19, -22);
-  scene.add(wallMesh);
-
-  // Side Walls
-  const sideWallMat = new THREE.MeshStandardMaterial({ color: 0x060310, roughness: 0.85, metalness: 0.3 });
-  const leftWall = new THREE.Mesh(new THREE.PlaneGeometry(60, 42), sideWallMat);
-  leftWall.position.set(-42, 19, 5);
-  leftWall.rotation.y = Math.PI / 2;
-  scene.add(leftWall);
-  const rightWall = new THREE.Mesh(new THREE.PlaneGeometry(60, 42), sideWallMat);
-  rightWall.position.set(42, 19, 5);
-  rightWall.rotation.y = -Math.PI / 2;
-  scene.add(rightWall);
-
-  // ===== 3. MAIN MACHINE NIGHTCLUB HEADER BANNER =====
-  const bannerGroup = new THREE.Group();
-  bannerGroup.position.set(0, 13.5, -11.5);
-
-  const bannerBack = new THREE.Mesh(new THREE.BoxGeometry(18, 4.2, 0.2),
-    new THREE.MeshStandardMaterial({ color: 0x060310, roughness: 0.3, metalness: 0.8 }));
-  bannerGroup.add(bannerBack);
-
-  const bannerFrame = new THREE.Mesh(new THREE.BoxGeometry(18.5, 4.7, 0.08),
-    new THREE.MeshBasicMaterial({ color: 0xff0075 }));
-  bannerFrame.position.z = -0.08;
-  bannerGroup.add(bannerFrame);
-
-  const innerRim = new THREE.Mesh(new THREE.BoxGeometry(18.1, 4.3, 0.05),
-    new THREE.MeshBasicMaterial({ color: 0x00f0ff }));
-  innerRim.position.z = -0.04;
-  bannerGroup.add(innerRim);
-
-  const bannerCanvas = document.createElement('canvas');
-  bannerCanvas.width = 2048;
-  bannerCanvas.height = 480;
-  const bctx = bannerCanvas.getContext('2d')!;
-
-  const bgrad = bctx.createLinearGradient(0, 0, 2048, 0);
-  bgrad.addColorStop(0, '#04020a');
-  bgrad.addColorStop(0.5, '#180430');
-  bgrad.addColorStop(1, '#04020a');
-  bctx.fillStyle = bgrad;
-  bctx.fillRect(0, 0, 2048, 480);
-
-  bctx.shadowColor = '#ff0075';
-  bctx.shadowBlur = 35;
-  bctx.fillStyle = '#ffffff';
-  bctx.font = '900 88px sans-serif';
-  bctx.textAlign = 'center';
-  bctx.fillText('NIGHTCLUB 3D 娃娃機旗艦店', 1024, 175);
-
-  bctx.shadowColor = '#00f0ff';
-  bctx.shadowBlur = 25;
-  bctx.fillStyle = '#00f0ff';
-  bctx.font = '700 52px sans-serif';
-  bctx.fillText('賽博龐克 · 滿滿機台 · 極限甩爪狂歡', 1024, 285);
-
-  bctx.shadowColor = '#ffe600';
-  bctx.shadowBlur = 18;
-  bctx.fillStyle = '#ffe600';
-  bctx.font = '600 38px sans-serif';
-  bctx.fillText('100 個堆山爆抓 · 50 刮彩券好禮連發', 1024, 385);
-
-  const bannerTex = new THREE.CanvasTexture(bannerCanvas);
-  const bannerMat = new THREE.MeshBasicMaterial({ map: bannerTex, transparent: true });
-  const bannerPlane = new THREE.Mesh(new THREE.PlaneGeometry(17.5, 3.9), bannerMat);
-  bannerPlane.position.z = 0.12;
-  bannerGroup.add(bannerPlane);
-  scene.add(bannerGroup);
-
-  // ===== 4. BUSTLING ARCADE HALL: SURROUNDING CLAW MACHINES =====
-  // Create 6 glowing decorative claw machines around the room
-  createSideArcadeMachines(scene);
-
-  // ===== 5. NIGHTCLUB CEILING STROBE LIGHT STRIPS =====
-  const neonColors = [0xff0075, 0x00f0ff, 0xffe600, 0xaa00ff, 0x00ff88];
-  neonColors.forEach((col, i) => {
-    const stripMat = new THREE.MeshBasicMaterial({ color: col });
-    const strip = new THREE.Mesh(new THREE.BoxGeometry(36, 0.16, 0.16), stripMat);
-    strip.position.set(0, 9.4 + i * 0.3, -10 + i * 2.2);
-    scene.add(strip);
-  });
-
-  // ===== 6. DYNAMIC NIGHTCLUB POINT LIGHTS =====
-  const n1 = new THREE.PointLight(0xff0075, 2.2, 35);
-  n1.position.set(-14, 9, -5);
-  scene.add(n1);
-
-  const n2 = new THREE.PointLight(0x00f0ff, 2.0, 35);
-  n2.position.set(14, 9, -5);
-  scene.add(n2);
-
-  const n3 = new THREE.PointLight(0xaa00ff, 1.6, 40);
-  n3.position.set(0, 12, 5);
-  scene.add(n3);
-}
-
-/**
- * Creates 6 detailed surrounding arcade claw machines to form a bustling Nightclub Arcade Hall
- */
-function createSideArcadeMachines(scene: THREE.Scene) {
-  const machineConfigs = [
-    // Left Row
-    { x: -14.5, z: 1.0,  rotY: Math.PI * 0.12,  bodyHex: 0x00f0ff, glowHex: 0x00f0ff, title: 'UFO CATCHER 9' },
-    { x: -22.5, z: -2.5, rotY: Math.PI * 0.18,  bodyHex: 0xff0075, glowHex: 0xff0075, title: 'GASHAPON KING' },
-    { x: -30.5, z: -6.0, rotY: Math.PI * 0.25,  bodyHex: 0xaa00ff, glowHex: 0xaa00ff, title: 'CYBER TOY 2077' },
-
-    // Right Row
-    { x: 14.5,  z: 1.0,  rotY: -Math.PI * 0.12, bodyHex: 0xffb703, glowHex: 0xffb703, title: 'TOY STORY 3D' },
-    { x: 22.5,  z: -2.5, rotY: -Math.PI * 0.18, bodyHex: 0x00ff88, glowHex: 0x00ff88, title: 'NEON CLAW 999' },
-    { x: 30.5,  z: -6.0, rotY: -Math.PI * 0.25, bodyHex: 0xff0055, glowHex: 0xff0055, title: 'MONSTER PRIZE' },
-  ];
-
-  machineConfigs.forEach((cfg) => {
-    const group = new THREE.Group();
-    group.position.set(cfg.x, 0, cfg.z);
-    group.rotation.y = cfg.rotY;
-
-    const W = 8.5, H = 8.2, D = 8.0;
-
-    // ── Machine Outer Cabinet Frame ──
-    const frameMat = new THREE.MeshStandardMaterial({ color: cfg.bodyHex, roughness: 0.2, metalness: 0.4 });
-    const darkBodyMat = new THREE.MeshStandardMaterial({ color: 0x11111a, roughness: 0.4, metalness: 0.6 });
-    const chromeMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.1, metalness: 0.9 });
-
-    // Lower cabinet base
-    const base = new THREE.Mesh(new THREE.BoxGeometry(W, 3.2, D), darkBodyMat);
-    base.position.y = 1.6;
-    group.add(base);
-
-    // Front coin console
-    const consoleMesh = new THREE.Mesh(new THREE.BoxGeometry(W - 0.4, 0.8, 1.4), frameMat);
-    consoleMesh.position.set(0, 3.0, D / 2 - 0.5);
-    group.add(consoleMesh);
-
-    // Illuminated coin slot
-    const coinSlot = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.6, 0.1),
-      new THREE.MeshBasicMaterial({ color: cfg.glowHex }));
-    coinSlot.position.set(0, 2.6, D / 2 + 0.02);
-    group.add(coinSlot);
-
-    // 4 Corner Pillars
-    const pillarR = 0.28;
-    const p1 = new THREE.Mesh(new THREE.CylinderGeometry(pillarR, pillarR, H, 12), frameMat);
-    p1.position.set(-W / 2 + 0.3, H / 2, D / 2 - 0.3);
-    const p2 = new THREE.Mesh(new THREE.CylinderGeometry(pillarR, pillarR, H, 12), frameMat);
-    p2.position.set(W / 2 - 0.3, H / 2, D / 2 - 0.3);
-    const p3 = new THREE.Mesh(new THREE.CylinderGeometry(pillarR, pillarR, H, 12), frameMat);
-    p3.position.set(-W / 2 + 0.3, H / 2, -D / 2 + 0.3);
-    const p4 = new THREE.Mesh(new THREE.CylinderGeometry(pillarR, pillarR, H, 12), frameMat);
-    p4.position.set(W / 2 - 0.3, H / 2, -D / 2 + 0.3);
-    group.add(p1, p2, p3, p4);
-
-    // ── Glowing Inner Prize Chamber ──
-    const chamberGlowMat = new THREE.MeshBasicMaterial({
-      color: cfg.glowHex,
-      transparent: true,
-      opacity: 0.25
-    });
-    const chamberBox = new THREE.Mesh(new THREE.BoxGeometry(W - 0.8, 3.8, D - 0.8), chamberGlowMat);
-    chamberBox.position.set(0, 5.0, 0);
-    group.add(chamberBox);
-
-    // Prize chamber floor
-    const chamberFloor = new THREE.Mesh(new THREE.BoxGeometry(W - 0.6, 0.2, D - 0.6), frameMat);
-    chamberFloor.position.set(0, 3.3, 0);
-    group.add(chamberFloor);
-
-    // ── Dummy Prize Items Inside Chamber ──
-    const prizeColors = [0xff0055, 0x00f0ff, 0xffe600, 0xffffff, 0xaa00ff];
-    for (let i = 0; i < 14; i++) {
-      const pColor = prizeColors[i % prizeColors.length];
-      const pMat = new THREE.MeshStandardMaterial({ color: pColor, roughness: 0.3 });
-      const px = (Math.random() - 0.5) * (W - 2.0);
-      const pz = (Math.random() - 0.5) * (D - 2.0);
-      const py = 3.6 + (i % 3) * 0.45;
-
-      let prizeMesh: THREE.Mesh;
-      if (i % 2 === 0) {
-        prizeMesh = new THREE.Mesh(new THREE.SphereGeometry(0.38, 10, 10), pMat);
-      } else {
-        prizeMesh = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.7, 0.7), pMat);
-      }
-      prizeMesh.position.set(px, py, pz);
-      group.add(prizeMesh);
-    }
-
-    // Dummy gantry & claw rails
-    const gantryRail = new THREE.Mesh(new THREE.BoxGeometry(W - 1.0, 0.15, 0.15), chromeMat);
-    gantryRail.position.set(0, 6.7, 0);
-    group.add(gantryRail);
-
-    // ── Clear Glass Walls ──
-    const glassMat = new THREE.MeshStandardMaterial({
-      color: 0xffffff,
-      opacity: 0.18,
-      transparent: true,
-      roughness: 0.0
-    });
-    const frontGlass = new THREE.Mesh(new THREE.PlaneGeometry(W - 0.8, 3.8), glassMat);
-    frontGlass.position.set(0, 5.0, D / 2 - 0.2);
-    group.add(frontGlass);
-
-    // ── Top Header Marquee Banner ──
-    const bannerCanvas = document.createElement('canvas');
-    bannerCanvas.width = 512;
-    bannerCanvas.height = 128;
-    const bctx = bannerCanvas.getContext('2d')!;
-
-    // Header bg
-    bctx.fillStyle = '#' + cfg.bodyHex.toString(16).padStart(6, '0');
-    bctx.fillRect(0, 0, 512, 128);
-    bctx.strokeStyle = '#ffffff'; bctx.lineWidth = 6;
-    bctx.strokeRect(6, 6, 500, 116);
-
-    // Header text
-    bctx.shadowColor = '#ffffff';
-    bctx.shadowBlur = 12;
-    bctx.fillStyle = '#ffffff';
-    bctx.font = '900 42px sans-serif';
-    bctx.textAlign = 'center';
-    bctx.fillText(cfg.title, 256, 75);
-
-    const bannerTex = new THREE.CanvasTexture(bannerCanvas);
-    const marqueeMesh = new THREE.Mesh(new THREE.BoxGeometry(W, 1.4, D),
-      new THREE.MeshStandardMaterial({ map: bannerTex, roughness: 0.3 }));
-    marqueeMesh.position.set(0, 7.5, 0);
-    group.add(marqueeMesh);
-
-    // ── Emissive Light Source Inside Each Machine ──
-    const mLight = new THREE.PointLight(cfg.glowHex, 1.4, 18);
-    mLight.position.set(0, 5.5, 0);
-    group.add(mLight);
-
-    scene.add(group);
-  });
-}
-
 // Start Game
-init();
+init().catch(error => {
+  console.error(error);
+  const loading = document.getElementById('asset-loading');
+  if (loading) {
+    loading.classList.add('failed');
+    document.getElementById('asset-progress')!.textContent = '載入失敗';
+    document.getElementById('asset-retry')!.hidden = false;
+  }
+});
+document.getElementById('asset-retry')?.addEventListener('click',() => location.reload());

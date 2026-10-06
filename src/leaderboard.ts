@@ -335,6 +335,7 @@ export class LeaderboardManager {
     time: string;
     date: string;
   }): Promise<boolean> {
+    if (import.meta.env.DEV) return false;
     try {
       await fetch(DEFAULT_GSHEET_WEBHOOK_URL, {
         method: 'POST',

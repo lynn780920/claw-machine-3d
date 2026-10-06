@@ -8,15 +8,12 @@ export class PhysicsSystem {
 
   async init() {
     await RAPIER.init();
-    // Realistic arcade gravity (-22.0 m/s2) for realistic drops & kinetic stability
+    // Preserve the existing arcade world scale while migrating its visual assets.
     const gravity = { x: 0.0, y: -22.0, z: 0.0 };
     this.world = new RAPIER.World(gravity);
 
     // High precision solver iterations to eliminate interpenetration and tunneling
     this.world.integrationParameters.numSolverIterations = 20;
-    this.world.integrationParameters.numAdditionalSolverIterations = 10;
-    // 20mm contact skin cushion gives the constraint solver predictive margins so high-speed falls or pile weight never penetrate
-    this.world.integrationParameters.contactSkin = 0.02;
 
     this.isInitialized = true;
   }
@@ -76,7 +73,7 @@ export class PhysicsSystem {
         const dy = p.y - y;
         const dz = p.z - z;
         if (dx * dx + dy * dy + dz * dz <= rSq) {
-          body.wakeUp(true);
+          body.wakeUp();
         }
       }
     });
@@ -86,7 +83,7 @@ export class PhysicsSystem {
     if (!this.isInitialized || !this.world) return;
     this.bodies.forEach((_, body) => {
       if (body.bodyType() === RAPIER.RigidBodyType.Dynamic) {
-        body.wakeUp(true);
+        body.wakeUp();
       }
     });
   }

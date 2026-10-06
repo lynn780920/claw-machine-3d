@@ -1816,3 +1816,21 @@ input:checked + .slider.round:before {
   to { box-shadow: 0 0 16px rgba(251, 191, 36, 0.7); }
 }
 
+#asset-loading {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 20px;
+  background: #242a27;
+  color: #f0f2ed;
+  font-family: system-ui, sans-serif;
+}
+.loading-title { font-size: 28px; font-weight: 600; }
+#asset-progress { font-variant-numeric: tabular-nums; color: #b1c6b4; }
+#asset-retry { padding: 10px 18px; border: 1px solid #90ab94; border-radius: 4px; background: #3a493e; color: white; cursor: pointer; }
+#asset-retry[hidden] { display: none; }
+

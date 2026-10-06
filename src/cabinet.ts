@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import * as RAPIER from '@dimforge/rapier3d-compat';
 import { PhysicsSystem } from './physics';
+import { instantiateModel, disposeModel } from './modelAssets';
 
 /**
  * 3D Arcade Claw Machine Cabinet
@@ -51,6 +52,7 @@ export class Cabinet {
   public marqueeTex!: THREE.CanvasTexture;
 
   private currentTheme: string = 'medium';
+  private modelRoot?: THREE.Group;
 
   constructor(scene: THREE.Scene, physics: PhysicsSystem) {
     this.mesh = new THREE.Group();
@@ -144,6 +146,7 @@ export class Cabinet {
     }
 
     const tex = new THREE.CanvasTexture(c);
+    tex.colorSpace = THREE.SRGBColorSpace;
     tex.wrapS = THREE.RepeatWrapping;
     tex.wrapT = THREE.RepeatWrapping;
     tex.repeat.set(5, 5);
@@ -152,6 +155,10 @@ export class Cabinet {
 
   // ── Arcade Japanese Prize Machine Backdrop (Matching Kujiflip 1:1) ──
   public updateBackdrop(theme: string) {
+    this.drawReferenceBackdrop(theme);
+  }
+
+  private drawReferenceBackdrop(theme: string) {
     if (!this.backdropCanvas) return;
     const ctx = this.backdropCanvas.getContext('2d');
     if (!ctx) return;
@@ -251,6 +258,8 @@ export class Cabinet {
 
   public rebuildCabinet(mode: string, physics: PhysicsSystem) {
     this.currentTheme = mode;
+    if (this.modelRoot) disposeModel(this.modelRoot);
+    this.disposeBaffleMeshes();
 
     // 1. Remove all static rigid bodies from physics world
     this.staticBodies.forEach(b => {
@@ -331,404 +340,71 @@ export class Cabinet {
   }
 
   private build(physics: PhysicsSystem) {
-    const floorThickness = 0.5;
-    const halfW = this.width / 2;
-    const halfD = this.depth / 2;
+    this.buildReferenceCabinet(physics);
+  }
 
-    // Attach sub-groups
-    this.mesh.add(this.baffleGroup);
-    this.mesh.add(this.dropIndicatorGroup);
-    this.mesh.add(this.joystickGroup);
-
-    // ── 1. Materials ──
-    const glassMat = new THREE.MeshStandardMaterial({
-      color: 0xe0f7fa,
-      opacity: 0.12,
-      transparent: true,
-      roughness: 0.0,
-      metalness: 0.1
-    });
-
-    const chromeMat = new THREE.MeshStandardMaterial({
-      color: 0xe2e8f0,
-      metalness: 0.92,
-      roughness: 0.08
-    });
-
-    // Textured Non-Slip Playfield Floor Mat
-    const floorMat = new THREE.MeshStandardMaterial({
-      map: this.floorMatTex,
-      roughness: 0.65,
-      metalness: 0.12
-    });
-
-    const holeMat = new THREE.MeshStandardMaterial({ color: 0x09090b, roughness: 0.9, metalness: 0.1 });
-    const holeRimMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.4 });
-
-    // ── 2. Cabinet Base Floor (Parametric with hole for prize chute) ──
-    const addFloorSection = (minX: number, maxX: number, minZ: number, maxZ: number) => {
-      const w = maxX - minX;
-      const d = maxZ - minZ;
-      if (w <= 0.01 || d <= 0.01) return;
-      const x = minX + w / 2;
-      const z = minZ + d / 2;
-
-      const geo = new THREE.BoxGeometry(w, floorThickness, d);
-      const m = new THREE.Mesh(geo, floorMat);
-      m.position.set(x, -floorThickness / 2, z);
-      m.receiveShadow = true;
-      this.mesh.add(m);
-
-      if (physics && physics.world) {
-        const bodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(x, -0.5, z);
-        const body = physics.world.createRigidBody(bodyDesc);
-        const colDesc = RAPIER.ColliderDesc.cuboid(w / 2, 0.5, d / 2)
-          .setFriction(0.75)
-          .setRestitution(0.02);
-        physics.world.createCollider(colDesc, body);
-        this.staticBodies.push(body);
+  private buildReferenceCabinet(physics: PhysicsSystem) {
+    const root = instantiateModel('cabinet');
+    this.modelRoot = root;
+    const sx = this.width / 7.4, sy = this.height / 6.6, sz = this.depth / 6.4;
+    root.scale.set(sx, sy, sz);
+    this.mesh.add(root, this.baffleGroup, this.dropIndicatorGroup);
+    this.joystickGroup = root.getObjectByName('JoystickPivot') as THREE.Group;
+    this.joystickBall = root.getObjectByName('JoystickKnob') as THREE.Mesh;
+    this.actionButtonMesh = root.getObjectByName('ActionButton') as THREE.Mesh;
+    const sign = root.getObjectByName('BackSign') as THREE.Mesh;
+    (sign.material as THREE.Material).dispose();
+    sign.material = new THREE.MeshBasicMaterial({map:this.backdropTex,toneMapped:false});
+    this.backdropTex.anisotropy = 8;
+    const backPanel = root.getObjectByName('BackPanel') as THREE.Mesh;
+    (backPanel.material as THREE.MeshStandardMaterial).color.set(0x16101f);
+    const steelTexture = this.floorMatTex;
+    root.traverse(object => {
+      if (!(object instanceof THREE.Mesh)) return;
+      if (object.name.startsWith('Glass')) {
+        (object.material as THREE.Material).dispose();
+        object.material = new THREE.MeshBasicMaterial({color:0x92dcdf,transparent:true,opacity:0.018,depthWrite:false});
+        return;
       }
+      const material = object.material as THREE.MeshStandardMaterial;
+      if (material.name === 'PowderCoatedSteel') {
+        material.bumpMap = steelTexture;
+        material.bumpScale = 0.018;
+      }
+    });
+    const addCollider = (size: number[], pos: number[], friction = 0.45) => {
+      const body = physics.world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(pos[0], pos[1], pos[2]));
+      physics.world.createCollider(RAPIER.ColliderDesc.cuboid(size[0]/2,size[1]/2,size[2]/2).setFriction(friction).setRestitution(0.02), body);
+      this.staticBodies.push(body);
     };
-
-    // 4 seamless non-overlapping sections around the chute opening
-    addFloorSection(this.chuteMaxX, halfW, -halfD, halfD);
-    addFloorSection(-halfW, this.chuteMaxX, -halfD, this.chuteMinZ);
-    addFloorSection(-halfW, this.chuteMinX, this.chuteMinZ, halfD);
-    addFloorSection(this.chuteMinX, this.chuteMaxX, this.chuteMaxZ, halfD);
-
-    // Floor Metal Perimeter Trim (鋁合金壓邊收口條)
-    const trimThick = 0.06;
-    const addFloorTrim = (tw: number, td: number, tx: number, tz: number) => {
-      const trimMesh = new THREE.Mesh(new THREE.BoxGeometry(tw, 0.04, td), chromeMat);
-      trimMesh.position.set(tx, 0.01, tz);
-      this.mesh.add(trimMesh);
-    };
-    addFloorTrim(this.width, trimThick, 0, -halfD + trimThick / 2);
-    addFloorTrim(this.width, trimThick, 0, halfD - trimThick / 2);
-    addFloorTrim(trimThick, this.depth, -halfW + trimThick / 2, 0);
-    addFloorTrim(trimThick, this.depth, halfW - trimThick / 2, 0);
-
-    // ── 3. Chute Baffles & Slanted Slide Ramp ──
+    const halfW = this.width / 2, halfD = this.depth / 2;
+    const sections: [string, number, number, number, number][] = [
+      ['FloorRight', this.chuteMaxX, halfW, -halfD, halfD],
+      ['FloorBack', -halfW, this.chuteMaxX, -halfD, this.chuteMinZ],
+      ['FloorLeft', -halfW, this.chuteMinX, this.chuteMinZ, halfD],
+      ['FloorFront', this.chuteMinX, this.chuteMaxX, this.chuteMaxZ, halfD]
+    ];
+    for (const [name,minX,maxX,minZ,maxZ] of sections) {
+      const w = maxX-minX, d = maxZ-minZ;
+      const floor = root.getObjectByName(name) as THREE.Mesh;
+      floor.scale.set(w/sx,0.3/sy,d/sz);
+      floor.position.set((minX+maxX)/2/sx,-0.15/sy,(minZ+maxZ)/2/sz);
+      (floor.material as THREE.MeshStandardMaterial).map = this.floorMatTex;
+      addCollider([w,0.3,d],[(minX+maxX)/2,-0.15,(minZ+maxZ)/2],0.65);
+    }
+    for (const x of [-halfW,halfW]) addCollider([0.12,this.height,this.depth],[x,this.height/2,0]);
+    for (const z of [-halfD,halfD]) addCollider([this.width,this.height,0.12],[0,this.height/2,z]);
+    addCollider([this.width,0.15,this.depth],[0,this.height+0.075,0]);
     this.rebuildBaffles(this.chuteWallHeight, physics);
-
-    const chuteW = this.chuteMaxX - this.chuteMinX;
-    const chuteD = this.chuteMaxZ - this.chuteMinZ;
-    const chuteCenterX = (this.chuteMinX + this.chuteMaxX) / 2;
-    const chuteCenterZ = (this.chuteMinZ + this.chuteMaxZ) / 2;
-
-    // Chute Pit Hole Visual Dark Box (出貨口深坑)
-    const holeGeo = new THREE.BoxGeometry(chuteW, 1.2, chuteD);
-    const holeMesh = new THREE.Mesh(holeGeo, holeMat);
-    holeMesh.position.set(chuteCenterX, -0.85, chuteCenterZ);
-    this.mesh.add(holeMesh);
-
-    // Slanted Prize Slide Ramp inside Chute Pit (真實出貨導流滑梯)
-    const rampLen = Math.hypot(chuteD + 0.2, 0.8);
-    const rampAngle = Math.atan2(0.8, chuteD + 0.2);
-    const rampGeo = new THREE.BoxGeometry(chuteW - 0.08, 0.03, rampLen);
-    const rampMesh = new THREE.Mesh(rampGeo, chromeMat);
-    rampMesh.position.set(chuteCenterX, -0.65, chuteCenterZ + 0.1);
-    rampMesh.rotation.x = rampAngle;
-    this.mesh.add(rampMesh);
-
-    // Dark Rim Frame around the chute hole
-    const rimGeo = new THREE.BoxGeometry(chuteW + 0.08, 0.04, chuteD + 0.08);
-    const rimMesh = new THREE.Mesh(rimGeo, holeRimMat);
-    rimMesh.position.set(chuteCenterX, -0.01, chuteCenterZ);
-    this.mesh.add(rimMesh);
-
-    // ── 4. Frame Pillars (Matching theme color & scaled bounds) ──
-    // ── 4. Frame Pillars (Matching theme color & scaled bounds) ──
-    const colSize = 0.35;
-    const addColumn = (x: number, z: number) => {
-      const geo = new THREE.BoxGeometry(colSize, this.height, colSize);
-      const m = new THREE.Mesh(geo, this.bodyMat);
-      m.position.set(x, this.height / 2, z);
-      m.castShadow = true;
-      this.mesh.add(m);
-
-      if (physics && physics.world) {
-        const bodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(x, this.height / 2, z);
-        const body = physics.world.createRigidBody(bodyDesc);
-        const colDesc = RAPIER.ColliderDesc.cuboid(colSize / 2, this.height / 2, colSize / 2);
-        physics.world.createCollider(colDesc, body);
-        this.staticBodies.push(body);
-      }
-    };
-
-    addColumn(-halfW, -halfD);
-    addColumn(halfW, -halfD);
-    addColumn(-halfW, halfD);
-    addColumn(halfW, halfD);
-
-    // Front Pillars Vertical Neon LED Glow Bars (立柱全彩氛圍燈條)
-    const neonBarGeo = new THREE.BoxGeometry(0.08, this.height - 0.4, 0.08);
-    const leftNeon = new THREE.Mesh(neonBarGeo, this.neonBorderMat);
-    leftNeon.position.set(-halfW + 0.22, this.height / 2, halfD - 0.22);
-    this.mesh.add(leftNeon);
-
-    const rightNeon = new THREE.Mesh(neonBarGeo, this.neonBorderMat);
-    rightNeon.position.set(halfW - 0.22, this.height / 2, halfD - 0.22);
-    this.mesh.add(rightNeon);
-
-    // ── 5. Transparent Side Glass Windows ──
-    const sideGlassMat = new THREE.MeshStandardMaterial({
-      color: 0xe0f7fa,
-      opacity: 0.15,
-      transparent: true,
-      roughness: 0.0,
-      metalness: 0.1,
-      side: THREE.DoubleSide
-    });
-
-    const sideWallGeo = new THREE.BoxGeometry(0.08, this.height, this.depth - 0.1);
-    const addSideWall = (x: number) => {
-      const wall = new THREE.Mesh(sideWallGeo, sideGlassMat);
-      wall.position.set(x, this.height / 2, 0);
-      this.mesh.add(wall);
-
-      if (physics && physics.world) {
-        const bodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(x, this.height / 2, 0);
-        const body = physics.world.createRigidBody(bodyDesc);
-        const colDesc = RAPIER.ColliderDesc.cuboid(0.5 / 2, this.height / 2, this.depth / 2)
-          .setFriction(0.1)
-          .setRestitution(0.2);
-        physics.world.createCollider(colDesc, body);
-        this.staticBodies.push(body);
-      }
-    };
-
-    addSideWall(-halfW);
-    addSideWall(halfW);
-
-    // ── 5B. Real Street Arcade Tall Base Cabinet (約佔總機身高 42%~45%) ──
-    const baseHeight = Math.max(4.8, this.height * 0.82);
-    const baseCabinetGeo = new THREE.BoxGeometry(this.width + 0.35, baseHeight, this.depth + 0.35);
-    const baseCabinetMesh = new THREE.Mesh(baseCabinetGeo, this.bodyMat);
-    baseCabinetMesh.position.set(0, -floorThickness - baseHeight / 2, 0);
-    this.mesh.add(baseCabinetMesh);
-
-    // 4 Base Swivel Wheels at Bottom Corners
-    const wheelGeo = new THREE.CylinderGeometry(0.26, 0.26, 0.20, 16);
-    const wheelMat = new THREE.MeshStandardMaterial({ color: 0x111827, roughness: 0.8 });
-    const addWheel = (wx: number, wz: number) => {
-      const wheel = new THREE.Mesh(wheelGeo, wheelMat);
-      wheel.rotation.z = Math.PI / 2;
-      wheel.position.set(wx, -floorThickness - baseHeight - 0.25, wz);
-      this.mesh.add(wheel);
-    };
-    const wheelDistX = halfW - 0.4;
-    const wheelDistZ = halfD - 0.4;
-    addWheel(-wheelDistX, -wheelDistZ);
-    addWheel(wheelDistX, -wheelDistZ);
-    addWheel(-wheelDistX, wheelDistZ);
-    addWheel(wheelDistX, wheelDistZ);
-
-    // ── 6. Outer Glass Panes (Front & Back) ──
-    const wallThick = 0.08;
-    const physThick = 0.5;
-    const addGlassPane = (visualW: number, visualH: number, visualD: number, x: number, y: number, z: number, physW = visualW, physD = visualD) => {
-      const geo = new THREE.BoxGeometry(visualW, visualH, visualD);
-      const m = new THREE.Mesh(geo, glassMat);
-      m.position.set(x, y, z);
-      this.mesh.add(m);
-
-      if (physics && physics.world) {
-        const bodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(x, y, z);
-        const body = physics.world.createRigidBody(bodyDesc);
-        const colDesc = RAPIER.ColliderDesc.cuboid(physW / 2, visualH / 2, physD / 2)
-          .setFriction(0.1)
-          .setRestitution(0.2);
-        physics.world.createCollider(colDesc, body);
-        this.staticBodies.push(body);
-      }
-    };
-
-    // Back glass pane
-    addGlassPane(this.width - 0.1, this.height, wallThick, 0, this.height / 2, -halfD, this.width, physThick);
-    // Front glass pane
-    addGlassPane(this.width - 0.1, this.height, wallThick, 0, this.height / 2, halfD, this.width, physThick);
-
-    // Japanese Arcade Prize Machine Backdrop Inside Cabinet
-    const backWallPlane = new THREE.Mesh(
-      new THREE.PlaneGeometry(this.width - 0.2, this.height - 0.1),
-      new THREE.MeshStandardMaterial({
-        map: this.backdropTex,
-        roughness: 0.25,
-        metalness: 0.35
-      })
-    );
-    backWallPlane.position.set(0, this.height / 2, -halfD + 0.08);
-    this.mesh.add(backWallPlane);
-
-    // ── 7. Freestanding Top Marquee (Matching Kujiflip Rounded Neon Signboard) ──
-    const marqueeW = Math.min(4.5, this.width * 0.72);
-    const marqueeH = 1.30;
-    const marqueeD = 0.32;
-    const marqueeGeo = new THREE.BoxGeometry(marqueeW, marqueeH, marqueeD);
-    const marqueeMat = new THREE.MeshStandardMaterial({ map: this.marqueeTex, roughness: 0.2 });
-    const marqueeMesh = new THREE.Mesh(marqueeGeo, marqueeMat);
-    marqueeMesh.position.set(0, this.height + 0.85, 0);
-    this.mesh.add(marqueeMesh);
-
-    // Marquee Glowing Neon Outer Rim
-    const marqueeRimGeo = new THREE.BoxGeometry(marqueeW + 0.12, marqueeH + 0.12, marqueeD - 0.05);
-    const marqueeRimMesh = new THREE.Mesh(marqueeRimGeo, this.neonBorderMat);
-    marqueeRimMesh.position.set(0, this.height + 0.85, 0);
-    this.mesh.add(marqueeRimMesh);
-
-    // Roof Top Cap
-    const roofGeo = new THREE.BoxGeometry(this.width + 0.6, 0.35, this.depth + 0.6);
-    const roofMesh = new THREE.Mesh(roofGeo, this.bodyDarkMat);
-    roofMesh.position.set(0, this.height + 0.18, 0);
-    this.mesh.add(roofMesh);
-
-    // Warm Golden LED Ceiling Light Grille
-    const ceilingLightGeo = new THREE.BoxGeometry(this.width - 0.6, 0.15, this.depth - 0.6);
-    const ceilingLightMat = new THREE.MeshStandardMaterial({
-      color: 0xffb703,
-      emissive: 0xff9f1c,
-      emissiveIntensity: 0.85,
-      roughness: 0.2
-    });
-    const ceilingLightMesh = new THREE.Mesh(ceilingLightGeo, ceilingLightMat);
-    ceilingLightMesh.position.set(0, this.height - 0.15, 0);
-    this.mesh.add(ceilingLightMesh);
-
-    // ── 8. Front Protruding Control Console Deck (Matching Kujiflip 1:1) ──
-    const consoleW = Math.min(3.4, this.width * 0.55);
-    const consoleD = 1.35;
-    const consoleH = 0.36;
-    const consoleZ = halfD + consoleD / 2 - 0.12;
-
-    // Beveled Console Shelf Base
-    const consoleMesh = new THREE.Mesh(new THREE.BoxGeometry(consoleW, consoleH, consoleD), this.bodyMat);
-    consoleMesh.position.set(0, 0.12, consoleZ);
-    consoleMesh.castShadow = true;
-    this.mesh.add(consoleMesh);
-
-    // Console Dark Inset Plate
-    const consolePlate = new THREE.Mesh(
-      new THREE.BoxGeometry(consoleW - 0.2, 0.04, consoleD - 0.2),
-      new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.6, roughness: 0.3 })
-    );
-    consolePlate.position.set(0, 0.31, consoleZ);
-    this.mesh.add(consolePlate);
-
-    // Protruding Coin Slot Unit (Right of Lower Cabinet at Waist Height)
-    const coinPlate = new THREE.Mesh(
-      new THREE.BoxGeometry(1.2, 1.4, 0.1),
-      new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.8, roughness: 0.2 })
-    );
-    coinPlate.position.set(0.65, -floorThickness - baseHeight * 0.25, halfD + 0.05);
-    this.mesh.add(coinPlate);
-
-    // Chrome Coin Insertion Slot & Return Button
-    const coinSlotMesh = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.45, 0.06), chromeMat);
-    coinSlotMesh.position.set(0.65, -floorThickness - baseHeight * 0.22, halfD + 0.11);
-    this.mesh.add(coinSlotMesh);
-
-    const coinBtnMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.06, 16), chromeMat);
-    coinBtnMesh.rotation.x = Math.PI / 2;
-    coinBtnMesh.position.set(0.65, -floorThickness - baseHeight * 0.33, halfD + 0.11);
-    this.mesh.add(coinBtnMesh);
-
-    // Prize Retrieval Door with Vibrant Orange Door Flap (Left of Lower Cabinet near Knees)
-    const doorFrame = new THREE.Mesh(
-      new THREE.BoxGeometry(1.9, 1.9, 0.08),
-      new THREE.MeshStandardMaterial({ color: 0x475569, metalness: 0.5, roughness: 0.4 })
-    );
-    doorFrame.position.set(-1.45, -floorThickness - baseHeight * 0.65, halfD + 0.04);
-    this.mesh.add(doorFrame);
-
-    const doorFlap = new THREE.Mesh(
-      new THREE.BoxGeometry(1.6, 1.6, 0.06),
-      new THREE.MeshStandardMaterial({ color: 0xea580c, metalness: 0.15, roughness: 0.35 })
-    );
-    doorFlap.position.set(-1.45, -floorThickness - baseHeight * 0.65, halfD + 0.07);
-    this.mesh.add(doorFlap);
-
-    // Interactive Joystick Group (Left Side of Console Deck)
-    this.joystickGroup.position.set(-0.65, 0.32, consoleZ);
-
-    const stickBaseMat = new THREE.MeshStandardMaterial({ color: 0x111827, metalness: 0.3, roughness: 0.5 });
-    const stickBase = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.28, 0.08, 24), stickBaseMat);
-    stickBase.position.y = 0.04;
-    this.joystickGroup.add(stickBase);
-
-    const stickGeo = new THREE.CylinderGeometry(0.045, 0.045, 0.46, 16);
-    const stick = new THREE.Mesh(stickGeo, chromeMat);
-    stick.position.y = 0.28;
-    stick.castShadow = true;
-    this.joystickGroup.add(stick);
-
-    // Red Ball Top Knob
-    const ballGeo = new THREE.SphereGeometry(0.20, 24, 24);
-    const ballMat = new THREE.MeshStandardMaterial({
-      color: 0xdc2626,
-      emissive: 0xdc2626,
-      emissiveIntensity: 0.25,
-      metalness: 0.2,
-      roughness: 0.1
-    });
-    this.joystickBall = new THREE.Mesh(ballGeo, ballMat);
-    this.joystickBall.position.y = 0.52;
-    this.joystickBall.castShadow = true;
-    this.joystickBall.name = 'joystickBall';
-    this.joystickGroup.add(this.joystickBall);
-
-    // Big Red Arcade Action Push Button (Right Side of Console Deck)
-    const btnBaseGeo = new THREE.CylinderGeometry(0.32, 0.36, 0.08, 24);
-    const btnBaseMat = new THREE.MeshStandardMaterial({ color: 0x111827, roughness: 0.6 });
-    const btnBaseMesh = new THREE.Mesh(btnBaseGeo, btnBaseMat);
-    btnBaseMesh.position.set(0.65, 0.34, consoleZ);
-    this.mesh.add(btnBaseMesh);
-
-    const btnGeo = new THREE.CylinderGeometry(0.24, 0.26, 0.12, 24);
-    const btnMat = new THREE.MeshStandardMaterial({
-      color: 0xdc2626,
-      emissive: 0xdc2626,
-      emissiveIntensity: 0.35,
-      metalness: 0.15,
-      roughness: 0.15
-    });
-    this.actionButtonMesh = new THREE.Mesh(btnGeo, btnMat);
-    this.actionButtonMesh.position.set(0.65, 0.40, consoleZ);
-    this.actionButtonMesh.name = 'actionButton';
-    this.mesh.add(this.actionButtonMesh);
-
-    // Target Indicator (Sleek Cyan Neon Glow Ring)
-    const outerIndicatorGeo = new THREE.RingGeometry(0.55, 0.6, 32);
-    const outerIndicatorMat = new THREE.MeshBasicMaterial({
-      color: 0x38bdf8,
-      transparent: true,
-      opacity: 0.6,
-      side: THREE.DoubleSide,
-      depthWrite: false,
-      polygonOffset: true,
-      polygonOffsetFactor: -1,
-      polygonOffsetUnits: -1
-    });
-    this.outerRing = new THREE.Mesh(outerIndicatorGeo, outerIndicatorMat);
-    this.outerRing.rotation.x = -Math.PI / 2;
-    this.dropIndicatorGroup.add(this.outerRing);
-
-    const innerIndicatorGeo = new THREE.RingGeometry(0.08, 0.12, 16);
-    const innerIndicatorMat = new THREE.MeshBasicMaterial({
-      color: 0x38bdf8,
-      transparent: true,
-      opacity: 0.6,
-      side: THREE.DoubleSide,
-      depthWrite: false,
-      polygonOffset: true,
-      polygonOffsetFactor: -1,
-      polygonOffsetUnits: -1
-    });
-    this.innerCircle = new THREE.Mesh(innerIndicatorGeo, innerIndicatorMat);
-    this.innerCircle.rotation.x = -Math.PI / 2;
-    this.dropIndicatorGroup.add(this.innerCircle);
-
-    this.dropIndicatorGroup.position.set(0, 0.05, 0);
+    if (!this.outerRing) {
+      const guideMaterial = new THREE.MeshBasicMaterial({ color: 0xd5e5d6, transparent: true, opacity: 0.35, depthWrite: false, side: THREE.DoubleSide });
+      this.outerRing = new THREE.Mesh(new THREE.RingGeometry(0.5,0.515,40),guideMaterial);
+      this.outerRing.rotation.x = -Math.PI/2;
+      this.innerCircle = new THREE.Mesh(new THREE.RingGeometry(0.035,0.055,16),guideMaterial);
+      this.innerCircle.rotation.x = -Math.PI/2;
+    }
+    this.dropIndicatorGroup.add(this.outerRing,this.innerCircle);
+    root.updateMatrixWorld(true);
   }
 
   /* ── Dynamic Chute Baffle Height & Guard Rail Update ── */
@@ -738,6 +414,7 @@ export class Cabinet {
   }
 
   private rebuildBaffles(height: number, physics: PhysicsSystem) {
+    this.disposeBaffleMeshes();
     // Clear old visual baffle meshes & physics rigidbodies
     while (this.baffleGroup.children.length > 0) {
       const child = this.baffleGroup.children[0];
@@ -801,6 +478,17 @@ export class Cabinet {
   }
 
   // Update target indicator position
+  private disposeBaffleMeshes() {
+    this.baffleGroup.traverse(object => {
+      if (!(object instanceof THREE.Mesh)) return;
+      object.geometry.dispose();
+      if (object.material !== this.baffleMat && object.material !== this.neonBorderMat) {
+        (object.material as THREE.Material).dispose();
+      }
+    });
+    this.baffleGroup.clear();
+  }
+
   public updateIndicator(x: number, z: number, y: number = 0.05) {
     this.dropIndicatorGroup.position.set(x, 0.05, z);
   }
@@ -846,44 +534,14 @@ export class Cabinet {
 
   // Dynamic Theme Switching for 4 Machine Types
   public setTheme(theme: string) {
-    if (theme === 'kbasket') {
-      // K-霸機台 (酷炫極致電競黑紅 + 霸王巨爪)
-      this.bodyMat.color.setHex(0x111116);
-      this.bodyDarkMat.color.setHex(0x22222d);
-      this.accentMat.color.setHex(0xff0033);
-      this.baffleMat.color.setHex(0xff0033);
-      this.neonBorderMat.color.setHex(0xff0033);
-      this.neonBorderMat.emissive.setHex(0xff0033);
-      this.updateMarqueeText('K - 霸', '', '#ffffff', '#ff0033', '#111116');
-    } else if (theme === 'sanrio' || theme === 'small') {
-      // 小型機台 (1:1 還原 Kujiflip 經典象牙白日系街機 + 金色霓虹招牌)
-      this.bodyMat.color.setHex(0xf8fafc);
-      this.bodyDarkMat.color.setHex(0xe2e8f0);
-      this.accentMat.color.setHex(0xf59e0b);
-      this.baffleMat.color.setHex(0xffffff);
-      this.baffleMat.opacity = 0.22;
-      this.baffleMat.transparent = true;
-      this.neonBorderMat.color.setHex(0xf59e0b);
-      this.neonBorderMat.emissive.setHex(0xf59e0b);
-      this.updateMarqueeText('賭博就是不歸路', '', '#fef08a', '#f59e0b', '#101014');
-    } else if (theme === 'anime' || theme === 'large') {
-      // 中大機台 (動漫模型黑金尊爵 + 加大強爪)
-      this.bodyMat.color.setHex(0x1a1625);
-      this.bodyDarkMat.color.setHex(0x2d2438);
-      this.accentMat.color.setHex(0xf59e0b);
-      this.baffleMat.color.setHex(0xf59e0b);
-      this.neonBorderMat.color.setHex(0xfcb316);
-      this.neonBorderMat.emissive.setHex(0xfcb316);
-      this.updateMarqueeText('BIG PRIZE', '中大機台 · 動漫模型大賞', '#ffffff', '#f59e0b', '#1a1625');
-    } else {
-      // 中型機台 (經典黃色街機)
-      this.bodyMat.color.setHex(0xffcc00);
-      this.bodyDarkMat.color.setHex(0xe6b800);
-      this.accentMat.color.setHex(0xdc2626);
-      this.baffleMat.color.setHex(0x00f0ff);
-      this.neonBorderMat.color.setHex(0x00f0ff);
-      this.neonBorderMat.emissive.setHex(0x00f0ff);
-      this.updateMarqueeText('賭博就是不歸路', '', '#fef08a', '#f59e0b', '#101014');
-    }
+    this.bodyMat.color.setHex(0x202222);
+    this.bodyDarkMat.color.setHex(0x171918);
+    this.accentMat.color.setHex(0xb9c3bb);
+    this.baffleMat.color.setHex(0xf2faf4);
+    this.baffleMat.opacity = 0.14;
+    this.baffleMat.depthWrite = false;
+    this.neonBorderMat.color.setHex(0x8b948d);
+    this.neonBorderMat.emissive.setHex(0x000000);
+    this.updateMarqueeText('夾樂機台', '', '#eeeeea', '#343934', '#171918');
   }
 }

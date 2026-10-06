@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import * as RAPIER from '@dimforge/rapier3d-compat';
 import { PhysicsSystem } from './physics';
 import { PrizesManager } from './prizes';
+import { instantiateModel } from './modelAssets';
 
 export type ClawState =
   | 'IDLE'
@@ -11,7 +12,8 @@ export type ClawState =
   | 'TOP_HIT'
   | 'RETURNING'
   | 'RELEASING'
-  | 'RESETTING';
+  | 'RESETTING'
+  | 'OPENING';
 
 /**
  * Arcade 3D Claw Machine Simulation
@@ -26,7 +28,7 @@ export type ClawState =
  */
 export class Claw {
   /* ── Visual Objects ── */
-  public carriageMesh!: THREE.Mesh;
+  public carriageMesh!: THREE.Object3D;
   public baseMesh!: THREE.Group;
   public cableLine!: THREE.Line;
 
@@ -137,6 +139,10 @@ export class Claw {
       this.smoothCarrVelZ = 0;
       this.lastSmoothCarrVelX = 0;
       this.lastSmoothCarrVelZ = 0;
+      this.lastCarrX = homeX;
+      this.lastCarrZ = homeZ;
+      this.lastCarrVelX = 0;
+      this.lastCarrVelZ = 0;
     }
   }
 
@@ -150,217 +156,36 @@ export class Claw {
      BUILD PATENT-ACCURATE ARCADE CLAW 3D MODEL
      ================================================================ */
   private build(scene: THREE.Scene, physics: PhysicsSystem) {
-    const CARRIAGE_Y = 5.45;
-    this.carriageY = CARRIAGE_Y;
-
-    // ── High Grade Arcade Materials ──
-    const purpleAnodizedMat = new THREE.MeshStandardMaterial({
-      color: 0x7c3aed,
-      metalness: 0.85,
-      roughness: 0.18,
-      emissive: 0x4c1d95,
-      emissiveIntensity: 0.25
-    });
-
-    const chromeMat = new THREE.MeshStandardMaterial({
-      color: 0xf8fafc,
-      metalness: 0.96,
-      roughness: 0.05
-    });
-
-    const darkSteelMat = new THREE.MeshStandardMaterial({
-      color: 0x334155,
-      metalness: 0.88,
-      roughness: 0.22
-    });
-
-    const rubberRedMat = new THREE.MeshStandardMaterial({
-      color: 0xdc2626,
-      roughness: 0.88,
-      metalness: 0.05
-    });
-
-    const goldAccentMat = new THREE.MeshStandardMaterial({
-      color: 0xeab308,
-      metalness: 0.92,
-      roughness: 0.12
-    });
-
-    /* ─── 1. Carriage (天車) ─── */
-    const carrGroup = new THREE.Group();
-    const carrBaseMesh = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.22, 1.2), chromeMat);
-    carrBaseMesh.castShadow = true;
-    carrGroup.add(carrBaseMesh);
-
-    const motorCap = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.32, 0.18, 16), darkSteelMat);
-    motorCap.position.y = 0.18;
-    carrGroup.add(motorCap);
-
-    carrGroup.position.set(0, CARRIAGE_Y, 0);
-    scene.add(carrGroup);
-    this.carriageMesh = carrBaseMesh;
-
-    const carrDesc = RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(0, CARRIAGE_Y, 0);
-    this.carriageBody = physics.world.createRigidBody(carrDesc);
-    physics.world.createCollider(RAPIER.ColliderDesc.cuboid(0.6, 0.11, 0.6), this.carriageBody);
-    physics.registerBody(this.carriageBody, carrGroup);
-
-    /* ─── 2. Base Group ─── */
-    this.baseMesh = new THREE.Group();
-    this.baseMesh.position.set(0, CARRIAGE_Y - this.ropeLength, 0);
-    scene.add(this.baseMesh);
-
-    // Component 1 in Patent: Vertical Solenoid Housing
-    const solenoidGeo = new THREE.CylinderGeometry(0.28, 0.32, 0.42, 32);
-    const solenoidMesh = new THREE.Mesh(solenoidGeo, darkSteelMat);
-    solenoidMesh.position.y = 0.21;
-    solenoidMesh.castShadow = true;
-    this.baseMesh.add(solenoidMesh);
-
-    const solenoidRing = new THREE.Mesh(new THREE.TorusGeometry(0.325, 0.02, 8, 32), goldAccentMat);
-    solenoidRing.rotation.x = Math.PI / 2;
-    solenoidRing.position.y = 0.08;
-    this.baseMesh.add(solenoidRing);
-
-    // Top Bezel Hinge Plate
-    const topPlateGeo = new THREE.CylinderGeometry(0.42, 0.45, 0.1, 24);
-    const topPlate = new THREE.Mesh(topPlateGeo, purpleAnodizedMat);
-    topPlate.position.y = 0.0;
-    topPlate.castShadow = true;
-    this.baseMesh.add(topPlate);
-
-    // Eyelet Cable Hook Ring
-    const eyelet = new THREE.Mesh(new THREE.TorusGeometry(0.09, 0.022, 8, 16), chromeMat);
-    eyelet.position.y = 0.44;
-    this.baseMesh.add(eyelet);
-
-    // Central Shaft (中軸/炮筒) - 緊湊修身設計，避免過度下凸
-    const rodGeo = new THREE.CylinderGeometry(0.035, 0.035, 0.16, 16);
-    const rod = new THREE.Mesh(rodGeo, chromeMat);
-    rod.position.y = -0.08;
-    rod.castShadow = true;
-    this.baseMesh.add(rod);
-
-    // Bottom Stop Bumper (底部精緻限位卡榫)
-    const bottomBumper = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.03, 16), goldAccentMat);
-    bottomBumper.position.y = -0.16;
-    this.baseMesh.add(bottomBumper);
-
-    // Component 2 in Patent: Sliding Collar (中環/滑塊) - 精巧緊實
-    this.sliderGroup = new THREE.Group();
-    this.sliderGroup.position.y = -0.10;
-    this.baseMesh.add(this.sliderGroup);
-
-    const slideMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, 0.05, 24), purpleAnodizedMat);
-    slideMesh.castShadow = true;
-    this.sliderGroup.add(slideMesh);
-
-    const slideRing = new THREE.Mesh(new THREE.TorusGeometry(0.115, 0.01, 8, 24), chromeMat);
-    slideRing.rotation.x = Math.PI / 2;
-    this.sliderGroup.add(slideRing);
-
-    /* ─── 3. Three Continuous Curved Metal Prongs ─── */
-    for (let i = 0; i < 3; i++) {
-      const yAngle = (i * Math.PI * 2) / 3;
-      this.buildPatentCurvedArm(i, yAngle, chromeMat, darkSteelMat, rubberRedMat, goldAccentMat);
+    const asset = instantiateModel('claw');
+    this.carriageMesh = asset.getObjectByName('CarriageRoot')!;
+    this.baseMesh = asset.getObjectByName('ClawRoot') as THREE.Group;
+    scene.add(this.carriageMesh, this.baseMesh);
+    this.carriageMesh.position.set(0,this.carriageY,0);
+    this.baseMesh.position.set(0,this.carriageY-this.ropeLength,0);
+    this.sliderGroup = this.baseMesh.getObjectByName('Slider') as THREE.Group;
+    for (let i=1;i<=3;i++) {
+      this.armPivots.push(this.baseMesh.getObjectByName(`ArmPivot_${i}`) as THREE.Group);
+      const linkage = new THREE.Mesh(new THREE.CylinderGeometry(0.013,0.013,0.38,10),new THREE.MeshStandardMaterial({color:0xbec5c1,metalness:0.9,roughness:0.25}));
+      scene.add(linkage);
+      this.linkageMeshes.push(linkage);
     }
-
-    /* ─── 4. Kinematic Base Body ─── */
-    const baseDesc = RAPIER.RigidBodyDesc.kinematicPositionBased()
-      .setTranslation(0, CARRIAGE_Y - this.ropeLength, 0);
-    this.baseBody = physics.world.createRigidBody(baseDesc);
-
-    physics.world.createCollider(
-      RAPIER.ColliderDesc.cylinder(0.1, 0.45),
-      this.baseBody
-    );
-    physics.registerBody(this.baseBody, this.baseMesh);
-
-    /* ─── 5. Cable Line Rendering ─── */
-    const lineGeo = new THREE.BufferGeometry().setFromPoints([
-      new THREE.Vector3(),
-      new THREE.Vector3(0, -1, 0)
-    ]);
-    this.cableLine = new THREE.Line(
-      lineGeo,
-      new THREE.LineBasicMaterial({ color: 0x1e293b, linewidth: 2.5 })
-    );
+    this.carriageBody = physics.world.createRigidBody(RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(0,this.carriageY,0));
+    physics.world.createCollider(RAPIER.ColliderDesc.cuboid(0.48,0.07,0.4),this.carriageBody);
+    this.baseBody = physics.world.createRigidBody(RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(0,this.carriageY-this.ropeLength,0));
+    physics.world.createCollider(RAPIER.ColliderDesc.cylinder(0.08,0.36),this.baseBody);
+    this.cableLine = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(),new THREE.Vector3(0,-1,0)]),new THREE.LineBasicMaterial({color:0x929990}));
     scene.add(this.cableLine);
   }
 
-  /* ─── Build One Patent Curved Arm ─── */
-  private buildPatentCurvedArm(
-    index: number,
-    yAngle: number,
-    chrome: THREE.Material,
-    darkSteel: THREE.Material,
-    rubber: THREE.Material,
-    gold: THREE.Material
-  ) {
-    const HINGE_R = 0.38;
-
-    const pivotGroup = new THREE.Group();
-    pivotGroup.position.set(
-      Math.cos(yAngle) * HINGE_R,
-      -0.02,
-      Math.sin(yAngle) * HINGE_R
-    );
-    pivotGroup.rotation.y = -yAngle;
-    this.baseMesh.add(pivotGroup);
-    this.armPivots.push(pivotGroup);
-
-    const armHinge = new THREE.Group();
-    armHinge.name = 'armHinge';
-    pivotGroup.add(armHinge);
-
-    // Linkage Anchor Bracket for push rod connection
-    const linkBracket = new THREE.Object3D();
-    linkBracket.name = 'linkBracket';
-    linkBracket.position.set(0.10, -0.16, 0);
-    armHinge.add(linkBracket);
-
-    // Hinge Pin Bolt
-    const pin = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.028, 0.09, 12), gold);
-    pin.rotation.x = Math.PI / 2;
-    armHinge.add(pin);
-
-    // ── Authentic Taiwanese/Japanese Arcade 3D Curved Tubular Metal Prongs (圓管金屬曲爪) ──
-    // Smooth Catmull-Rom 3D Curve forming the elegant curved claw arm:
-    const curvePoints = [
-      new THREE.Vector3(0, 0, 0),
-      new THREE.Vector3(0.12, -0.20, 0),
-      new THREE.Vector3(0.24, -0.45, 0),
-      new THREE.Vector3(0.20, -0.68, 0),
-      new THREE.Vector3(0.08, -0.84, 0)
-    ];
-    const armCurve = new THREE.CatmullRomCurve3(curvePoints);
-    const tubeGeo = new THREE.TubeGeometry(armCurve, 24, 0.034, 16, false);
-    const tubeMesh = new THREE.Mesh(tubeGeo, chrome);
-    tubeMesh.castShadow = true;
-    armHinge.add(tubeMesh);
-
-    // ── Bright Red Anti-Slip Rubber Sleeve Tip Cap (紅色防滑膠套爪尖) ──
-    const tipCurvePoints = [
-      new THREE.Vector3(0.16, -0.72, 0),
-      new THREE.Vector3(0.08, -0.84, 0)
-    ];
-    const tipCurve = new THREE.CatmullRomCurve3(tipCurvePoints);
-    const tipSleeveGeo = new THREE.TubeGeometry(tipCurve, 10, 0.042, 16, false);
-    const tipSleeveMesh = new THREE.Mesh(tipSleeveGeo, rubber);
-    tipSleeveMesh.castShadow = true;
-    armHinge.add(tipSleeveMesh);
-
-    // Smooth rounded rubber hemisphere end tip (杜絕尖銳串燒穿刺感)
-    const endCapGeo = new THREE.SphereGeometry(0.042, 14, 14);
-    const endCap = new THREE.Mesh(endCapGeo, rubber);
-    endCap.position.set(0.08, -0.84, 0);
-    armHinge.add(endCap);
-
-    // Component 12 in Patent: Linkage Push Rod
-    const linkage = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.016, 0.38, 8), chrome);
-    linkage.castShadow = true;
-    this.baseMesh.add(linkage);
-    this.linkageMeshes.push(linkage);
+  public reset() {
+    this.releasePrize(this.physicsRef);
+    this.state = 'IDLE';
+    this.stateTimer = 0;
+    this.swayAngleX = this.swayAngleZ = this.swayVelX = this.swayVelZ = 0;
+    this.ropeLength = this.config.minRopeLength;
+    this.targetRopeLength = this.ropeLength;
+    this.targetArmAngle = this.config.clawOpenAngle;
+    this.currentArmAngle = this.targetArmAngle;
   }
 
   /* ================================================================
@@ -537,7 +362,7 @@ export class Claw {
 
     for (let i = 0; i < 3; i++) {
       const pivot = this.armPivots[i];
-      const hinge = pivot.getObjectByName('armHinge');
+      const hinge = pivot.getObjectByName(`ArmHinge_${i+1}`);
       if (hinge) {
         hinge.rotation.z = this.currentArmAngle;
       }
@@ -555,9 +380,9 @@ export class Claw {
 
     for (let i = 0; i < 3; i++) {
       const pivot = this.armPivots[i];
-      const hinge = pivot.getObjectByName('armHinge');
+      const hinge = pivot.getObjectByName(`ArmHinge_${i+1}`);
       if (hinge && this.linkageMeshes[i]) {
-        const linkBracket = hinge.getObjectByName('linkBracket') || hinge;
+        const linkBracket = hinge.getObjectByName(`LinkBracket_${i+1}`) || hinge;
         const armWorld = new THREE.Vector3();
         linkBracket.getWorldPosition(armWorld);
 
@@ -599,7 +424,7 @@ export class Claw {
 
       for (let i = 0; i < 3; i++) {
         const pivot = this.armPivots[i];
-        const hinge = pivot ? pivot.getObjectByName('armHinge') : null;
+        const hinge = pivot ? pivot.getObjectByName(`ArmHinge_${i+1}`) : null;
         if (hinge) {
           const armNodes = localArmPts.map((pt, idx) => {
             const worldPos = pt.clone();
@@ -620,7 +445,7 @@ export class Claw {
 
               const hitLimit = node.radius + 0.12 * clawScale;
               if (dist < hitLimit && dist > 0.0001) {
-                pBody.wakeUp(true);
+                pBody.wakeUp();
                 const overlap = hitLimit - dist;
 
                 const pushX = dx / dist;
@@ -747,7 +572,7 @@ export class Claw {
             const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
 
             if (dist < 1.35) {
-              pBody.wakeUp(true);
+              pBody.wakeUp();
               const nx = dx / (dist || 1);
               const nz = dz / (dist || 1);
               const pushForce = 0.45 * (1.35 - dist);
@@ -816,7 +641,7 @@ export class Claw {
             if (vel.x * vel.x + vel.y * vel.y + vel.z * vel.z < 0.04) {
               pBody.setLinearDamping(0.20);
               pBody.setAngularDamping(0.35);
-              pBody.wakeUp(true);
+              pBody.wakeUp();
             }
           }
         }
@@ -908,7 +733,7 @@ export class Claw {
       // 提起時保持合理阻尼
       targetBody.setLinearDamping(0.35);
       targetBody.setAngularDamping(0.40);
-      targetBody.wakeUp(true);
+      targetBody.wakeUp();
 
       // Spherical Joint 錨定接觸點，並啟用碰撞與接觸響應
       const sphericalJointData = RAPIER.JointData.spherical(
@@ -959,7 +784,7 @@ export class Claw {
         col.setRestitution(0.08);
       }
 
-      body.wakeUp(true);
+      body.wakeUp();
 
       // ── 真正的 3D 甩爪動量轉移 (Authentic Fling & Drop Momentum) ──
       // 1. 爪頭鐘擺切線瞬時速度 (Tangential Swing Velocity)
