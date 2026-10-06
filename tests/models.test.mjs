@@ -11,6 +11,15 @@ import { PRIZE_TYPES } from '../src/modelAssets.ts';
 import { APPLIANCE_TYPES, MIXED_PRIZE_TYPES, prizeStockScale } from '../src/modelAssets.ts';
 import { collectHullPoints } from '../src/prizeGeometry.ts';
 import * as RAPIER from '@dimforge/rapier3d-compat';
+import { ClawFinger } from '../src/clawCollisions.ts';
+import { LARGE_POKEMON_DIMENSIONS } from '../src/modelAssets.ts';
+
+test('Snorlax and Charizard have larger independent plush dimensions', () => {
+  assert.ok(LARGE_POKEMON_DIMENSIONS.snorlax.height > 2);
+  assert.ok(LARGE_POKEMON_DIMENSIONS.snorlax.radius > 0.9);
+  assert.ok(LARGE_POKEMON_DIMENSIONS.charizard.height > 2.2);
+  assert.ok(LARGE_POKEMON_DIMENSIONS.charizard.radius >= 1.5);
+});
 
 test('first-stage mixed stock excludes appliances and retains all Pokemon', () => {
   for (const type of APPLIANCE_TYPES) {
@@ -105,6 +114,76 @@ const load = async name => {
   const gltf = await new GLTFLoader().parseAsync(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.length),'');
   return gltf.scene;
 };
+
+test('GLB fingers stop closing at a prize surface instead of penetrating it',async () => {
+  await RAPIER.init();
+  const world = new RAPIER.World({x:0,y:0,z:0});
+  try {
+    world.timestep = 1/120;
+    const asset = await load('claw');
+    const root = asset.getObjectByName('ClawRoot');
+    root.position.y = 2;
+    const finger = new ClawFinger(world,root.getObjectByName('ArmHinge_1'));
+    assert.ok(finger.colliders.length >= 16);
+    const prize = world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(0.36,1.38,0));
+    const collider = world.createCollider(RAPIER.ColliderDesc.ball(0.16),prize);
+    for (let i=0;i<180;i++) {
+      finger.move(Math.max(-0.5,finger.angle-0.015),[prize]);
+      world.step();
+    }
+    assert.ok(finger.angle > -0.45,'finger closed through the prize');
+    assert.ok(finger.contact(prize),'finger never reached the prize surface');
+    for (const part of finger.colliders) {
+      const contact = part.contactCollider(collider,0.03);
+      if (contact) assert.ok(contact.distance >= -0.004,`penetration ${contact.distance}`);
+    }
+    root.scale.setScalar(1.35);
+    finger.rebuild();
+    assert.ok(finger.colliders.length >= 16);
+    finger.move(finger.angle,[]);
+    world.step();
+    const prong = finger.hinge.getObjectByName('Prong_1');
+    const vertices = prong.geometry.attributes.position;
+    for (let i=0;i<vertices.count;i+=11) {
+      const point = prong.localToWorld(new THREE.Vector3().fromBufferAttribute(vertices,i));
+      assert.ok(finger.colliders.some(part => {
+        const projection = part.projectPoint(point,true);
+        return projection && point.distanceTo(new THREE.Vector3(projection.point.x,projection.point.y,projection.point.z))<0.01;
+      }),'scaled GLB finger surface is outside its collision shape');
+    }
+  } finally {world.free();}
+});
+
+test('moving metal fingers transfer momentum and unsupported prizes fall under gravity',async () => {
+  await RAPIER.init();
+  const world = new RAPIER.World({x:0,y:0,z:0});
+  try {
+    world.timestep = 1/120;
+    const asset = await load('claw');
+    const root = asset.getObjectByName('ClawRoot');
+    root.position.y = 2.5;
+    const hinge = root.getObjectByName('ArmHinge_1');
+    const finger = new ClawFinger(world,hinge);
+    const tip = hinge.localToWorld(new THREE.Vector3(0.1,-0.79,0));
+    const prize = world.createRigidBody(RAPIER.RigidBodyDesc.dynamic().setCcdEnabled(true)
+      .setTranslation(tip.x+0.18,tip.y,tip.z));
+    world.createCollider(RAPIER.ColliderDesc.ball(0.12).setMass(0.35),prize);
+    const initial = prize.translation().x;
+    for (let i=0;i<240;i++) {
+      root.position.x = i/300;
+      finger.move(finger.angle,[prize]);
+      world.step();
+    }
+    assert.ok(prize.translation().x > initial+0.35,'prize did not react to finger contact');
+    const height = prize.translation().y;
+    root.position.x = -5;
+    finger.move(finger.angle,[]);
+    world.gravity = {x:0,y:-9.81,z:0};
+    for (let i=0;i<120;i++) world.step();
+    assert.ok(prize.translation().y < height-4);
+    assert.ok(prize.linvel().y < -9);
+  } finally {world.free();}
+});
 
 test('all three GLB hinges animate their tips and belong to the claw root',async () => {
   const asset = await load('claw');

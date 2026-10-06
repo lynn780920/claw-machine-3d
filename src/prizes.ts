@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import * as RAPIER from '@dimforge/rapier3d-compat';
 import { PhysicsSystem } from './physics';
-import { instantiateModel, disposeModel, cartonLabel, APPLIANCE_TYPES, MIXED_PRIZE_TYPES, prizeStockScale } from './modelAssets';
+import { instantiateModel, disposeModel, cartonLabel, APPLIANCE_TYPES, MIXED_PRIZE_TYPES, prizeStockScale, LARGE_POKEMON_DIMENSIONS } from './modelAssets';
 import { collectHullPoints } from './prizeGeometry';
 
 export class PrizesManager {
@@ -17,9 +17,9 @@ export class PrizesManager {
   }
 
   private getPrizeDimensions(prizeType: string): { radius: number; height: number } {
+    if (LARGE_POKEMON_DIMENSIONS[prizeType]) return LARGE_POKEMON_DIMENSIONS[prizeType];
     switch (prizeType) {
       case 'pikachu': return { radius: 0.85, height: 1.95 };
-      case 'charizard': return { radius: 1.0, height: 2.2 };
       case 'squirtle': return { radius: 0.82, height: 1.7 };
       case 'bulbasaur': return { radius: 0.88, height: 1.65 };
       case 'tea_box': return { radius: 0.87, height: 2.18 };

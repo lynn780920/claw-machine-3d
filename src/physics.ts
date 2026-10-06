@@ -38,7 +38,7 @@ export class PhysicsSystem {
     });
   }
 
-  step() {
+  step(beforeSubstep?: (dt: number) => void) {
     if (!this.isInitialized) return;
 
     // Substepping: 2 micro-steps per frame (1/120s each) for ultra-accurate collision response and zero tunneling
@@ -46,8 +46,10 @@ export class PhysicsSystem {
     const substepDt = originalDt / 2;
     this.world.integrationParameters.dt = substepDt;
 
-    this.world.step();
-    this.world.step();
+    for (let i=0;i<2;i++) {
+      beforeSubstep?.(substepDt);
+      this.world.step();
+    }
 
     this.world.integrationParameters.dt = originalDt;
     

@@ -3,6 +3,7 @@ import * as RAPIER from '@dimforge/rapier3d-compat';
 import { PhysicsSystem } from './physics';
 import { PrizesManager } from './prizes';
 import { instantiateModel } from './modelAssets';
+import { ClawFinger } from './clawCollisions';
 
 export type ClawState =
   | 'IDLE'
@@ -19,8 +20,8 @@ export type ClawState =
  * Arcade 3D Claw Machine Simulation
  * - Authentic Mechanical Arm Close (6.0 speed):
  *   Closes arms with smooth solenoid speed matching real Taiwanese arcade claw machines, preventing infinite kinematic collision impulses.
- * - Plush Toy Soft Velocity Guard (防爆破噴飛):
- *   Clamps maximum dynamic doll velocity to <= 2.0 m/s so dolls move & tumble like soft plush toys without flying/spraying.
+ * - GLB-shaped metal fingers stop closing against prize surfaces.
+ *   Rapier contacts transfer momentum without scripted pushes or velocity clamps.
  * - Diagonal Momentum Drop (甩爪動量斜向飛出與空中二收):
  *   Carries swing velocity (swayVelX/Z) diagonally along the swing vector. Air close (二收) closes arms smoothly in mid-air.
  * - Dynamic Spherical Physics Grip (自然重力懸掛與滑落包爪):
@@ -33,6 +34,7 @@ export class Claw {
   public cableLine!: THREE.Line;
 
   private armPivots: THREE.Group[] = [];
+  private fingers: ClawFinger[] = [];
   private linkageMeshes: THREE.Mesh[] = [];
   private sliderGroup!: THREE.Group;
 
@@ -149,6 +151,9 @@ export class Claw {
   public setClawScale(scaleRatio: number) {
     if (this.baseMesh) {
       this.baseMesh.scale.set(scaleRatio, scaleRatio, scaleRatio);
+      for (const finger of this.fingers) finger.rebuild();
+      this.baseBody.collider(0).setShape(new RAPIER.Cylinder(0.22*scaleRatio,0.39*scaleRatio));
+      this.baseBody.collider(0).setTranslationWrtParent({x:0,y:0.17*scaleRatio,z:0});
     }
   }
 
@@ -172,7 +177,8 @@ export class Claw {
     this.carriageBody = physics.world.createRigidBody(RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(0,this.carriageY,0));
     physics.world.createCollider(RAPIER.ColliderDesc.cuboid(0.48,0.07,0.4),this.carriageBody);
     this.baseBody = physics.world.createRigidBody(RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(0,this.carriageY-this.ropeLength,0));
-    physics.world.createCollider(RAPIER.ColliderDesc.cylinder(0.08,0.36),this.baseBody);
+    physics.world.createCollider(RAPIER.ColliderDesc.cylinder(0.22,0.39).setTranslation(0,0.17,0).setFriction(0.7),this.baseBody);
+    this.fingers = this.armPivots.map((pivot,i) => new ClawFinger(physics.world,pivot.getObjectByName(`ArmHinge_${i+1}`)!));
     this.cableLine = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(),new THREE.Vector3(0,-1,0)]),new THREE.LineBasicMaterial({color:0x929990}));
     scene.add(this.cableLine);
   }
@@ -353,20 +359,14 @@ export class Claw {
     } else if (this.state === 'GRABBING') {
       // 下爪到底合爪瞬間：電磁閥通電，確實全力收緊至密爪！
       effectiveTargetAngle = this.config.clawCloseAngle;
-    } else if (this.state === 'ASCENDING' || this.state === 'TOP_HIT' || this.state === 'RETURNING') {
-      if (!this.grabbedBody) {
-        effectiveTargetAngle = this.config.clawCloseAngle;
-      }
     }
-    this.currentArmAngle += (effectiveTargetAngle - this.currentArmAngle) * 9.5 * deltaTime;
-
-    for (let i = 0; i < 3; i++) {
-      const pivot = this.armPivots[i];
-      const hinge = pivot.getObjectByName(`ArmHinge_${i+1}`);
-      if (hinge) {
-        hinge.rotation.z = this.currentArmAngle;
-      }
+    for (const finger of this.fingers) {
+      const angle = this.grabbedBody && this.state !== 'OPENING'
+        ? finger.angle
+        : finger.angle + (effectiveTargetAngle-finger.angle)*Math.min(1,9.5*deltaTime);
+      finger.move(angle,prizesManager?.bodies ?? []);
     }
+    this.currentArmAngle = this.fingers.reduce((sum,finger)=>sum+finger.angle,0)/3;
 
     // Mechanical Collar Movement (精簡行程，緊貼頂盤內側，滑塊絕不上凸下露)
     const t = (this.currentArmAngle - this.config.clawCloseAngle) /
@@ -396,131 +396,25 @@ export class Claw {
       }
     }
 
-    // ── F. Soft Contact Velocity Guard (防爆破噴飛 - 保持物體運動逼真穩定) ──
-    if (prizesManager && prizesManager.bodies.length > 0) {
-      for (const pBody of prizesManager.bodies) {
-        if (pBody !== this.grabbedBody) {
-          const vel = pBody.linvel();
-          const speedSq = vel.x * vel.x + vel.y * vel.y + vel.z * vel.z;
-          if (speedSq > 9.0) { // speed > 3.0 m/s
-            const factor = 3.0 / Math.sqrt(speedSq);
-            pBody.setLinvel({ x: vel.x * factor, y: vel.y * factor, z: vel.z * factor }, true);
-          }
-        }
-      }
-    }
-
-    // ── G. Solid Metal Arm Collision (圓管曲爪動態旋轉物理牆 - 跟隨爪臂旋轉防穿透) ──
-    if (prizesManager && prizesManager.bodies.length > 0) {
-      const clawScale = this.baseMesh ? this.baseMesh.scale.x : 1.0;
-      const currentCandidate = (this.state === 'GRABBING') ? this.findCandidatePrize(prizesManager) : null;
-
-      const localArmPts = [
-        new THREE.Vector3(0, 0, 0),        // Hinge
-        new THREE.Vector3(0.12, -0.22, 0), // Upper
-        new THREE.Vector3(0.24, -0.45, 0), // Elbow
-        new THREE.Vector3(0.08, -0.84, 0)  // Tip
-      ];
-
-      for (let i = 0; i < 3; i++) {
-        const pivot = this.armPivots[i];
-        const hinge = pivot ? pivot.getObjectByName(`ArmHinge_${i+1}`) : null;
-        if (hinge) {
-          const armNodes = localArmPts.map((pt, idx) => {
-            const worldPos = pt.clone();
-            hinge.localToWorld(worldPos);
-            const radius = (idx === 3 ? 0.085 : 0.075) * clawScale;
-            return { pos: worldPos, radius };
-          });
-
-          for (const node of armNodes) {
-            for (const pBody of prizesManager.bodies) {
-              if (pBody === this.grabbedBody || pBody === currentCandidate) continue;
-
-              const bPos = pBody.translation();
-              const dx = bPos.x - node.pos.x;
-              const dy = bPos.y - node.pos.y;
-              const dz = bPos.z - node.pos.z;
-              const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
-
-              const hitLimit = node.radius + 0.12 * clawScale;
-              if (dist < hitLimit && dist > 0.0001) {
-                pBody.wakeUp();
-                const overlap = hitLimit - dist;
-
-                const pushX = dx / dist;
-                const pushY = Math.max(0.15, dy / dist);
-                const pushZ = dz / dist;
-
-                const impulseMag = Math.min(0.8, overlap * 1.5 + 0.05);
-                pBody.applyImpulse(
-                  { x: pushX * impulseMag, y: pushY * impulseMag, z: pushZ * impulseMag },
-                  true
-                );
-              }
-            }
-          }
-        }
-      }
-    }
 
     // ── E. State Machine with Realistic Impact Dynamics ──
     switch (this.state) {
       case 'DESCENDING': {
-        const clawScale = this.baseMesh ? this.baseMesh.scale.x : 1.0;
         const touchedFloor = targetY <= minBaseY + 0.05;
         let hitPrizeBody: RAPIER.RigidBody | null = null;
 
-        if (prizesManager && prizesManager.bodies.length > 0) {
-          const clawTipY = targetY - 0.70 * clawScale;
-          const stopRadiusXZ = 0.48 * clawScale;
-
-          for (const pBody of prizesManager.bodies) {
-            const pos = pBody.translation();
-            const dx = pos.x - finalX;
-            const dy = pos.y - clawTipY;
-            const dz = pos.z - finalZ;
-            const distXZ = Math.sqrt(dx * dx + dz * dz);
-            // 接觸娃娃頂面或斜面
-            if (distXZ <= stopRadiusXZ && (dy >= -0.35 * clawScale && dy <= 0.45 * clawScale)) {
-              hitPrizeBody = pBody;
-              break;
+        if (prizesManager) {
+          const head = this.baseBody.collider(0);
+          hitPrizeBody = prizesManager.bodies.find(body => {
+            for (let i=0;i<body.numColliders();i++) {
+              const contact = head.contactCollider(body.collider(i),0.01);
+              if (contact) return true;
             }
-          }
+            return false;
+          }) ?? null;
         }
 
         if (touchedFloor || hitPrizeBody || this.stateTimer > 4.5) {
-          // 猛一爪下砸動能傳遞 (真實街機下砸震盪力學)
-          if (hitPrizeBody && prizesManager) {
-            const dropVel = this.config.dropSpeed || 2.0;
-            const impactX = this.swayVelX * 1.2;
-            const impactZ = this.swayVelZ * 1.2;
-            
-            // 喚醒周圍所有沉睡剛體
-            physics.wakeUpNear(finalX, targetY - 0.5 * clawScale, finalZ, 2.0);
-
-            // 施加猛烈向下壓迫與橫向甩動衝量，使娃娃自然翻滾受力
-            hitPrizeBody.applyImpulse(
-              {
-                x: impactX * 0.45 + (Math.random() - 0.5) * 0.25,
-                y: -Math.min(1.2, dropVel * 0.45),
-                z: impactZ * 0.45 + (Math.random() - 0.5) * 0.25
-              },
-              true
-            );
-            hitPrizeBody.applyTorqueImpulse(
-              {
-                x: (Math.random() - 0.5) * 0.4,
-                y: (Math.random() - 0.5) * 0.3,
-                z: (Math.random() - 0.5) * 0.4
-              },
-              true
-            );
-
-            // 爪身受到下砸反作用力微幅反彈停頓
-            this.ropeLength = Math.max(this.config.minRopeLength, this.ropeLength - 0.06);
-          }
-
           this.targetRopeLength = this.ropeLength;
           this.triggerGrab(prizesManager);
         }
@@ -560,29 +454,6 @@ export class Claw {
         break;
 
       case 'OPENING':
-        // Outward physical push force & flip torque on nearby prize corners when opening (放爪推角翻肉物理)
-        if (prizesManager && prizesManager.bodies.length > 0) {
-          const clawPos = this.baseMesh.position;
-          const clawTipY = clawPos.y - 0.7;
-          for (const pBody of prizesManager.bodies) {
-            const pos = pBody.translation();
-            const dx = pos.x - clawPos.x;
-            const dy = pos.y - clawTipY;
-            const dz = pos.z - clawPos.z;
-            const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
-
-            if (dist < 1.35) {
-              pBody.wakeUp();
-              const nx = dx / (dist || 1);
-              const nz = dz / (dist || 1);
-              const pushForce = 0.45 * (1.35 - dist);
-
-              // Apply outward impulse & rotational flip torque
-              pBody.applyImpulse({ x: nx * pushForce, y: pushForce * 0.45, z: nz * pushForce }, true);
-              pBody.applyTorqueImpulse({ x: nz * pushForce * 0.3, y: pushForce * 0.2, z: -nx * pushForce * 0.3 }, true);
-            }
-          }
-        }
 
         if (this.stateTimer > 0.6) {
           this.state = 'RETURNING';
@@ -630,23 +501,6 @@ export class Claw {
       this.stateTimer = 0;
     }
 
-    // ── Anti-Floating Guard: 確保非抓取狀態下沒有任何剛體因休眠或阻尼殘留黏在空中 ──
-    if (this.state !== 'GRABBING' && this.state !== 'ASCENDING' && this.state !== 'TOP_HIT' && this.state !== 'RETURNING') {
-      if (prizesManager && prizesManager.bodies.length > 0) {
-        for (const pBody of prizesManager.bodies) {
-          const trans = pBody.translation();
-          // 如果物體懸在空中且速度幾乎為0，強制還原正常阻尼並喚醒
-          if (trans.y > 1.1) {
-            const vel = pBody.linvel();
-            if (vel.x * vel.x + vel.y * vel.y + vel.z * vel.z < 0.04) {
-              pBody.setLinearDamping(0.20);
-              pBody.setAngularDamping(0.35);
-              pBody.wakeUp();
-            }
-          }
-        }
-      }
-    }
   }
 
   /* ================================================================
@@ -669,6 +523,7 @@ export class Claw {
 
     for (const pBody of prizesManager.bodies) {
       if (pBody === this.grabbedBody) continue;
+      if (this.fingers.filter(finger => finger.contact(pBody)).length < 2) continue;
       const bPos = pBody.translation();
       const dx = bPos.x - basePos.x;
       const dz = bPos.z - basePos.z;
@@ -691,36 +546,23 @@ export class Claw {
     return candidateBody;
   }
 
-  public getSafeContactAngle(pBody: RAPIER.RigidBody): number {
-    const clawScale = this.baseMesh ? this.baseMesh.scale.x : 1.0;
-    const bPos = pBody.translation();
-    const basePos = this.baseMesh.position;
-    const dx = bPos.x - basePos.x;
-    const dz = bPos.z - basePos.z;
-    const distXZ = Math.sqrt(dx * dx + dz * dz);
-    // 自然包爪夾緊角度：爪尖向內收攏緊緊抱住娃娃！
-    // 依娃娃重心距離動態算出貼合爪尖半徑 targetR (0.048m~0.28m)
-    const targetR = Math.max(0.048 * clawScale, Math.min(0.28 * clawScale, distXZ + 0.02 * clawScale));
-    const safeAngle = (targetR / clawScale - 0.46) / 0.84;
-    return Math.max(this.config.clawCloseAngle, Math.min(-0.16, safeAngle));
-  }
 
   private attemptGrab(physics: PhysicsSystem, prizesManager?: PrizesManager) {
-    const basePos = this.baseMesh.position;
-    const clawScale = this.baseMesh ? this.baseMesh.scale.x : 1.0;
-
     const candidateBody = this.findCandidatePrize(prizesManager);
 
     if (candidateBody) {
       const targetBody = candidateBody;
       const bPos = targetBody.translation();
 
-      const localAnchorX = bPos.x - basePos.x;
-      const localAnchorY = bPos.y - basePos.y;
-      const localAnchorZ = bPos.z - basePos.z;
+      const contacts = this.fingers.map(finger => finger.contact(targetBody)).filter(contact => contact !== null);
+      const anchor = contacts.reduce((point,contact) => point.add(new THREE.Vector3(contact.point2.x,contact.point2.y,contact.point2.z)),new THREE.Vector3()).divideScalar(contacts.length);
+      const baseAnchor = anchor.clone().sub(new THREE.Vector3().copy(this.baseBody.translation()))
+        .applyQuaternion(new THREE.Quaternion().copy(this.baseBody.rotation()).invert());
+      const prizeAnchor = anchor.clone().sub(new THREE.Vector3(bPos.x,bPos.y,bPos.z))
+        .applyQuaternion(new THREE.Quaternion().copy(targetBody.rotation()).invert());
 
       // 嚴格計算外圍貼合角，抱住物體外殼
-      this.grabbedContactAngle = this.getSafeContactAngle(targetBody);
+      this.grabbedContactAngle = this.currentArmAngle;
       this.targetArmAngle = this.grabbedContactAngle;
 
       for (let i = 0; i < targetBody.numColliders(); i++) {
@@ -737,8 +579,8 @@ export class Claw {
 
       // Spherical Joint 錨定接觸點，並啟用碰撞與接觸響應
       const sphericalJointData = RAPIER.JointData.spherical(
-        { x: localAnchorX, y: localAnchorY, z: localAnchorZ },
-        { x: 0, y: 0, z: 0 }
+        baseAnchor,
+        prizeAnchor
       );
 
       const joint = physics.world.createImpulseJoint(
@@ -758,9 +600,9 @@ export class Claw {
     }
   }
 
-  private releasePrize(physics: PhysicsSystem, reason: 'NORMAL' | 'WEAK_DROP' | 'TOP_HIT' | 'CHUTE_RELEASE' = 'NORMAL') {
+  private releasePrize(physics: PhysicsSystem, _reason: 'NORMAL' | 'WEAK_DROP' | 'TOP_HIT' | 'CHUTE_RELEASE' = 'NORMAL') {
     this.grabbedContactAngle = this.config.clawCloseAngle;
-    this.targetArmAngle = this.config.clawCloseAngle;
+    this.targetArmAngle = this.config.clawOpenAngle;
     if (this.grabbedJoint) {
       try {
         physics.world.removeImpulseJoint(this.grabbedJoint, true);
@@ -786,64 +628,8 @@ export class Claw {
 
       body.wakeUp();
 
-      // ── 真正的 3D 甩爪動量轉移 (Authentic Fling & Drop Momentum) ──
-      // 1. 爪頭鐘擺切線瞬時速度 (Tangential Swing Velocity)
-      const baseVisualArm = 1.25;
-      const visualSwingArm = baseVisualArm * (this.config.swayScale || 1.35);
-
-      const swingLinVelX = visualSwingArm * Math.cos(this.swayAngleX) * this.swayVelX;
-      const swingLinVelZ = visualSwingArm * Math.cos(this.swayAngleZ) * this.swayVelZ;
-      const swingLinVelY = -visualSwingArm * (
-        Math.sin(this.swayAngleX) * this.swayVelX +
-        Math.sin(this.swayAngleZ) * this.swayVelZ
-      );
-
-      // 2. 天車平移速度 (Carriage Velocity)
-      const carrVx = this.smoothCarrVelX;
-      const carrVz = this.smoothCarrVelZ;
-
-      // 3. 爪子整體 3D 合成速度（完全保留玩家大甩甩幅之強大慣性！）
-      let throwVx = carrVx + swingLinVelX * 1.18;
-      let throwVz = carrVz + swingLinVelZ * 1.18;
-      let throwVy = swingLinVelY;
-
-      // 4. 依照掉落情境精準賦予物理向量
-      if (reason === 'TOP_HIT') {
-        // 撞天車震落：強烈向下反衝震波 + 沿當前天車傾角反彈
-        throwVy = -1.8;
-        throwVx += Math.sin(this.swayAngleX) * 1.35;
-        throwVz += Math.sin(this.swayAngleZ) * 1.35;
-      } else if (reason === 'WEAK_DROP') {
-        // 電壓轉弱滑落：在上升途中脫鉤，保留部分上升慣性後呈自然拋物線下墜
-        const ascentVel = (this.state === 'ASCENDING') ? 0.9 : 0;
-        throwVy = Math.max(-0.6, ascentVel + swingLinVelY * 0.5);
-      } else if (reason === 'CHUTE_RELEASE') {
-        // 到達洞口正常放爪：輕輕順勢落入出貨口
-        throwVy = Math.min(-0.35, swingLinVelY);
-      } else {
-        throwVy = Math.min(-0.45, swingLinVelY);
-      }
-
-      // 5. 三爪張開時機械推力 (放爪推角推肉，沿物體相對於爪中心方向微推並賦予旋轉)
-      const bPos = body.translation();
-      const cPos = this.baseMesh.position;
-      const pushDx = bPos.x - cPos.x;
-      const pushDz = bPos.z - cPos.z;
-      const pushDist = Math.hypot(pushDx, pushDz);
-      if (pushDist > 0.02) {
-        throwVx += (pushDx / pushDist) * 0.30;
-        throwVz += (pushDz / pushDist) * 0.30;
-      }
-
-      // 6. 賦予精確線速度，徹底移除人工削弱與隨機打散，保持自然拋物線
-      body.setLinvel({ x: throwVx, y: throwVy, z: throwVz }, true);
-
-      // 7. 轉移自然角動量（翻滾旋轉）
-      body.setAngvel({
-        x: -this.swayVelZ * 0.85 + (Math.random() - 0.5) * 0.3,
-        y: (Math.random() - 0.5) * 0.5,
-        z: this.swayVelX * 0.85 + (Math.random() - 0.5) * 0.3
-      }, true);
+      // Rapier already carries the prize's linear and angular momentum.
+      // Opening fingers and gravity determine the release, not a velocity override.
     }
 
     physics.wakeUpAllDynamicBodies();

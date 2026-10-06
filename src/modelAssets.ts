@@ -6,6 +6,10 @@ export const PRIZE_TYPES = ['blindbox', 'cookie_box', 'dragonball', 'dyson', 'le
 const reference = new Set(['tea_box', 'fruit_box', 'milk_box']);
 const pokemon = ['pikachu', 'eevee', 'gengar', 'snorlax', 'psyduck', 'charizard', 'squirtle', 'bulbasaur'];
 export const APPLIANCE_TYPES = ['ps5', 'switch', 'dyson', 'marshall', 'lego'];
+export const LARGE_POKEMON_DIMENSIONS: Record<string,{radius:number;height:number}> = {
+  charizard: {radius:1.5,height:2.8},
+  snorlax: {radius:0.95,height:2.15}
+};
 export const MIXED_PRIZE_TYPES = [...PRIZE_TYPES.filter(type => !APPLIANCE_TYPES.includes(type)), ...pokemon];
 const boxedPrizes = new Set(['blindbox', 'cookie_box', 'dragonball', 'mug_box', 'onepiece', 'ssr_glowing_labubu', 'tea_box', 'fruit_box', 'milk_box']);
 

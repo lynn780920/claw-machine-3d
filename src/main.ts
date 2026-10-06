@@ -178,9 +178,10 @@ async function init() {
     
     // Move carriage horizontally
     while (accumulator >= fixedDt) {
-      handleKeyboardMove(fixedDt);
-      claw.update(fixedDt, physics, prizesManager);
-      physics.step();
+      physics.step(substepDt => {
+        handleKeyboardMove(substepDt);
+        claw.update(substepDt, physics, prizesManager);
+      });
       simulationSteps++;
       accumulator -= fixedDt;
       checkWinCondition();
