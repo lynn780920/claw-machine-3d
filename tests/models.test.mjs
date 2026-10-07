@@ -38,6 +38,13 @@ test('Snorlax and Eevee have independent full-size plush dimensions', () => {
   assert.ok(LARGE_POKEMON_DIMENSIONS.eevee.radius >= 0.9);
 });
 
+test('Psyduck and Gengar use full-size plush dimensions', () => {
+  for (const type of ['psyduck','gengar']) {
+    assert.ok(LARGE_POKEMON_DIMENSIONS[type].height >= 1.9);
+    assert.ok(LARGE_POKEMON_DIMENSIONS[type].radius >= 0.88);
+  }
+});
+
 test('first-stage mixed stock excludes appliances and retains all Pokemon', () => {
   for (const type of APPLIANCE_TYPES) {
     assert.ok(!MIXED_PRIZE_TYPES.includes(type));

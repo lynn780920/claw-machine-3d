@@ -104,7 +104,7 @@ export class PrizesManager {
     this.clearPrizes();
     if (typeFilter === 'pokemon' || typeFilter === 'mixed') {
       const types = typeFilter === 'mixed' ? MIXED_PRIZE_TYPES : FEATURED_POKEMON_TYPES;
-      for (const item of randomPrizeStock(count,types,spreadRadius,chuteBounds)) {
+      for (const item of randomPrizeStock(count,types,spreadRadius,chuteBounds,Math.random,type => this.getPrizeDimensions(type))) {
         this.spawnModelPrize(item.x,item.y,item.z,item.type,new THREE.Euler(item.rx,item.ry,item.rz),prizeStockScale(item.type,typeFilter));
       }
       this.physics.prewarmSimulation(600);

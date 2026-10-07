@@ -29,6 +29,27 @@ test('random stocking changes positions, rotations and inventory order without l
   assert.deepEqual(randomPrizeStock(0,types,4.8),[]);
 });
 
+test('stocked plush and round packs do not start intersecting in the same column', () => {
+  const size = type => type === 'psyduck' ? {radius:0.88,height:1.9} : {radius:0.46,height:0.95};
+  const stock = randomPrizeStock(42,['psyduck','snack_pack'],4.8,chute,seeded(31),size);
+  assert.ok(Math.max(...stock.map(prize => prize.y + Math.max(size(prize.type).height,size(prize.type).radius*2)/2)) < 6.6);
+  const columns = new Map();
+  for (const prize of stock) {
+    const key = `${prize.x},${prize.z}`;
+    if (!columns.has(key)) columns.set(key,[]);
+    columns.get(key).push(prize);
+  }
+  for (const prizes of columns.values()) {
+    let top = 0;
+    for (const prize of prizes.sort((a,b)=>a.y-b.y)) {
+      const {radius,height} = size(prize.type);
+      const halfHeight = Math.max(height,radius*2)/2;
+      assert.ok(prize.y-halfHeight >= top+0.13);
+      top = prize.y+halfHeight;
+    }
+  }
+});
+
 test('weight and rolling resistance are independent, bounded settings', () => {
   const normal = prizePhysicsProfile('eevee',true);
   const heavy = prizePhysicsProfile('eevee',true,2);
