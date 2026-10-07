@@ -47,6 +47,8 @@ export class Cabinet {
   public neonBorderMat!: THREE.MeshStandardMaterial;
 
   public floorMatTex!: THREE.CanvasTexture;
+  public bounceFloor = false;
+  private bounceClothTex?: THREE.CanvasTexture;
   public backdropCanvas!: HTMLCanvasElement;
   public backdropTex!: THREE.CanvasTexture;
   public marqueeCanvas!: HTMLCanvasElement;
@@ -389,9 +391,11 @@ export class Cabinet {
         material.bumpScale = 0.018;
       }
     });
-    const addCollider = (size: number[], pos: number[], friction = 0.45) => {
+    const addCollider = (size: number[], pos: number[], friction = 0.45, elastic = false) => {
       const body = physics.world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(pos[0], pos[1], pos[2]));
-      physics.world.createCollider(RAPIER.ColliderDesc.cuboid(size[0]/2,size[1]/2,size[2]/2).setFriction(friction).setRestitution(0.02), body);
+      const shape = RAPIER.ColliderDesc.cuboid(size[0]/2,size[1]/2,size[2]/2).setFriction(friction).setRestitution(elastic ? 0.94 : 0.02);
+      if (elastic) shape.setRestitutionCombineRule(RAPIER.CoefficientCombineRule.Max);
+      physics.world.createCollider(shape, body);
       this.staticBodies.push(body);
     };
     const halfW = this.width / 2, halfD = this.depth / 2;
@@ -431,8 +435,25 @@ export class Cabinet {
       const floor = root.getObjectByName(name) as THREE.Mesh;
       floor.scale.set(w/sx,0.3/sy,d/sz);
       floor.position.set((minX+maxX)/2/sx,-0.15/sy,(minZ+maxZ)/2/sz);
-      (floor.material as THREE.MeshStandardMaterial).map = this.floorMatTex;
-      addCollider([w,0.3,d],[(minX+maxX)/2,-0.15,(minZ+maxZ)/2],0.65);
+      const mat = floor.material as THREE.MeshStandardMaterial;
+      if (this.bounceFloor && !this.bounceClothTex) {
+        const canvas = document.createElement('canvas'); canvas.width = canvas.height = 256;
+        const ctx = canvas.getContext('2d')!;
+        ctx.fillStyle = '#123c48'; ctx.fillRect(0,0,256,256);
+        for (let i=0;i<256;i+=8) {
+          ctx.fillStyle = '#398f98'; ctx.fillRect(i,0,3,256);
+          ctx.fillStyle = '#215d6b'; ctx.fillRect(0,i,256,3);
+        }
+        ctx.strokeStyle = '#9ae4dc'; ctx.lineWidth = 4; ctx.strokeRect(6,6,244,244);
+        this.bounceClothTex = new THREE.CanvasTexture(canvas);
+        this.bounceClothTex.colorSpace = THREE.SRGBColorSpace;
+      }
+      mat.map = this.bounceFloor ? this.bounceClothTex! : this.floorMatTex;
+      mat.bumpMap = mat.map;
+      mat.bumpScale = this.bounceFloor ? 0.025 : 0.005;
+      if (this.bounceFloor) { mat.color.setHex(0xffffff); mat.metalness = 0; mat.roughness = 0.95; }
+      mat.needsUpdate = true;
+      addCollider([w,0.3,d],[(minX+maxX)/2,-0.15,(minZ+maxZ)/2],this.bounceFloor ? 0.35 : 0.65,this.bounceFloor);
     }
     for (const x of [-halfW,halfW]) addCollider([0.12,this.height,this.depth],[x,this.height/2,0]);
     for (const z of [-halfD,halfD]) addCollider([this.width,this.height,0.12],[0,this.height/2,z]);

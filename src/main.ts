@@ -23,19 +23,13 @@ let leaderboardManager: LeaderboardManager;
 let campaignProgress = loadCampaignProgress(LEVEL_CONFIGS.length,localStorage.getItem('claw_player_nickname') || '');
 let stageDrops = 0;
 let stageExhaustedAt = 0;
-const finalTargets = [{type:'eevee',label:'玩偶'},{type:'cookie_box',label:'圓鐵盒'},{type:'mug_box',label:'方盒'}];
-const stageMarkers = new Map<THREE.Object3D,{material:THREE.MeshStandardMaterial;emissive:THREE.Color;intensity:number}[]>();
+const stageMarkers = new Map<THREE.Object3D,THREE.Mesh<THREE.BufferGeometry,THREE.ShaderMaterial>[]>();
 
 function removeStageMarker(prize: THREE.Object3D) {
   const marker = stageMarkers.get(prize);
   if (!marker) return;
-  for (const entry of marker) {
-    entry.material.emissive.copy(entry.emissive);
-    entry.material.emissiveIntensity = entry.intensity;
-  }
+  for (const outline of marker) { outline.removeFromParent(); outline.material.dispose(); }
   stageMarkers.delete(prize);
-  const light = prize.getObjectByName('TargetGlow');
-  if (light instanceof THREE.PointLight) { light.removeFromParent(); light.dispose(); }
 }
 
 function clearStageMarkers() {
@@ -51,20 +45,24 @@ function spawnMarkedTarget(type: string, id: string, x: number, z: number) {
   prizesManager.spawnSinglePrize(x, 2.2, z, type);
   const mesh = prizesManager.prizes.at(-1)!;
   mesh.userData.stageTarget = id;
-  const materials: {material:THREE.MeshStandardMaterial;emissive:THREE.Color;intensity:number}[] = [];
+  const sources: THREE.Mesh[] = [];
   mesh.traverse(object => {
-    if (!(object instanceof THREE.Mesh)) return;
-    for (const material of Array.isArray(object.material) ? object.material : [object.material]) {
-      if (!(material instanceof THREE.MeshStandardMaterial)) continue;
-      materials.push({material,emissive:material.emissive.clone(),intensity:material.emissiveIntensity});
-      material.emissive.setHex(0x8fffd0);
-      material.emissiveIntensity = 1.8;
-    }
+    if (object instanceof THREE.Mesh) sources.push(object);
   });
-  stageMarkers.set(mesh,materials);
-  const glow = new THREE.PointLight(0x8fffd0, 3, 2.5, 2);
-  glow.name = 'TargetGlow';
-  mesh.add(glow);
+  // Back-face shells light only the silhouette, leaving the prize textures untouched.
+  const outlines = sources.flatMap(source => [0.035,0.075].map((width,index) => {
+    const material = new THREE.ShaderMaterial({
+      uniforms:{width:{value:width},opacity:{value:index ? 0.2 : 0.8}},
+      vertexShader:'uniform float width; void main(){vec4 p=modelViewMatrix*vec4(position,1.0);p.xyz+=normalize(normalMatrix*normal)*width;gl_Position=projectionMatrix*p;}',
+      fragmentShader:'uniform float opacity; void main(){gl_FragColor=vec4(0.1,1.0,0.35,opacity);}',
+      side:THREE.BackSide,transparent:true,depthWrite:false,toneMapped:false
+    });
+    const outline = new THREE.Mesh(source.geometry,material);
+    outline.name = 'TargetOutline'; outline.renderOrder = 2;
+    source.add(outline);
+    return outline;
+  }));
+  stageMarkers.set(mesh,outlines);
 }
 
 // Three.js Core
@@ -246,7 +244,7 @@ async function init() {
 
     // Sync helper guides / indicator ring
     for (const materials of stageMarkers.values()) {
-      for (const {material} of materials) material.emissiveIntensity = 1.8 + Math.sin(now*0.003)*0.55;
+      for (const {material} of materials) material.uniforms.opacity.value = (material.uniforms.width.value < 0.05 ? 0.8 : 0.2) * (0.85+Math.sin(now*0.003)*0.15);
     }
     const clawPos = claw.baseMesh.position;
     cabinet.updateIndicator(clawPos.x, clawPos.z, clawPos.y);
@@ -326,8 +324,6 @@ function checkWinCondition() {
         const lostTarget = prizeMesh.userData.stageTarget as string | undefined;
         if (lostTarget?.startsWith('stage6-')) {
           spawnMarkedTarget(['eevee','cookie_box','squirtle'][Number(lostTarget.slice(-1))],lostTarget,0.7,-1.25);
-        } else if (lostTarget?.startsWith('stage7-')) {
-          spawnMarkedTarget(finalTargets[levelSystem.stageWins].type,lostTarget,0.7,-1.25);
         }
         continue;
       }
@@ -336,12 +332,7 @@ function checkWinCondition() {
       updateStatsUI();
       if (levelSystem) {
         const targetId = prizeMesh.userData.stageTarget as string | undefined;
-        const cleared = levelSystem.onItemWon(prizesManager.prizes.length,targetId);
-        if (!cleared && levelSystem.getCurrentConfig().stageNum === 7 && targetId?.startsWith('stage7-')) {
-          const next = levelSystem.stageWins;
-          spawnMarkedTarget(finalTargets[next].type,`stage7-${next}`,0.7,-1.25);
-          updateStageHint(`接力 ${next+1}/3：指定夾出發光${finalTargets[next].label}`);
-        }
+        levelSystem.onItemWon(prizesManager.prizes.length,targetId);
       }
       showWinAlert();
     }
@@ -1230,6 +1221,7 @@ function setupUIEventListeners() {
     if (mode === 'anime') mode = 'large';
 
     currentMachineMode = mode;
+    claw.forceTopRelease = stageNum === 7;
     const modeSelect = document.getElementById('setting-machinemode') as HTMLSelectElement | null;
     if (modeSelect) modeSelect.value = mode;
 
@@ -1238,6 +1230,7 @@ function setupUIEventListeners() {
 
     // 2. Rebuild the single physical cabinet to target scale & theme
     if (cabinet) {
+      cabinet.bounceFloor = stageNum === 7;
       cabinet.rebuildCabinet(mode, physics);
     }
 
@@ -1325,20 +1318,21 @@ function setupUIEventListeners() {
       claw.setClawScale(1.0);
       claw.setMachineBounds(chuteHomeX,chuteHomeZ,3.0,cabinet.height);
       syncDIPPanelUI({
-        strong:stageNum === 5 ? '75' : stageNum === 6 ? '88' : '92', height:stageNum === 5 ? '55' : '76', weak:stageNum === 5 ? '43' : stageNum === 6 ? '65' : '69',
-        tophit:stageNum === 5 ? '35' : stageNum === 6 ? '20' : '13', speed:stageNum === 6 ? '2.6' : '2.0', dropspeed:'2.0',
-        sway:stageNum === 6 ? '1.6' : '1.4', length:'9.5', baffle:stageNum === 5 ? '0.3' : stageNum === 6 ? '0.6' : '0.7',
-        dolls:stageNum === 5 ? '18' : stageNum === 6 ? '15' : '13',
-        antiswing:'disabled',prizetype:'mixed',
+        strong:stageNum === 5 ? '75' : stageNum === 6 ? '88' : '98', height:stageNum === 5 ? '55' : '76', weak:stageNum === 5 ? '43' : stageNum === 6 ? '65' : '98',
+        tophit:stageNum === 5 ? '35' : stageNum === 6 ? '20' : '100', speed:stageNum === 6 ? '2.6' : '2.0', dropspeed:'2.0',
+        sway:stageNum === 6 ? '1.6' : '1.4', length:'9.5', baffle:stageNum === 5 ? '0.3' : stageNum === 6 ? '0.6' : '1.2',
+        dolls:stageNum === 5 ? '18' : stageNum === 6 ? '15' : '2',
+        antiswing:'disabled',prizetype:stageNum === 7 ? 'onepiece' : 'mixed',
         ...(stageNum === 6 ? {weight:'0.60',rolling:'0.35'} : {})
       });
-      prizesManager.spawnPrizes(stageNum === 5 ? 18 : 12,'mixed',4.8,chuteBounds);
+      prizesManager.spawnPrizes(stageNum === 7 ? 2 : stageNum === 5 ? 18 : 12,stageNum === 7 ? 'onepiece' : 'mixed',stageNum === 7 ? 2.2 : 4.8,chuteBounds);
+      if (stageNum === 7) {
+        for (const body of prizesManager.bodies) { body.setLinearDamping(0.1); body.setAngularDamping(0.35); }
+      }
       if (stageNum === 6) {
         for (const [index,type] of ['eevee','cookie_box','squirtle'].entries()) {
           spawnMarkedTarget(type,`stage6-${index}`,0.15+index*0.8,-1.25+index*0.45);
         }
-      } else if (stageNum === 7) {
-        spawnMarkedTarget(finalTargets[0].type,'stage7-0',0.7,-1.25);
       }
       applyCameraView(mode,cameraViewMode);
     } else {
@@ -1763,7 +1757,7 @@ function setupUIEventListeners() {
       switchMachineMode(level.machineMode,level.stageNum);
       updateStageHint(level.stageNum === 5 ? '剩餘下爪次數：30 次'
         : level.stageNum === 6 ? '指定夾出 3 件微微發光的獎品'
-        : level.stageNum === 7 ? '接力 1/3：指定夾出發光玩偶' : '');
+        : level.stageNum === 7 ? '彈跳台：觸頂必掉，彈出任一盒一番賞即可過關' : '');
 
       // Highlight active card in briefing modal
       for (let i = 1; i <= LEVEL_CONFIGS.length; i++) {

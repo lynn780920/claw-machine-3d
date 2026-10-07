@@ -118,13 +118,13 @@ export const LEVEL_CONFIGS: LevelConfig[] = [
     strategyHint: '先移開擋住目標的獎品；其他物品出貨不計入尋寶進度。'
   },
   {
-    id: 7, stageNum: 7, name: '第七關：Lynn 最終挑戰', shortName: '第 7 關',
-    machineMode: 'medium', machineLabel: '指定獎品接力機台', timeLimitSeconds: 12 * 60,
-    targetWins: 3, isClearAll: false, dollCount: 13, prizeType: 'mixed',
+    id: 7, stageNum: 7, name: '第七關：幸運彈跳台', shortName: '第 7 關',
+    machineMode: 'medium', machineLabel: '彈跳布機台', timeLimitSeconds: 12 * 60,
+    targetWins: 1, isClearAll: false, dollCount: 2, prizeType: 'onepiece',
     difficulty: '地獄魔王', difficultyColor: '#f43f5e',
-    description: '依序出貨玩偶、圓鐵盒與方盒；每回合保留檯面上的剩餘物品。',
-    objectiveText: '完成 3 件指定獎品接力',
-    strategyHint: '目前目標會微微發光，下一件會在成功出貨後進場。'
+    description: '兩盒一番賞、98% 強爪、100% 觸頂震落，讓彈跳布決定落點！',
+    objectiveText: '彈出任一盒一番賞',
+    strategyHint: '抓高後掉落，利用彈跳越過 1.2m 擋板，彈出一盒即可過關。'
   }
 ];
 
@@ -256,7 +256,7 @@ export class LevelSystem {
     this.totalCampaignWins++;
     const config = this.getCurrentConfig();
     const countsForStage = config.stageNum === 6 ? targetId?.startsWith('stage6-') === true
-      : config.stageNum === 7 ? targetId === `stage7-${this.stageWins}` : true;
+      : true;
     if (countsForStage) this.stageWins++;
 
     this.updateProgressUI(remainingItemsInMachine);

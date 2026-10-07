@@ -111,6 +111,7 @@ export class Claw {
   }
 
   public carriageLimit = 4.2;
+  public forceTopRelease = false;
   private xBounds: [number, number] = [-4.2, 4.2];
   private zBounds: [number, number] = [-4.2, 4.2];
   public homeX = -3.0;
@@ -625,6 +626,11 @@ export class Claw {
   private triggerTopHit(physics: PhysicsSystem) {
     this.state = 'TOP_HIT';
     this.stateTimer = 0;
+
+    if (this.forceTopRelease) {
+      this.releasePrize(physics, 'TOP_HIT');
+      return;
+    }
 
     if (this.config.godMode) return; // 🌟 無敵保夾模式：撞天車絕不震落！
 

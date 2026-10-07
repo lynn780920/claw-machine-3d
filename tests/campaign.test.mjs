@@ -15,7 +15,7 @@ test('browser progress restores an unlocked stage and ignores corrupt data', () 
   delete globalThis.localStorage;
 });
 
-test('stage six counts only marked prizes and stage seven follows the relay order', () => {
+test('stage six counts only marked prizes and stage seven wins with one bounced box', () => {
   globalThis.window = {setInterval};
   let clears = 0, victories = 0;
   const game = new LevelSystem({
@@ -28,9 +28,8 @@ test('stage six counts only marked prizes and stage seven follows the relay orde
   for (let i=0;i<3;i++) game.onItemWon(11-i,`stage6-${i}`);
   assert.equal(clears,1);
   game.startLevel(6);
-  game.onItemWon(10,'stage7-1');
-  assert.equal(game.stageWins,0);
-  for (let i=0;i<3;i++) game.onItemWon(9-i,`stage7-${i}`);
+  assert.equal(game.getCurrentConfig().dollCount,2);
+  game.onItemWon(1);
   assert.equal(victories,1);
   assert.equal(LEVEL_CONFIGS.length,7);
   game.stopTimer();
