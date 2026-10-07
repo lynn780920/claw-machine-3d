@@ -19,8 +19,8 @@
     <link rel="apple-touch-icon" sizes="180x180" href="./assets/apple-touch-icon-180x180-D0xw-ZwL.png" />
     <link rel="apple-touch-icon" href="./assets/apple-touch-icon-96QgC70_.png" />
     <link rel="manifest" href="./assets/manifest-DWV-rB2U.json" />
-    <script type="module" crossorigin src="./assets/index-BIEyuQd-.js"></script>
-    <link rel="stylesheet" crossorigin href="./assets/index-th715VK1.css">
+    <script type="module" crossorigin src="./assets/index-CFU6yWY-.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-B6zgR9e6.css">
   </head>
   <body>
     <div id="app">
@@ -304,6 +304,16 @@
         <div class="setting-group">
           <label>鋪貨娃娃數量 <span class="value" id="val-dolls">42</span></label>
           <input type="range" id="setting-dolls" min="5" max="100" step="1" value="42">
+        </div>
+
+        <div class="setting-group">
+          <label for="setting-prize-weight">物品重量倍率 <span class="value" id="val-prize-weight">1.00x</span></label>
+          <input type="range" id="setting-prize-weight" min="0.25" max="3" step="0.05" value="1">
+        </div>
+
+        <div class="setting-group">
+          <label for="setting-rolling-resistance">物品滾動阻力 <span class="value" id="val-rolling-resistance">1.00x</span></label>
+          <input type="range" id="setting-rolling-resistance" min="0.25" max="3" step="0.05" value="1">
         </div>
 
         <div class="setting-group" style="flex-direction: column; align-items: stretch; background: rgba(124, 58, 237, 0.12); padding: 12px; border-radius: 10px; border: 1px solid #7c3aed; margin-bottom: 12px; width: 100%; box-sizing: border-box;">
@@ -607,6 +617,7 @@
         <button id="close-leaderboard-btn" class="modal-close-icon"><svg viewBox="0 0 20 20" fill="currentColor" class="close-icon-svg"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg></button>
       </div>
       <div class="leaderboard-content-body">
+        <p id="leaderboard-sync-status" role="status">正在讀取 Google Sheet…</p>
         <!-- Section A: 各關最高紀錄保持人 -->
         <h3 class="records-section-title">各關卡最高紀錄保持人</h3>
         <div class="records-hall-grid" id="records-hall-container">
