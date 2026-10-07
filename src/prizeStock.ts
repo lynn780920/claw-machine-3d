@@ -100,6 +100,6 @@ export function prizePhysicsProfile(type:string, plush:boolean, weight=1, rollin
     blindbox:0.12,ssr_glowing_labubu:0.12,sanrio_bottle:0.16,mug_box:0.38,cookie_box:0.2,
     snack_pack:0.1,dragonball:0.22,onepiece:0.22,ps5:2.6,switch:0.8,dyson:1.1,marshall:1.4,lego:0.45};
   const mass = estimates[type] ?? (plush ? 0.13 : 0.25);
-  return {mass:mass*Math.max(0.25,Math.min(3,weight)),friction:plush ? 0.85 : 0.65,restitution:0.015,
+  return {mass:mass*Math.max(0.25,Math.min(3,weight)),friction:plush ? 0.85 : 1.05,restitution:0.015,
     linearDamping:0.25,angularDamping:(plush ? 1.8 : 1.2)*Math.max(0.25,Math.min(3,rolling))};
 }

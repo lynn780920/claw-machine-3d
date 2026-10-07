@@ -38,7 +38,7 @@ export class ClawFinger {
       const tube = object.name.startsWith('Prong_') && vertices.count === 363;
       const add = (shape:RAPIER.ColliderDesc,position:THREE.Vector3,rotation:THREE.Quaternion) => {
         const collider = this.world.createCollider(shape.setTranslation(position.x,position.y,position.z)
-          .setRotation(rotation).setFriction(0.8).setRestitution(0).setContactSkin(0.003),this.body);
+          .setRotation(rotation).setFriction(1.1).setRestitution(0).setContactSkin(0.003),this.body);
         this.colliders.push(collider);
         this.parts.push({collider,position,rotation});
       };

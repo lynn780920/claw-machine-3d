@@ -228,6 +228,8 @@ export class Claw {
       if (touchedBody) {
         touchedBody.wakeUp();
         const point=touchedBody.translation();
+        const clawPoint=this.baseBody.translation();
+        touchedBody.applyImpulse({x:(point.x-clawPoint.x)*0.045,y:-0.035,z:(point.z-clawPoint.z)*0.045},true);
         physics.wakeUpNear(point.x,point.y,point.z,1.6*this.baseMesh.scale.x);
         this.triggerGrab(prizesManager);
       }
@@ -439,7 +441,7 @@ export class Claw {
     const basePos = this.baseMesh.position;
     const clawScale = this.baseMesh ? this.baseMesh.scale.x : 1.0;
     const lowestTipY = basePos.y - 0.78 * clawScale;
-    const maxDistXZ = 0.38 * clawScale;
+    const maxDistXZ = 0.85 * clawScale;
 
     let candidateBody: RAPIER.RigidBody | null = null;
     let bestScore = -Infinity;

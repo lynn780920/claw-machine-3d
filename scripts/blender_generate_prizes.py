@@ -590,8 +590,8 @@ def build_cookie_box():
     tin = bpy.context.active_object
     tin.data.materials.append(mat_body)
 
-    # Top Cap Plane with Cookie Tin Art
-    bpy.ops.mesh.primitive_plane_add(size=R * 2, location=(0, 0, H / 2 + 0.002))
+    # The printed lid must follow the round tin, not extend as a square card.
+    bpy.ops.mesh.primitive_cylinder_add(vertices=64, radius=R * 0.96, depth=0.003, location=(0, 0, H / 2 + 0.002))
     cap = bpy.context.active_object
     cap.data.materials.append(mat_top)
 
