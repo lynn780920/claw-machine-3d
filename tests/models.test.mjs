@@ -9,7 +9,7 @@ import { fitMachineCamera } from '../src/renderSetup.ts';
 import { withTimeout } from '../src/modelAssets.ts';
 import { PRIZE_TYPES } from '../src/modelAssets.ts';
 import { APPLIANCE_TYPES, MIXED_PRIZE_TYPES, prizeStockScale } from '../src/modelAssets.ts';
-import { collectHullPoints } from '../src/prizeGeometry.ts';
+import { collectHullPoints, centerAndScaleHullPoints } from '../src/prizeGeometry.ts';
 import * as RAPIER from '@dimforge/rapier3d-compat';
 import { ClawFinger } from '../src/clawCollisions.ts';
 import { LARGE_POKEMON_DIMENSIONS, POKEMON_TYPES, FEATURED_POKEMON_TYPES, applyPlushMaterial } from '../src/modelAssets.ts';
@@ -41,7 +41,37 @@ test('Snorlax and Eevee have independent full-size plush dimensions', () => {
 test('Psyduck and Gengar use full-size plush dimensions', () => {
   for (const type of ['psyduck','gengar']) {
     assert.ok(LARGE_POKEMON_DIMENSIONS[type].height >= 1.9);
-    assert.ok(LARGE_POKEMON_DIMENSIONS[type].radius >= 0.88);
+    assert.ok(LARGE_POKEMON_DIMENSIONS[type].radius >= 1.0);
+  }
+});
+
+test('resized skinned Pokemon collider bounds match their visible GLB bounds', async () => {
+  const originalSelf = globalThis.self;
+  const originalBitmap = globalThis.createImageBitmap;
+  globalThis.self = globalThis;
+  globalThis.createImageBitmap = async () => ({width:1,height:1,close(){}});
+  try {
+    for (const type of ['psyduck','gengar','eevee']) {
+      const bytes = await fs.readFile(new URL(`../public/models/pokemon/${type}.glb`,import.meta.url));
+      const visual = (await new GLTFLoader().parseAsync(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.length),'')).scene;
+      const sourceHull = collectHullPoints(visual);
+      const bounds = new THREE.Box3().setFromObject(visual);
+      const size = bounds.getSize(new THREE.Vector3());
+      const center = bounds.getCenter(new THREE.Vector3());
+      const {radius,height} = LARGE_POKEMON_DIMENSIONS[type];
+      const ratio = Math.min(height/size.y,radius*2/Math.max(size.x,size.z));
+      const hull = new THREE.Box3().setFromBufferAttribute(new THREE.BufferAttribute(centerAndScaleHullPoints(sourceHull,center,ratio),3));
+      visual.scale.setScalar(ratio);
+      visual.position.copy(center).multiplyScalar(-ratio);
+      const visible = new THREE.Box3().setFromObject(visual,true);
+      if (type === 'psyduck') assert.ok(visible.getSize(new THREE.Vector3()).y > 1.7);
+      if (type === 'gengar') assert.ok(visible.getSize(new THREE.Vector3()).y > 1.25);
+      assert.ok(hull.min.distanceTo(visible.min)<0.06,`${type} hull bottom is displaced`);
+      assert.ok(hull.max.distanceTo(visible.max)<0.06,`${type} hull top is displaced`);
+    }
+  } finally {
+    if (originalSelf === undefined) delete globalThis.self; else globalThis.self = originalSelf;
+    if (originalBitmap === undefined) delete globalThis.createImageBitmap; else globalThis.createImageBitmap = originalBitmap;
   }
 });
 

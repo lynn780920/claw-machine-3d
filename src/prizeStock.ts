@@ -9,11 +9,7 @@ function shuffled<T>(items: readonly T[], random:()=>number): T[] {
   return result;
 }
 
-export function randomPrizeStock(
-  count:number, types:readonly string[], spread:number, chute?:ChuteBounds,
-  random = Math.random,
-  dimensions: (type:string)=>{radius:number;height:number} = () => ({radius:0.6,height:1.2})
-) {
+export function randomPrizeStock(count:number, types:readonly string[], spread:number, chute?:ChuteBounds, random = Math.random, chuteClearance = 0.45) {
   if (count<=0) return [];
   if (!types.length) throw new RangeError('Prize stock requires at least one type');
   const slots:{x:number;z:number}[] = [];
@@ -21,7 +17,8 @@ export function randomPrizeStock(
     let best = {x:spread*0.35,z:-spread*0.35}, score = -Infinity;
     for (let attempt=0;attempt<50;attempt++) {
       const candidate = {x:(random()*2-1)*spread*0.52,z:(random()*2-1)*spread*0.45};
-      if (chute && candidate.x>chute.minX-0.45 && candidate.x<chute.maxX+0.45 && candidate.z>chute.minZ-0.45 && candidate.z<chute.maxZ+0.45) continue;
+      if (chute && candidate.x>chute.minX-chuteClearance && candidate.x<chute.maxX+chuteClearance
+        && candidate.z>chute.minZ-chuteClearance && candidate.z<chute.maxZ+chuteClearance) continue;
       const distance = slots.length ? Math.min(...slots.map(p=>(p.x-candidate.x)**2+(p.z-candidate.z)**2)) : random();
       if (distance>score) {best=candidate;score=distance;}
     }
@@ -29,23 +26,15 @@ export function randomPrizeStock(
   }
   const inventory:string[] = [];
   while (inventory.length<count) inventory.push(...shuffled(types,random));
-  const heightOf = (type:string) => {
-    const size = dimensions(type);
-    return Math.max(size.height,size.radius*2);
-  };
-  const packingOrder = shuffled(inventory.slice(0,count),random).sort((a,b) => heightOf(b)-heightOf(a));
   const stock = [];
-  const slotTops = slots.map(() => 0);
-  const slotOrder = shuffled(slots.map((position,index)=>({...position,index})),random);
-  for (const type of packingOrder) {
-    const slot = slotOrder.reduce((best,candidate) => slotTops[candidate.index] < slotTops[best.index] ? candidate : best);
-    const halfHeight = heightOf(type)/2;
-    const y = slotTops[slot.index] + halfHeight + 0.14;
-    slotTops[slot.index] = y + halfHeight;
-    stock.push({type,x:slot.x,y,z:slot.z,
-      rx:-0.75-random()*0.8,ry:random()*Math.PI*2,rz:(random()-0.5)*0.7});
+  for (let layer=0;stock.length<count;layer++) {
+    for (const slot of shuffled(slots,random)) {
+      if (stock.length>=count) break;
+      stock.push({type:inventory[stock.length],x:slot.x,y:0.95+layer*1.15,z:slot.z,
+        rx:-0.75-random()*0.8,ry:random()*Math.PI*2,rz:(random()-0.5)*0.7});
+    }
   }
-  return shuffled(stock,random);
+  return stock;
 }
 
 export function prizePhysicsProfile(type:string, plush:boolean, weight=1, rolling=1) {

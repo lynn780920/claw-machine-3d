@@ -10,8 +10,8 @@ export const APPLIANCE_TYPES = ['ps5', 'switch', 'dyson', 'marshall', 'lego'];
 export const LARGE_POKEMON_DIMENSIONS: Record<string,{radius:number;height:number}> = {
   eevee: {radius:0.9,height:2.0},
   snorlax: {radius:0.95,height:2.15},
-  gengar: {radius:0.9,height:1.95},
-  psyduck: {radius:0.88,height:1.9}
+  gengar: {radius:1.05,height:2.0},
+  psyduck: {radius:1.0,height:1.9}
 };
 export const MIXED_PRIZE_TYPES = [...PRIZE_TYPES.filter(type => !APPLIANCE_TYPES.includes(type)), ...POKEMON_TYPES];
 const boxedPrizes = new Set(['blindbox', 'cookie_box', 'dragonball', 'mug_box', 'onepiece', 'ssr_glowing_labubu', 'tea_box', 'fruit_box', 'milk_box']);

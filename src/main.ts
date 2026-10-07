@@ -29,6 +29,7 @@ let controls: OrbitControls;
 // Custom Game Objects
 let physics: PhysicsSystem;
 let cabinet: Cabinet;
+let hasUsedClaw = false;
 let claw: Claw;
 let prizesManager: PrizesManager;
 
@@ -178,6 +179,7 @@ async function init() {
     
     // Move carriage horizontally
     while (accumulator >= fixedDt) {
+      if (claw.state !== 'IDLE') hasUsedClaw = true;
       physics.step(substepDt => {
         handleKeyboardMove(substepDt);
         claw.update(substepDt, physics, prizesManager);
@@ -257,7 +259,7 @@ function checkWinCondition() {
       prizesManager.bodies.splice(idx, 1);
       prizesManager.prizes.splice(idx, 1);
 
-      if (!isEnteringChuteHole) continue;
+      if (!isEnteringChuteHole || !hasUsedClaw) continue;
 
       wins++;
       updateStatsUI();
@@ -1128,6 +1130,7 @@ function setupUIEventListeners() {
   }
 
   function switchMachineMode(mode: string) {
+    hasUsedClaw = false;
     // Normalize aliases
     if (mode === 'sanrio') mode = 'small';
     if (mode === 'standard') mode = 'medium';

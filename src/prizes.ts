@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import * as RAPIER from '@dimforge/rapier3d-compat';
 import { PhysicsSystem } from './physics';
 import { instantiateModel, disposeModel, cartonLabel, APPLIANCE_TYPES, MIXED_PRIZE_TYPES, prizeStockScale, LARGE_POKEMON_DIMENSIONS, FEATURED_POKEMON_TYPES, POKEMON_TYPES } from './modelAssets';
-import { collectHullPoints } from './prizeGeometry';
+import { collectHullPoints, centerAndScaleHullPoints } from './prizeGeometry';
 import { randomPrizeStock, prizePhysicsProfile } from './prizeStock';
 
 export class PrizesManager {
@@ -104,7 +104,8 @@ export class PrizesManager {
     this.clearPrizes();
     if (typeFilter === 'pokemon' || typeFilter === 'mixed') {
       const types = typeFilter === 'mixed' ? MIXED_PRIZE_TYPES : FEATURED_POKEMON_TYPES;
-      for (const item of randomPrizeStock(count,types,spreadRadius,chuteBounds,Math.random,type => this.getPrizeDimensions(type))) {
+      const chuteClearance = Math.max(...types.map(type => this.getPrizeDimensions(type).radius))+0.12;
+      for (const item of randomPrizeStock(count,types,spreadRadius,chuteBounds,Math.random,chuteClearance)) {
         this.spawnModelPrize(item.x,item.y,item.z,item.type,new THREE.Euler(item.rx,item.ry,item.rz),prizeStockScale(item.type,typeFilter));
       }
       this.physics.prewarmSimulation(600);
@@ -257,6 +258,8 @@ export class PrizesManager {
 
   private spawnModelPrize(x: number, y: number, z: number, type: string, rotation = new THREE.Euler(0,(Math.random()-0.5)*0.5,0), scale = 1) {
     const visual = instantiateModel(type);
+    const plush = POKEMON_TYPES.includes(type);
+    const sourceHull = plush ? collectHullPoints(visual) : null;
     const originalBounds = new THREE.Box3().setFromObject(visual);
     const size = originalBounds.getSize(new THREE.Vector3());
     const center = originalBounds.getCenter(new THREE.Vector3());
@@ -281,11 +284,11 @@ export class PrizesManager {
     }
     const body = this.makeDynBodyWithRotation(x,y,z,rotation.x,rotation.y,rotation.z);
     const half = size.multiplyScalar(ratio/2);
-    const plush = POKEMON_TYPES.includes(type);
     const capsuleRadius = Math.min(half.x,half.y,half.z);
     let shape = RAPIER.ColliderDesc.cuboid(half.x,half.y,half.z);
-    if (plush) {
-      shape=RAPIER.ColliderDesc.convexHull(collectHullPoints(group)) ?? RAPIER.ColliderDesc.capsule(Math.max(0,half.y-capsuleRadius),capsuleRadius);
+    if (sourceHull) {
+      shape=RAPIER.ColliderDesc.convexHull(centerAndScaleHullPoints(sourceHull,center,ratio))
+        ?? RAPIER.ColliderDesc.capsule(Math.max(0,half.y-capsuleRadius),capsuleRadius);
     }
     const profile = prizePhysicsProfile(type,plush,this.weightMultiplier,this.rollingResistance);
     const mass = profile.mass*(this.applianceLightweight && APPLIANCE_TYPES.includes(type) ? 0.4 : 1);
