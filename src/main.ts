@@ -24,14 +24,15 @@ let campaignProgress = loadCampaignProgress(LEVEL_CONFIGS.length,localStorage.ge
 let stageDrops = 0;
 let stageExhaustedAt = 0;
 const finalTargets = [{type:'eevee',label:'玩偶'},{type:'cookie_box',label:'圓鐵盒'},{type:'mug_box',label:'方盒'}];
-const stageMarkers = new Map<THREE.Object3D,THREE.Mesh>();
+const stageMarkers = new Map<THREE.Object3D,{material:THREE.MeshStandardMaterial;emissive:THREE.Color;intensity:number}[]>();
 
 function removeStageMarker(prize: THREE.Object3D) {
   const marker = stageMarkers.get(prize);
   if (!marker) return;
-  scene.remove(marker);
-  marker.geometry.dispose();
-  (marker.material as THREE.Material).dispose();
+  for (const entry of marker) {
+    entry.material.emissive.copy(entry.emissive);
+    entry.material.emissiveIntensity = entry.intensity;
+  }
   stageMarkers.delete(prize);
 }
 
@@ -48,13 +49,17 @@ function spawnMarkedTarget(type: string, id: string, x: number, z: number) {
   prizesManager.spawnSinglePrize(x, 2.2, z, type);
   const mesh = prizesManager.prizes.at(-1)!;
   mesh.userData.stageTarget = id;
-  const bounds = new THREE.Box3().setFromObject(mesh);
-  const ring = new THREE.Mesh(new THREE.RingGeometry(0.48,0.54,32),
-    new THREE.MeshBasicMaterial({color:0x27ff8b,side:THREE.DoubleSide,depthWrite:false,toneMapped:false}));
-  ring.rotation.x = -Math.PI/2;
-  ring.position.set(mesh.position.x,bounds.max.y+0.22,mesh.position.z);
-  scene.add(ring);
-  stageMarkers.set(mesh,ring);
+  const materials: {material:THREE.MeshStandardMaterial;emissive:THREE.Color;intensity:number}[] = [];
+  mesh.traverse(object => {
+    if (!(object instanceof THREE.Mesh)) return;
+    for (const material of Array.isArray(object.material) ? object.material : [object.material]) {
+      if (!(material instanceof THREE.MeshStandardMaterial)) continue;
+      materials.push({material,emissive:material.emissive.clone(),intensity:material.emissiveIntensity});
+      material.emissive.setHex(0x8fffd0);
+      material.emissiveIntensity = 0.28;
+    }
+  });
+  stageMarkers.set(mesh,materials);
 }
 
 // Three.js Core
@@ -229,15 +234,14 @@ async function init() {
       checkWinCondition();
     }
     if (levelSystem?.isRunning && levelSystem.getCurrentConfig().stageNum === 5
-      && stageDrops >= 12 && claw.state === 'IDLE' && levelSystem.stageWins < 3) {
+      && stageDrops >= 30 && claw.state === 'IDLE' && levelSystem.stageWins < 3) {
       if (!stageExhaustedAt) stageExhaustedAt = performance.now();
       if (performance.now()-stageExhaustedAt >= 2500) levelSystem.failCurrentLevel();
     }
 
     // Sync helper guides / indicator ring
-    for (const [prize,marker] of stageMarkers) {
-      const bounds = new THREE.Box3().setFromObject(prize);
-      marker.position.set(prize.position.x,bounds.max.y+0.22,prize.position.z);
+    for (const materials of stageMarkers.values()) {
+      for (const {material} of materials) material.emissiveIntensity = 0.28 + Math.sin(now*0.0025)*0.07;
     }
     const clawPos = claw.baseMesh.position;
     cabinet.updateIndicator(clawPos.x, clawPos.z, clawPos.y);
@@ -331,7 +335,7 @@ function checkWinCondition() {
         if (!cleared && levelSystem.getCurrentConfig().stageNum === 7 && targetId?.startsWith('stage7-')) {
           const next = levelSystem.stageWins;
           spawnMarkedTarget(finalTargets[next].type,`stage7-${next}`,0.7,-1.25);
-          updateStageHint(`接力 ${next+1}/3：請出貨${finalTargets[next].label}（綠圈標記）`);
+          updateStageHint(`接力 ${next+1}/3：指定夾出發光${finalTargets[next].label}`);
         }
       }
       showWinAlert();
@@ -617,11 +621,11 @@ function updateClawStateUI() {
 // Action button logic that routes based on current claw state (Free unlimited play without coins requirement!)
 function triggerActionButtonAction() {
   if (claw.state === 'IDLE') {
-    if (levelSystem?.getCurrentConfig().stageNum === 5 && stageDrops >= 12) return;
+    if (levelSystem?.getCurrentConfig().stageNum === 5 && stageDrops >= 30) return;
     if (levelSystem?.getCurrentConfig().stageNum === 5) {
       stageDrops++;
       stageExhaustedAt = 0;
-      updateStageHint(`用爪子撥物品入洞｜剩餘下爪 ${12-stageDrops} 次`);
+      updateStageHint(`剩餘下爪次數：${30-stageDrops} 次`);
     }
     plays++;
     updateStatsUI();
@@ -1136,6 +1140,8 @@ function setupUIEventListeners() {
     dolls: string;
     antiswing: string;
     prizetype: string;
+    weight?: string;
+    rolling?: string;
   }) {
     const strongEl = document.getElementById('setting-strong') as HTMLInputElement | null;
     const heightEl = document.getElementById('setting-height') as HTMLInputElement | null;
@@ -1198,6 +1204,11 @@ function setupUIEventListeners() {
     });
 
     applyDIPSettings();
+    if (params.weight !== undefined && params.rolling !== undefined) {
+      (document.getElementById('setting-prize-weight') as HTMLInputElement).value = params.weight;
+      (document.getElementById('setting-rolling-resistance') as HTMLInputElement).value = params.rolling;
+      applyPrizeTuning();
+    }
   }
 
   let currentMachineMode: string = 'medium';
@@ -1241,18 +1252,18 @@ function setupUIEventListeners() {
       claw.setMachineBounds(chuteHomeX, chuteHomeZ, 2.05, cabinet.height);
 
       syncDIPPanelUI({
-        strong: '95',
-        height: '65',
-        weak: '50',
-        tophit: '14',
-        speed: '2.4',
+        strong: '86',
+        height: '68',
+        weak: '57',
+        tophit: '23',
+        speed: '3.0',
         dropspeed: '2.0',
-        sway: '1.4',
-        length: '8.5',
-        baffle: '0.5',
+        sway: '1.0',
+        length: '9.5',
+        baffle: '0.1',
         dolls: '5',
         antiswing: 'disabled',
-        prizetype: 'blindbox'
+        prizetype: 'blindbox', weight:'0.60', rolling:'0.35'
       });
 
       prizesManager.spawnPrizes(5, 'blindbox', 2.2, chuteBounds);
@@ -1289,18 +1300,18 @@ function setupUIEventListeners() {
       claw.setMachineBounds(chuteHomeX, chuteHomeZ, 4.8, cabinet.height);
 
       syncDIPPanelUI({
-        strong: '100',
+        strong: '89',
         height: '72',
         weak: '60',
         tophit: '29',
-        speed: '1.3',
+        speed: '2.2',
         dropspeed: '2.0',
         sway: '1.2',
-        length: '9.0',
-        baffle: '1.1',
+        length: '10.0',
+        baffle: '0.9',
         dolls: '12',
         antiswing: 'disabled',
-        prizetype: 'giant_appliances'
+        prizetype: 'giant_appliances', weight:'0.60', rolling:'0.35'
       });
 
       prizesManager.spawnPrizes(12, 'giant_appliances', 6.0, chuteBounds);
@@ -1309,11 +1320,12 @@ function setupUIEventListeners() {
       claw.setClawScale(1.0);
       claw.setMachineBounds(chuteHomeX,chuteHomeZ,3.0,cabinet.height);
       syncDIPPanelUI({
-        strong:stageNum === 5 ? '61' : '92', height:'76', weak:'69',
-        tophit:stageNum === 5 ? '35' : '13', speed:'2.0', dropspeed:'2.0',
-        sway:'1.4', length:'9.5', baffle:stageNum === 5 ? '0' : '0.7',
+        strong:stageNum === 5 ? '61' : stageNum === 6 ? '88' : '92', height:'76', weak:stageNum === 6 ? '65' : '69',
+        tophit:stageNum === 5 ? '35' : stageNum === 6 ? '20' : '13', speed:stageNum === 6 ? '2.6' : '2.0', dropspeed:'2.0',
+        sway:stageNum === 6 ? '1.6' : '1.4', length:'9.5', baffle:stageNum === 5 ? '0' : stageNum === 6 ? '0.6' : '0.7',
         dolls:stageNum === 5 ? '18' : stageNum === 6 ? '15' : '13',
-        antiswing:'disabled',prizetype:'mixed'
+        antiswing:'disabled',prizetype:'mixed',
+        ...(stageNum === 6 ? {weight:'0.60',rolling:'0.35'} : {})
       });
       prizesManager.spawnPrizes(stageNum === 5 ? 18 : 12,'mixed',4.8,chuteBounds);
       if (stageNum === 6) {
@@ -1347,6 +1359,7 @@ function setupUIEventListeners() {
       prizesManager.spawnPrizes(42, 'mixed', 4.8, chuteBounds);
       applyCameraView('medium', cameraViewMode);
     }
+    claw.setPlayfieldBounds(cabinet.width,cabinet.depth);
   }
 
   // 🎥 Perspective Angle Toggle (Front eye-level / Side chute depth inspection)
@@ -1742,9 +1755,9 @@ function setupUIEventListeners() {
       if (titleEl) titleEl.textContent = level.shortName;
       
       switchMachineMode(level.machineMode,level.stageNum);
-      updateStageHint(level.stageNum === 5 ? '用爪子撥物品入洞｜剩餘下爪 12 次'
-        : level.stageNum === 6 ? '尋寶：找出 3 件綠圈標記的指定獎品'
-        : level.stageNum === 7 ? '接力 1/3：請出貨玩偶（綠圈標記）' : '');
+      updateStageHint(level.stageNum === 5 ? '剩餘下爪次數：30 次'
+        : level.stageNum === 6 ? '指定夾出 3 件微微發光的獎品'
+        : level.stageNum === 7 ? '接力 1/3：指定夾出發光玩偶' : '');
 
       // Highlight active card in briefing modal
       for (let i = 1; i <= LEVEL_CONFIGS.length; i++) {

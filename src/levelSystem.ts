@@ -95,17 +95,17 @@ export const LEVEL_CONFIGS: LevelConfig[] = [
     prizeType: 'giant_appliances',
     difficulty: '地獄魔王',
     difficultyColor: '#ef4444',
-    description: '1.35x 霸王巨爪與 1.1m 高擋板，限時 8 分鐘內夾出 3 樣巨型家電！',
+    description: '1.35x 霸王巨爪與 0.9m 擋板，限時 8 分鐘內夾出 3 樣巨型家電！',
     objectiveText: '夾出 3 樣巨型家電',
-    strategyHint: '100% 強爪與 2.4 天車速度對抗 1.1m 擋板，抓取重盒邊緣拉拔！'
+    strategyHint: '89% 強爪與 2.2 天車速度，抓取重盒邊緣拉拔！'
   },
   {
     id: 5, stageNum: 5, name: '第五關：一爪翻盤台', shortName: '第 5 關',
     machineMode: 'medium', machineLabel: '三爪撥物機台', timeLimitSeconds: 10 * 60,
     targetWins: 3, isClearAll: false, dollCount: 18, prizeType: 'mixed',
     difficulty: '困難', difficultyColor: '#22c55e',
-    description: '限 12 次下爪出貨 3 樣。爪力 61%、觸頂震落 35%、出貨口無擋板。',
-    objectiveText: '12 次下爪內出貨 3 樣',
+    description: '限 30 次下爪出貨 3 樣。爪力 61%、觸頂震落 35%、出貨口無擋板。',
+    objectiveText: '30 次下爪內出貨 3 樣',
     strategyHint: '不一定要夾起來；用爪子撥動獎品，讓它滑進洞口。'
   },
   {
@@ -113,8 +113,8 @@ export const LEVEL_CONFIGS: LevelConfig[] = [
     machineMode: 'medium', machineLabel: '指定獎品尋寶機台', timeLimitSeconds: 10 * 60,
     targetWins: 3, isClearAll: false, dollCount: 15, prizeType: 'mixed',
     difficulty: '困難', difficultyColor: '#06b6d4',
-    description: '在混合獎品中找出並出貨 3 件發光標記的指定獎品。',
-    objectiveText: '找出 3 件指定獎品',
+    description: '指定夾出 3 件微微發光的獎品。',
+    objectiveText: '指定夾出 3 件發光獎品',
     strategyHint: '先移開擋住目標的獎品；其他物品出貨不計入尋寶進度。'
   },
   {
@@ -124,7 +124,7 @@ export const LEVEL_CONFIGS: LevelConfig[] = [
     difficulty: '地獄魔王', difficultyColor: '#f43f5e',
     description: '依序出貨玩偶、圓鐵盒與方盒；每回合保留檯面上的剩餘物品。',
     objectiveText: '完成 3 件指定獎品接力',
-    strategyHint: '每次只會標記目前目標，下一件會在成功出貨後進場。'
+    strategyHint: '目前目標會微微發光，下一件會在成功出貨後進場。'
   }
 ];
 

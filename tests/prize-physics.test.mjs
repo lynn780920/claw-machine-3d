@@ -116,6 +116,29 @@ const bundle = await build({stdin:{contents:await fs.readFile(new URL('../src/cl
   }]});
 const {Claw} = await import(`data:text/javascript;base64,${Buffer.from(bundle.outputFiles[0].text).toString('base64')}`);
 
+test('small cabinet keeps open swinging fingers ahead of its backboard',async () => {
+  await RAPIER.init();
+  const bytes = await fs.readFile(new URL('../public/models/reference/claw.glb',import.meta.url));
+  globalThis.clawTestModel = (await new GLTFLoader().parseAsync(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.length),'')).scene;
+  const world = new RAPIER.World({x:0,y:0,z:0});
+  try {
+    const physics = {world,wakeUpAllDynamicBodies(){},wakeUpNear(){}};
+    const claw = new Claw(new THREE.Scene(),physics);
+    claw.setClawScale(0.85);
+    claw.setMachineBounds(-1.605,1.265,2.05,6);
+    claw.setPlayfieldBounds(5.3,4.6);
+    world.step();
+    claw.moveCarriage(100,-100,1);
+    world.step();
+    claw.swayAngleX = 0.35;
+    claw.swayAngleZ = -0.35;
+    claw.update(1/120,physics);
+    const bounds = new THREE.Box3().setFromObject(claw.baseMesh);
+    assert.ok(bounds.min.z > -4.6*3.035/6.4,'open claw penetrated backboard');
+    assert.ok(bounds.max.x < 5.3/2,'open claw penetrated side wall');
+  } finally {world.free();delete globalThis.clawTestModel;}
+});
+
 test('actual claw stops descending on finger contact and then raises instead of sinking',async () => {
   await RAPIER.init();
   const bytes = await fs.readFile(new URL('../public/models/reference/claw.glb',import.meta.url));

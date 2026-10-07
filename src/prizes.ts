@@ -68,9 +68,9 @@ export class PrizesManager {
         return { radius: 0.55, height: 1.17 };
       case 'snack_pack':
         return { radius: 0.46, height: 0.95 };
-      case 'ps5':
+      case 'ps5': return { radius: 1.4, height: 2.5 };
+      case 'dyson': return { radius: 1.25, height: 3.2 };
       case 'switch':
-      case 'dyson':
       case 'marshall':
       case 'lego':
       case 'giant_bear':

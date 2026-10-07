@@ -111,13 +111,32 @@ export class Claw {
   }
 
   public carriageLimit = 4.2;
+  private xBounds: [number, number] = [-4.2, 4.2];
+  private zBounds: [number, number] = [-4.2, 4.2];
   public homeX = -3.0;
   public homeZ = 3.0;
+
+  public setPlayfieldBounds(width: number, depth: number) {
+    // Reserve the open fingers and their tilted sweep, not just the claw center.
+    const reach = 1.4 * this.baseMesh.scale.x + 0.08;
+    const xLimit = Math.max(0.2, Math.min(this.carriageLimit, width / 2 - reach));
+    const rearLimit = Math.max(0.2, Math.min(this.carriageLimit, depth * 3.035 / 6.4 - reach));
+    const frontLimit = Math.max(0.2, Math.min(this.carriageLimit, depth / 2 - reach));
+    this.setMachineBounds(
+      Math.max(-xLimit, Math.min(xLimit, this.homeX)),
+      Math.max(-rearLimit, Math.min(frontLimit, this.homeZ)),
+      this.carriageLimit, this.carriageY + 0.55
+    );
+    this.xBounds = [-xLimit, xLimit];
+    this.zBounds = [-rearLimit, frontLimit];
+  }
 
   public setMachineBounds(homeX: number, homeZ: number, limit: number, machineHeight: number = 6.0, resetPosition: boolean = true) {
     this.homeX = homeX;
     this.homeZ = homeZ;
     this.carriageLimit = limit;
+    this.xBounds = [-limit, limit];
+    this.zBounds = [-limit, limit];
     this.carriageY = machineHeight - 0.55;
     this.ropeLength = (machineHeight >= 7.5) ? 1.25 : 1.05;
     this.config.minRopeLength = this.ropeLength;
@@ -260,8 +279,8 @@ export class Claw {
     );
     const anchorOffset = anchorLocal.clone().applyQuaternion(swayQuat);
     const offset = suspensionOffset(length,this.swayAngleX,this.swayAngleZ,
-      [-this.carriageLimit-carrPos.x+anchorOffset.x,this.carriageLimit-carrPos.x+anchorOffset.x],
-      [-this.carriageLimit-carrPos.z+anchorOffset.z,this.carriageLimit-carrPos.z+anchorOffset.z]);
+      [this.xBounds[0]-carrPos.x+anchorOffset.x,this.xBounds[1]-carrPos.x+anchorOffset.x],
+      [this.zBounds[0]-carrPos.z+anchorOffset.z,this.zBounds[1]-carrPos.z+anchorOffset.z]);
     const cableTop = new THREE.Vector3(carrPos.x,carrPos.y-0.1,carrPos.z);
     const cableBottom = cableTop.clone().add(new THREE.Vector3(offset.x,offset.y,offset.z));
     const finalX = cableBottom.x-anchorOffset.x;
@@ -574,8 +593,8 @@ export class Claw {
     const pos = this.carriageBody.translation();
     let nx = pos.x + vx * this.config.moveSpeed * deltaTime;
     let nz = pos.z + vz * this.config.moveSpeed * deltaTime;
-    nx = Math.max(-this.carriageLimit, Math.min(this.carriageLimit, nx));
-    nz = Math.max(-this.carriageLimit, Math.min(this.carriageLimit, nz));
+    nx = Math.max(this.xBounds[0], Math.min(this.xBounds[1], nx));
+    nz = Math.max(this.zBounds[0], Math.min(this.zBounds[1], nz));
     this.carriageBody.setNextKinematicTranslation({ x: nx, y: this.carriageY, z: nz });
     this.carriageMesh.position.set(nx, this.carriageY, nz);
   }
