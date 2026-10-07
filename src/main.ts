@@ -10,7 +10,7 @@ import { LevelSystem, LevelConfig, LEVEL_CONFIGS } from './levelSystem';
 import { LeaderboardManager, escapeLeaderboardText } from './leaderboard';
 import { preloadModels, disposeModel, withTimeout } from './modelAssets';
 import { setupStudio, fitMachineCamera } from './renderSetup';
-import { isDelivered } from './delivery';
+import { isDelivered, isWedgedInChute } from './delivery';
 import { buildArcadeEnvironment } from './arcadeEnvironment';
 
 // Game Statistics
@@ -213,6 +213,8 @@ async function init() {
   loading.remove();
 }
 
+const chuteStalls = new WeakMap<object, number>();
+
 // Check if any dolls fell down the exit chute
 function checkWinCondition() {
   const minX = cabinet.chuteMinX;
@@ -224,26 +226,30 @@ function checkWinCondition() {
     const body = prizesManager.bodies[idx];
     const pos = body.translation();
     
-    // Generous chute & slide ramp footprint detection (Never misses prizes falling into hole or down the delivery ramp)
-    const isEnteringChuteHole = isDelivered(pos,{minX,maxX,minZ,maxZ});
+    const chute = {minX,maxX,minZ,maxZ};
+    const prizeMesh = prizesManager.prizes[idx];
+    const nearChute = pos.x > minX && pos.x < maxX && pos.z > minZ && pos.z < maxZ && pos.y < 1.5;
+    const bottomY = nearChute ? new THREE.Box3().setFromObject(prizeMesh).min.y : Infinity;
+    const wedged = isWedgedInChute(pos,bottomY,body.linvel().y,chute);
+    const stalledFor = wedged ? (chuteStalls.get(body) ?? 0) + 1 / 60 : 0;
+    chuteStalls.set(body,stalledFor);
+    const isEnteringChuteHole = isDelivered(pos,chute) || stalledFor >= 0.45;
     const isFallenBelowFloor = pos.y < -12;
 
     if (isEnteringChuteHole || isFallenBelowFloor) {
-      const prizeMesh = prizesManager.prizes[idx];
-      
-      // Visual shrink-and-delete animation
-      let scale = 1.0;
-      const initialScale = prizeMesh.scale.clone();
-      const shrink = setInterval(() => {
-        scale -= 0.1;
-        if (scale <= 0.1) {
-          clearInterval(shrink);
+      const startY = prizeMesh.position.y;
+      const startTime = performance.now();
+      const fallThroughChute = (now: number) => {
+        const seconds = Math.min((now - startTime) / 1000, 0.7);
+        prizeMesh.position.y = startY - 11 * seconds * seconds;
+        if (seconds >= 0.7) {
           scene.remove(prizeMesh);
           disposeModel(prizeMesh);
         } else {
-          prizeMesh.scale.copy(initialScale).multiplyScalar(scale);
+          requestAnimationFrame(fallThroughChute);
         }
-      }, 50);
+      };
+      requestAnimationFrame(fallThroughChute);
 
       physics.unregisterBody(body);
       physics.world.removeRigidBody(body);

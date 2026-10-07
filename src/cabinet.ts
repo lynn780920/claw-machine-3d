@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import * as RAPIER from '@dimforge/rapier3d-compat';
 import { PhysicsSystem } from './physics';
 import { instantiateModel, disposeModel } from './modelAssets';
+import { CABINET_PALETTES, colorCabinetModel } from './cabinetPalette';
 
 /**
  * 3D Arcade Claw Machine Cabinet
@@ -125,13 +126,13 @@ export class Cabinet {
     c.height = 512;
     const ctx = c.getContext('2d')!;
 
-    // Deep dark slate/graphite base
-    ctx.fillStyle = '#222836';
+    // Light woven liner keeps prizes and the chute edge readable under cabinet lighting.
+    ctx.fillStyle = '#a4b2b6';
     ctx.fillRect(0, 0, 512, 512);
 
     // Fine woven crosshatch grid lines
     for (let i = 0; i < 512; i += 8) {
-      ctx.fillStyle = (i % 16 === 0) ? 'rgba(255, 255, 255, 0.038)' : 'rgba(0, 0, 0, 0.08)';
+      ctx.fillStyle = (i % 16 === 0) ? 'rgba(255, 255, 255, 0.13)' : 'rgba(31, 52, 60, 0.11)';
       ctx.fillRect(i, 0, 3, 512);
       ctx.fillRect(0, i, 512, 3);
     }
@@ -139,7 +140,7 @@ export class Cabinet {
     // Anti-slip rubber grip micro-dots
     for (let i = 0; i < 220; i++) {
       const radius = 2.5 + (i % 4) * 1.5;
-      ctx.fillStyle = (i % 2 === 0) ? 'rgba(255, 255, 255, 0.025)' : 'rgba(0, 0, 0, 0.05)';
+      ctx.fillStyle = (i % 2 === 0) ? 'rgba(255, 255, 255, 0.1)' : 'rgba(31, 52, 60, 0.09)';
       ctx.beginPath();
       ctx.arc((i * 113) % 512, (i * 227) % 512, radius, 0, Math.PI * 2);
       ctx.fill();
@@ -279,6 +280,11 @@ export class Cabinet {
     this.baffleBodies = [];
 
     // 2. Clear Three.js meshes
+    for (const child of this.mesh.children) {
+      if (!(child instanceof THREE.Mesh)) continue;
+      child.geometry.dispose();
+      (child.material as THREE.Material).dispose();
+    }
     while (this.mesh.children.length > 0) {
       this.mesh.remove(this.mesh.children[0]);
     }
@@ -346,6 +352,8 @@ export class Cabinet {
   private buildReferenceCabinet(physics: PhysicsSystem) {
     const root = instantiateModel('cabinet');
     this.modelRoot = root;
+    const palette = CABINET_PALETTES[this.currentTheme as keyof typeof CABINET_PALETTES] ?? CABINET_PALETTES.medium;
+    colorCabinetModel(root, palette);
     const sx = this.width / 7.4, sy = this.height / 6.6, sz = this.depth / 6.4;
     root.scale.set(sx, sy, sz);
     this.mesh.add(root, this.baffleGroup, this.dropIndicatorGroup);
@@ -356,8 +364,10 @@ export class Cabinet {
     (sign.material as THREE.Material).dispose();
     sign.material = new THREE.MeshBasicMaterial({map:this.backdropTex,toneMapped:false});
     this.backdropTex.anisotropy = 8;
-    const backPanel = root.getObjectByName('BackPanel') as THREE.Mesh;
-    (backPanel.material as THREE.MeshStandardMaterial).color.set(0x16101f);
+    // The GLB's solid base has a top face directly beneath the chute; replace it
+    // with an open shell so prizes visibly enter the same hole used by physics.
+    const solidBase = root.getObjectByName('BaseCabinet') as THREE.Mesh;
+    solidBase.visible = false;
     const steelTexture = this.floorMatTex;
     root.traverse(object => {
       if (!(object instanceof THREE.Mesh)) return;
@@ -368,7 +378,7 @@ export class Cabinet {
       }
       const material = object.material as THREE.MeshStandardMaterial;
       if(object.name.startsWith('Floor')) {
-        material.color.set(0x636970);
+        material.color.set(0xe6eeee);
         material.map=this.floorMatTex;
         material.bumpMap=this.floorMatTex;
         material.bumpScale=0.012;
@@ -385,6 +395,31 @@ export class Cabinet {
       this.staticBodies.push(body);
     };
     const halfW = this.width / 2, halfD = this.depth / 2;
+    const baseHeight = 2.65 * sy;
+    const baseY = -1.58 * sy;
+    const shellMaterial = new THREE.MeshStandardMaterial({ color: palette.base, metalness: 0.32, roughness: 0.48 });
+    const wellMaterial = new THREE.MeshStandardMaterial({ color: palette.panel, metalness: 0.12, roughness: 0.7 });
+    const rimMaterial = new THREE.MeshStandardMaterial({ color: palette.trim, metalness: 0.55, roughness: 0.32 });
+    const addVisualBox = (name: string, size: [number, number, number], position: [number, number, number], material: THREE.Material) => {
+      const mesh = new THREE.Mesh(new THREE.BoxGeometry(...size), material);
+      mesh.name = name;
+      mesh.position.set(...position);
+      mesh.receiveShadow = true;
+      this.mesh.add(mesh);
+    };
+    const shellThickness = 0.12;
+    for (const x of [-halfW, halfW]) addVisualBox('BaseSide', [shellThickness, baseHeight, this.depth], [x, baseY, 0], shellMaterial);
+    for (const z of [-halfD, halfD]) addVisualBox('BaseFace', [this.width, baseHeight, shellThickness], [0, baseY, z], shellMaterial);
+    const chuteW = this.chuteMaxX - this.chuteMinX;
+    const chuteD = this.chuteMaxZ - this.chuteMinZ;
+    const chuteX = (this.chuteMinX + this.chuteMaxX) / 2;
+    const chuteZ = (this.chuteMinZ + this.chuteMaxZ) / 2;
+    const wellDepth = Math.min(2.3, baseHeight * 0.88);
+    for (const x of [this.chuteMinX, this.chuteMaxX]) addVisualBox('ChuteWellSide', [0.07, wellDepth, chuteD], [x, -wellDepth / 2, chuteZ], wellMaterial);
+    addVisualBox('ChuteWellBack', [chuteW, wellDepth, 0.07], [chuteX, -wellDepth / 2, this.chuteMinZ], wellMaterial);
+    // These two exposed edges frame the opening; the opposite edges already have baffles.
+    addVisualBox('ChuteLipLeft', [0.055, 0.035, chuteD], [this.chuteMinX, 0.018, chuteZ], rimMaterial);
+    addVisualBox('ChuteLipFront', [chuteW, 0.035, 0.055], [chuteX, 0.018, this.chuteMaxZ], rimMaterial);
     const sections: [string, number, number, number, number][] = [
       ['FloorRight', this.chuteMaxX, halfW, -halfD, halfD],
       ['FloorBack', -halfW, this.chuteMaxX, -halfD, this.chuteMinZ],
@@ -498,6 +533,7 @@ export class Cabinet {
 
   public updateIndicator(x: number, z: number, y: number = 0.05) {
     this.dropIndicatorGroup.position.set(x, 0.05, z);
+    this.dropIndicatorGroup.visible = x < this.chuteMinX || x > this.chuteMaxX || z < this.chuteMinZ || z > this.chuteMaxZ;
   }
 
   // Tilt 3D Joystick
@@ -541,14 +577,16 @@ export class Cabinet {
 
   // Dynamic Theme Switching for 4 Machine Types
   public setTheme(theme: string) {
-    this.bodyMat.color.setHex(0x202222);
-    this.bodyDarkMat.color.setHex(0x171918);
-    this.accentMat.color.setHex(0xb9c3bb);
+    const palette = CABINET_PALETTES[theme as keyof typeof CABINET_PALETTES] ?? CABINET_PALETTES.medium;
+    this.bodyMat.color.setHex(palette.shell);
+    this.bodyDarkMat.color.setHex(palette.base);
+    this.accentMat.color.setHex(palette.trim);
     this.baffleMat.color.setHex(0xf2faf4);
     this.baffleMat.opacity = 0.14;
     this.baffleMat.depthWrite = false;
-    this.neonBorderMat.color.setHex(0x8b948d);
-    this.neonBorderMat.emissive.setHex(0x000000);
-    this.updateMarqueeText('夾樂機台', '', '#eeeeea', '#343934', '#171918');
+    this.neonBorderMat.color.setHex(palette.trim);
+    this.neonBorderMat.emissive.setHex(palette.trim);
+    this.neonBorderMat.emissiveIntensity = 0.22;
+    this.updateMarqueeText('夾樂機台', '', '#ffffff', '#26343d', '#27333c');
   }
 }

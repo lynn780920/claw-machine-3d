@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { isDelivered } from '../src/delivery.ts';
+import { isDelivered, isWedgedInChute } from '../src/delivery.ts';
 import { LEVEL_CONFIGS } from '../src/levelSystem.ts';
 import { fitMachineCamera } from '../src/renderSetup.ts';
 import { withTimeout } from '../src/modelAssets.ts';
@@ -13,6 +13,23 @@ import { collectHullPoints } from '../src/prizeGeometry.ts';
 import * as RAPIER from '@dimforge/rapier3d-compat';
 import { ClawFinger } from '../src/clawCollisions.ts';
 import { LARGE_POKEMON_DIMENSIONS, POKEMON_TYPES, FEATURED_POKEMON_TYPES, applyPlushMaterial } from '../src/modelAssets.ts';
+import { CABINET_PALETTES, colorCabinetModel } from '../src/cabinetPalette.ts';
+
+test('each machine palette colors the GLB shell and base differently', () => {
+  assert.equal(new Set(Object.values(CABINET_PALETTES).map(palette => palette.shell)).size, 4);
+  for (const palette of Object.values(CABINET_PALETTES)) {
+    const root = new THREE.Group();
+    for (const name of ['Frame_1_1', 'BaseCabinet', 'BackPanel']) {
+      const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial());
+      mesh.name = name;
+      root.add(mesh);
+    }
+    colorCabinetModel(root, palette);
+    assert.equal(root.getObjectByName('Frame_1_1').material.color.getHex(), palette.shell);
+    assert.equal(root.getObjectByName('BaseCabinet').material.color.getHex(), palette.base);
+    assert.equal(root.getObjectByName('BackPanel').material.color.getHex(), palette.panel);
+  }
+});
 
 test('Snorlax and Eevee have independent full-size plush dimensions', () => {
   assert.ok(LARGE_POKEMON_DIMENSIONS.snorlax.height > 2);
@@ -252,4 +269,12 @@ test('a prize must pass below the actual chute footprint before it scores',() =>
   assert.equal(isDelivered({x:0,y:-2,z:2},chute),false);
   assert.equal(isDelivered({x:-2,y:-2,z:3.2},chute),false);
   assert.equal(isDelivered({x:-2,y:-2,z:0.2},chute),false);
+});
+
+test('a prize wedged across the chute mouth can be captured without scoring a flyover', () => {
+  assert.equal(isWedgedInChute({x:-2,y:0.8,z:2},0.03,0.01,chute),true);
+  assert.equal(isWedgedInChute({x:-2,y:2,z:2},0.03,0,chute),false);
+  assert.equal(isWedgedInChute({x:-2,y:0.8,z:2},0.8,0,chute),false);
+  assert.equal(isWedgedInChute({x:-2,y:0.8,z:2},0.03,-2,chute),false);
+  assert.equal(isWedgedInChute({x:-3.25,y:0.8,z:2},0.03,0,chute),false);
 });

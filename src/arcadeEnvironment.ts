@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { instantiateModel, FEATURED_POKEMON_TYPES } from './modelAssets';
+import { CABINET_PALETTES, colorCabinetModel } from './cabinetPalette';
 
 function signTexture(title: string, color: string) {
   const canvas=document.createElement('canvas');
@@ -59,12 +60,16 @@ export function buildArcadeEnvironment(scene: THREE.Scene) {
     lamp.position.set(side*10,6,-6); room.add(lamp);
     for(let row=0;row<2;row++) {
       const machine=instantiateModel('cabinet'); machine.name=`Neighbor_${side}_${row}`;
+      const palette = side < 0
+        ? (row === 0 ? CABINET_PALETTES.small : CABINET_PALETTES.large)
+        : (row === 0 ? CABINET_PALETTES.kbasket : CABINET_PALETTES.medium);
+      colorCabinetModel(machine, palette);
       machine.position.set(side*(8.2+row*8),0,-2-row*4);
       machine.rotation.y=side*-0.10;
       machine.traverse(object=> {
         if (!(object instanceof THREE.Mesh)) return;
         object.castShadow=false;
-        if(object.name==='BackPanel') (object.material as THREE.MeshStandardMaterial).color.set(0x201725);
+        if(object.name.startsWith('Floor')) (object.material as THREE.MeshStandardMaterial).color.set(0xb7c6c5);
         if (object.name.startsWith('Glass')) { (object.material as THREE.Material).dispose(); object.material=new THREE.MeshBasicMaterial({transparent:true,opacity:0.018,depthWrite:false}); }
         if(object.name==='BackSign') {
           (object.material as THREE.Material).dispose();
@@ -81,7 +86,7 @@ export function buildArcadeEnvironment(scene: THREE.Scene) {
       }
       const header=new THREE.Mesh(new THREE.PlaneGeometry(6.8,1),new THREE.MeshBasicMaterial({map:signTexture(row?'PRIZE LAB':'POKEMON',side<0?'#ff428f':'#35e9ec'),toneMapped:false}));
       header.position.set(0,6.8,3.2); machine.add(header);
-      const edgeMaterial=new THREE.MeshBasicMaterial({color:side<0?0xff2189:0x00dbe8,toneMapped:false});
+      const edgeMaterial=new THREE.MeshBasicMaterial({color:palette.trim,toneMapped:false});
       for(const x of [-3.55,3.55]) {
         const led=new THREE.Mesh(new THREE.BoxGeometry(0.045,6.3,0.045),edgeMaterial);
         led.position.set(x,3.2,3.22); machine.add(led);
