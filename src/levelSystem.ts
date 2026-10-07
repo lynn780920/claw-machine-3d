@@ -37,7 +37,7 @@ export const LEVEL_CONFIGS: LevelConfig[] = [
     timeLimitSeconds: 15 * 60, // 15 分鐘 (900秒)
     targetWins: 8,
     isClearAll: false,
-    dollCount: 18,
+    dollCount: 42,
     prizeType: 'mixed',
     difficulty: '簡單',
     difficultyColor: '#10b981',

@@ -14,6 +14,7 @@ export class PrizesManager {
   public weightMultiplier = 1;
   public rollingResistance = 1;
   public applianceLightweight = false;
+  private pendingStock: ReturnType<typeof setTimeout>[] = [];
 
   applyPrizePhysics() {
     this.bodies.forEach((body,index) => {
@@ -110,6 +111,16 @@ export class PrizesManager {
         return {radius:dimensions.radius*scale,height:dimensions.height*scale};
       };
       const stock=randomPrizeStock(count,types,spreadRadius,chuteBounds,Math.random,chuteClearance,stockDimensions);
+      if (typeFilter === 'mixed' && count === 42) {
+        stock.forEach((item,index) => {
+          const timer=setTimeout(() => {
+            this.pendingStock=this.pendingStock.filter(pending => pending !== timer);
+            this.spawnModelPrize(item.x,Math.max(4.65,item.y+0.35),item.z,item.type,new THREE.Euler(item.rx,item.ry,item.rz),prizeStockScale(item.type,typeFilter));
+          },index*105);
+          this.pendingStock.push(timer);
+        });
+        return;
+      }
       for (let index=0;index<stock.length;index++) {
         const item=stock[index];
         const dropY=Math.min(2.25,Math.max(item.y,1.35+(index%3)*0.12));
@@ -313,6 +324,8 @@ export class PrizesManager {
   }
 
   clearPrizes() {
+    this.pendingStock.forEach(clearTimeout);
+    this.pendingStock=[];
     this.onBeforeClear?.();
     this.prizes.forEach(p => { disposeModel(p); this.scene.remove(p); });
     this.bodies.forEach(b => { this.physics.unregisterBody(b); this.physics.world.removeRigidBody(b); });

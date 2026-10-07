@@ -29,7 +29,6 @@ let controls: OrbitControls;
 // Custom Game Objects
 let physics: PhysicsSystem;
 let cabinet: Cabinet;
-let hasUsedClaw = false;
 let claw: Claw;
 let prizesManager: PrizesManager;
 
@@ -179,7 +178,6 @@ async function init() {
     
     // Move carriage horizontally
     while (accumulator >= fixedDt) {
-      if (claw.state !== 'IDLE') hasUsedClaw = true;
       physics.step(substepDt => {
         handleKeyboardMove(substepDt);
         claw.update(substepDt, physics, prizesManager);
@@ -262,7 +260,7 @@ function checkWinCondition() {
       prizesManager.bodies.splice(idx, 1);
       prizesManager.prizes.splice(idx, 1);
 
-      if (!isEnteringChuteHole || !hasUsedClaw) continue;
+      if (!isEnteringChuteHole) continue;
 
       wins++;
       updateStatsUI();
@@ -974,7 +972,7 @@ function setupUIEventListeners() {
     (document.getElementById('setting-sway') as HTMLInputElement).value = '1.4';
     (document.getElementById('setting-length') as HTMLInputElement).value = '9.5';
     (document.getElementById('setting-baffle') as HTMLInputElement).value = '0.7';
-    (document.getElementById('setting-dolls') as HTMLInputElement).value = '18';
+    (document.getElementById('setting-dolls') as HTMLInputElement).value = '42';
     (document.getElementById('setting-prize-weight') as HTMLInputElement).value = '1';
     (document.getElementById('setting-rolling-resistance') as HTMLInputElement).value = '1';
     applyPrizeTuning();
@@ -982,7 +980,7 @@ function setupUIEventListeners() {
     (document.getElementById('setting-antiswing') as HTMLSelectElement).value = 'disabled';
 
     applyDIPSettings();
-    document.getElementById('val-dolls')!.textContent = '18';
+    document.getElementById('val-dolls')!.textContent = '42';
     (document.getElementById('setting-prizetype') as HTMLSelectElement).value = 'mixed';
     respawnCurrentPrizes();
   });
@@ -1133,7 +1131,6 @@ function setupUIEventListeners() {
   }
 
   function switchMachineMode(mode: string) {
-    hasUsedClaw = false;
     // Normalize aliases
     if (mode === 'sanrio') mode = 'small';
     if (mode === 'standard') mode = 'medium';
@@ -1246,12 +1243,12 @@ function setupUIEventListeners() {
         sway: '1.4',
         length: '9.5',
         baffle: '0.7',
-        dolls: '18',
+        dolls: '42',
         antiswing: 'disabled',
         prizetype: 'mixed'
       });
 
-      prizesManager.spawnPrizes(18, 'mixed', 4.8, chuteBounds);
+      prizesManager.spawnPrizes(42, 'mixed', 4.8, chuteBounds);
       applyCameraView('medium', cameraViewMode);
     }
   }
