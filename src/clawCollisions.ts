@@ -89,7 +89,10 @@ export class ClawFinger {
             const shapePosition = part.position.clone().applyQuaternion(rotation).add(position);
             const shapeRotation = rotation.clone().multiply(part.rotation);
             const contact = body.collider(i).contactShape(part.collider.shape,shapePosition,shapeRotation,0.006);
-            if (contact && contact.distance < 0.003) return true;
+            if (contact && contact.distance < 0.003) {
+              body.wakeUp();
+              return true;
+            }
           }
         }
         return false;
@@ -117,7 +120,7 @@ export class ClawFinger {
     for (let i=0;i<body.numColliders();i++) {
       for (const finger of this.colliders) {
         const contact = finger.contactCollider(body.collider(i),0.025);
-        if (contact) return contact;
+        if (contact && contact.distance <= 0.008) return contact;
       }
     }
     return null;

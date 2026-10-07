@@ -105,10 +105,26 @@ export class PrizesManager {
     if (typeFilter === 'pokemon' || typeFilter === 'mixed') {
       const types = typeFilter === 'mixed' ? MIXED_PRIZE_TYPES : FEATURED_POKEMON_TYPES;
       const chuteClearance = Math.max(...types.map(type => this.getPrizeDimensions(type).radius))+0.12;
-      for (const item of randomPrizeStock(count,types,spreadRadius,chuteBounds,Math.random,chuteClearance)) {
-        this.spawnModelPrize(item.x,item.y,item.z,item.type,new THREE.Euler(item.rx,item.ry,item.rz),prizeStockScale(item.type,typeFilter));
+      const stockDimensions = (type:string) => {
+        const scale=prizeStockScale(type,typeFilter),dimensions=this.getPrizeDimensions(type);
+        return {radius:dimensions.radius*scale,height:dimensions.height*scale};
+      };
+      const stock=randomPrizeStock(count,types,spreadRadius,chuteBounds,Math.random,chuteClearance,stockDimensions);
+      for (let index=0;index<stock.length;index++) {
+        const item=stock[index];
+        const dropY=Math.max(item.y,4.65+(index%3)*0.08);
+        this.spawnModelPrize(item.x,dropY,item.z,item.type,new THREE.Euler(item.rx,item.ry,item.rz),prizeStockScale(item.type,typeFilter));
+        // Let each newly stocked item meet the existing pile before the next
+        // one appears. This avoids explosive overlap correction at startup.
+        this.physics.prewarmSimulation(60);
       }
-      this.physics.prewarmSimulation(600);
+      this.physics.prewarmSimulation(240);
+      if (chuteBounds) {
+        for (let attempt=0;attempt<3;attempt++) {
+          if (!this.recoverEscapedStock(chuteBounds)) break;
+          this.physics.prewarmSimulation(180);
+        }
+      }
       return;
     }
     if (typeFilter === 'blindbox') {
@@ -213,6 +229,20 @@ export class PrizesManager {
     this.spawnPrizeByType(x, y, z, prizeType);
   }
 
+  private recoverEscapedStock(chute:{minX:number;maxX:number;minZ:number;maxZ:number}) {
+    const escaped=this.bodies.filter(body => {
+      const p=body.translation();
+      const overChute=p.x>chute.minX && p.x<chute.maxX && p.z>chute.minZ && p.z<chute.maxZ;
+      return p.y<0.08 || (overChute && p.y<1.8);
+    });
+    escaped.forEach((body,index) => {
+      body.setTranslation({x:0.65+(index%3)*0.85,y:4.7+index*0.12,z:-1.7+Math.floor(index/3)*0.8},true);
+      body.setLinvel({x:0,y:0,z:0},true);
+      body.setAngvel({x:0,y:0,z:0},true);
+    });
+    return escaped.length;
+  }
+
   spawnRandomPresetBarrier() {
     this.clearPrizes();
     const barrierTypes = ['mug_box', 'cookie_box', 'sanrio_bottle', 'onepiece'];
@@ -294,7 +324,9 @@ export class PrizesManager {
     const mass = profile.mass*(this.applianceLightweight && APPLIANCE_TYPES.includes(type) ? 0.4 : 1);
     body.setLinearDamping(profile.linearDamping);
     body.setAngularDamping(profile.angularDamping);
-    shape.setMass(mass).setFriction(profile.friction).setRestitution(profile.restitution).setContactSkin(0.008);
+    body.setSoftCcdPrediction(plush ? 0.12 : 0.06);
+    body.setAdditionalSolverIterations(plush ? 4 : 2);
+    shape.setMass(mass).setFriction(profile.friction).setRestitution(profile.restitution).setContactSkin(plush ? 0.025 : 0.012);
     this.physics.world.createCollider(shape,body);
     this.physics.registerBody(body,group);
     this.scene.add(group);

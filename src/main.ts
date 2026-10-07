@@ -255,6 +255,7 @@ function checkWinCondition() {
 
       physics.unregisterBody(body);
       physics.world.removeRigidBody(body);
+      physics.wakeUpNear(pos.x,pos.y+1.0,pos.z,2.8);
 
       prizesManager.bodies.splice(idx, 1);
       prizesManager.prizes.splice(idx, 1);

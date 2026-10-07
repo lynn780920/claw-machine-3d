@@ -5,6 +5,7 @@ export class PhysicsSystem {
   public world!: RAPIER.World;
   private bodies: Map<RAPIER.RigidBody, THREE.Object3D> = new Map();
   private isInitialized = false;
+  private supportAuditStep = 0;
 
   async init() {
     await RAPIER.init();
@@ -14,6 +15,7 @@ export class PhysicsSystem {
 
     // High precision solver iterations to eliminate interpenetration and tunneling
     this.world.integrationParameters.numSolverIterations = 20;
+    this.world.integrationParameters.maxCcdSubsteps = 4;
 
     this.isInitialized = true;
   }
@@ -49,6 +51,19 @@ export class PhysicsSystem {
     for (let i=0;i<2;i++) {
       beforeSubstep?.(substepDt);
       this.world.step();
+    }
+
+    // Removing a supporting prize does not always wake a sleeping body above it.
+    // Periodically wake only genuinely unsupported sleepers so gravity can resume.
+    if (++this.supportAuditStep % 30 === 0) {
+      this.bodies.forEach((_,body) => {
+        if (body.bodyType() !== RAPIER.RigidBodyType.Dynamic || !body.isSleeping()) return;
+        let hasContact = false;
+        for (let i=0;i<body.numColliders() && !hasContact;i++) {
+          this.world.contactPairsWith(body.collider(i),() => { hasContact = true; });
+        }
+        if (!hasContact) body.wakeUp();
+      });
     }
 
     this.world.integrationParameters.dt = originalDt;
@@ -100,6 +115,7 @@ export class PhysicsSystem {
 
   clear() {
     this.bodies.clear();
+    this.supportAuditStep = 0;
     if (this.world) {
       this.world.free();
     }

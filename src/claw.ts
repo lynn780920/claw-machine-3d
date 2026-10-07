@@ -218,10 +218,19 @@ export class Claw {
     const minBaseY = 1.1;
 
     // ── B. Cable Length Animation ──
-    if (this.state === 'DESCENDING' && prizesManager?.bodies.some(body =>
-      this.fingers.some(finger => finger.contact(body)) ||
-      Array.from({length:body.numColliders()},(_,i)=>i).some(i=>this.baseBody.collider(0).contactCollider(body.collider(i),0.025)))) {
-      this.triggerGrab(prizesManager);
+    if (this.state === 'DESCENDING' && prizesManager) {
+      const touchedBody=prizesManager.bodies.find(body =>
+        this.fingers.some(finger => finger.contact(body)) ||
+        Array.from({length:body.numColliders()},(_,i)=>i).some(i=> {
+          const contact=this.baseBody.collider(0).contactCollider(body.collider(i),0.025);
+          return !!contact && contact.distance<=0.008;
+        }));
+      if (touchedBody) {
+        touchedBody.wakeUp();
+        const point=touchedBody.translation();
+        physics.wakeUpNear(point.x,point.y,point.z,1.6*this.baseMesh.scale.x);
+        this.triggerGrab(prizesManager);
+      }
     }
     if (Math.abs(this.ropeLength - this.targetRopeLength) > 0.01) {
       const speed = this.targetRopeLength > this.ropeLength
@@ -322,7 +331,7 @@ export class Claw {
           hitPrizeBody = prizesManager.bodies.find(body => {
             for (let i=0;i<body.numColliders();i++) {
               const contact = head.contactCollider(body.collider(i),0.01);
-              if (contact) return true;
+              if (contact && contact.distance<=0.008) return true;
             }
             return false;
           }) ?? null;

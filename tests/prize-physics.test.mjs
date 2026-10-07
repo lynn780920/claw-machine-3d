@@ -5,8 +5,9 @@ import * as THREE from 'three';
 import * as RAPIER from '@dimforge/rapier3d-compat';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {build} from 'esbuild';
-import {randomPrizeStock,prizePhysicsProfile} from '../src/prizeStock.ts';
+import {randomPrizeStock,prizePhysicsProfile,rotatedPrizeHalfHeight} from '../src/prizeStock.ts';
 import {stepSuspension,suspensionOffset} from '../src/clawSuspension.ts';
+import {PhysicsSystem} from '../src/physics.ts';
 
 const seeded = seed => () => ((seed=(seed*1664525+1013904223)>>>0)/4294967296);
 const types = ['pikachu','eevee','milk_box','blindbox'];
@@ -40,6 +41,24 @@ test('weight and rolling resistance are independent, bounded settings', () => {
   assert.ok(normal.friction>=0.8 && normal.restitution<0.03);
 });
 
+test('dimension-aware mixed stocking vertically separates repeated stack slots below the cabinet roof',()=>{
+  const dimensions={pikachu:{radius:0.85,height:1.95},eevee:{radius:0.9,height:2},milk_box:{radius:0.39,height:1.2},blindbox:{radius:0.4125,height:0.8775}};
+  const stock=randomPrizeStock(42,types,4.8,chute,seeded(8),1.12,type=>dimensions[type]);
+  assert.equal(stock.length,42);
+  let highest=0;
+  for (let i=0;i<stock.length;i++) {
+    const a=stock[i],da=dimensions[a.type],ah=rotatedPrizeHalfHeight(da,a.rx,a.ry,a.rz);
+    highest=Math.max(highest,a.y+ah);
+    for (let j=0;j<i;j++) {
+    const a=stock[i],b=stock[j],da=dimensions[a.type],db=dimensions[b.type];
+    if (Math.hypot(a.x-b.x,a.z-b.z)>0.0001) continue;
+    const ah=rotatedPrizeHalfHeight(da,a.rx,a.ry,a.rz),bh=rotatedPrizeHalfHeight(db,b.rx,b.ry,b.rz);
+    assert.ok(a.y-ah>=b.y+bh+0.05 || b.y-bh>=a.y+ah+0.05,'same-slot stock envelopes intersect before physics starts');
+    }
+  }
+  assert.ok(highest<6.55,`stock starts above the cabinet roof at ${highest}`);
+});
+
 test('saved tuning is restored after level initialization and before first stocking',async()=>{
   const source=await fs.readFile(new URL('../src/main.ts',import.meta.url),'utf8');
   const initialization=source.indexOf('levelSystem = new LevelSystem(');
@@ -69,6 +88,22 @@ test('Rapier mass changes immediately and rolling resistance dissipates rotation
   } finally {world.free();}
 });
 
+test('a sleeping prize resumes falling after its supporting body is removed',async()=>{
+  const physics=new PhysicsSystem();
+  await physics.init();
+  try {
+    const support=physics.world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(0,1,0));
+    physics.world.createCollider(RAPIER.ColliderDesc.cuboid(1,0.1,1),support);
+    const prize=physics.world.createRigidBody(RAPIER.RigidBodyDesc.dynamic().setTranslation(0,2,0));
+    physics.world.createCollider(RAPIER.ColliderDesc.ball(0.25).setMass(0.13),prize);
+    physics.registerBody(prize,new THREE.Object3D());
+    prize.sleep();
+    physics.world.removeRigidBody(support);
+    for(let i=0;i<60;i++) physics.step();
+    assert.ok(prize.translation().y<1.5,'unsupported sleeping prize remained suspended');
+  } finally {physics.clear();}
+});
+
 const bundle = await build({stdin:{contents:await fs.readFile(new URL('../src/claw.ts',import.meta.url),'utf8'),loader:'ts',sourcefile:'claw.ts'},
   bundle:true,write:false,format:'esm',platform:'node',plugins:[{
     name:'claw-fixture',setup(builder) {
@@ -88,7 +123,7 @@ test('actual claw stops descending on finger contact and then raises instead of 
   const world = new RAPIER.World({x:0,y:0,z:0});
   try {
     world.timestep = 1/120;
-    const physics = {world,wakeUpAllDynamicBodies(){}};
+    const physics = {world,wakeUpAllDynamicBodies(){},wakeUpNear(){}};
     const claw = new Claw(new THREE.Scene(),physics);
     claw.swayAngleX = 0.18; claw.swayAngleZ = -0.12;
     claw.update(1/120,physics);world.step();
@@ -119,7 +154,7 @@ test('a genuinely gripped prize rises with the claw and keeps its damping after 
   const world = new RAPIER.World({x:0,y:-22,z:0});
   try {
     world.timestep = 1/120;
-    const physics = {world,wakeUpAllDynamicBodies(){}};
+    const physics = {world,wakeUpAllDynamicBodies(){},wakeUpNear(){}};
     const claw = new Claw(new THREE.Scene(),physics);
     claw.config.godMode = true;
     claw.ropeLength = claw.targetRopeLength = 2.4;
@@ -143,6 +178,8 @@ test('plush estimates are lighter than filled cartons and appliances',()=>{
   assert.ok(prizePhysicsProfile('eevee',true).mass<prizePhysicsProfile('milk_box',false).mass);
   assert.ok(prizePhysicsProfile('snorlax',true).mass<prizePhysicsProfile('marshall',false).mass);
   assert.ok(prizePhysicsProfile('pikachu',true).mass<0.25);
+  assert.ok(prizePhysicsProfile('psyduck',true).mass<prizePhysicsProfile('milk_box',false).mass*0.6);
+  assert.ok(prizePhysicsProfile('snorlax',true).mass<prizePhysicsProfile('mug_box',false).mass);
 });
 
 test('taut suspension preserves cable length while swinging and at cabinet bounds',()=>{
