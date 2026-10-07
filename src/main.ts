@@ -233,6 +233,9 @@ async function init() {
         claw.update(substepDt, physics, prizesManager);
       });
       simulationSteps++;
+      for (const body of claw.bouncePending) {
+        if (!body.isValid() || cabinet.boostBounce(body,physics)) claw.bouncePending.delete(body);
+      }
       accumulator -= fixedDt;
       checkWinCondition();
     }
@@ -1222,6 +1225,7 @@ function setupUIEventListeners() {
 
     currentMachineMode = mode;
     claw.forceTopRelease = stageNum === 7;
+    claw.bouncePending.clear();
     const modeSelect = document.getElementById('setting-machinemode') as HTMLSelectElement | null;
     if (modeSelect) modeSelect.value = mode;
 
@@ -1320,7 +1324,7 @@ function setupUIEventListeners() {
       syncDIPPanelUI({
         strong:stageNum === 5 ? '75' : stageNum === 6 ? '88' : '98', height:stageNum === 5 ? '55' : '76', weak:stageNum === 5 ? '43' : stageNum === 6 ? '65' : '98',
         tophit:stageNum === 5 ? '35' : stageNum === 6 ? '20' : '100', speed:stageNum === 6 ? '2.6' : '2.0', dropspeed:'2.0',
-        sway:stageNum === 6 ? '1.6' : '1.4', length:'9.5', baffle:stageNum === 5 ? '0.3' : stageNum === 6 ? '0.6' : '1.2',
+        sway:stageNum === 6 ? '1.6' : '1.4', length:'9.5', baffle:stageNum === 5 ? '0.3' : stageNum === 6 ? '0.6' : '0.7',
         dolls:stageNum === 5 ? '18' : stageNum === 6 ? '15' : '2',
         antiswing:'disabled',prizetype:stageNum === 7 ? 'onepiece' : 'mixed',
         ...(stageNum === 6 ? {weight:'0.60',rolling:'0.35'} : {})
@@ -1757,7 +1761,7 @@ function setupUIEventListeners() {
       switchMachineMode(level.machineMode,level.stageNum);
       updateStageHint(level.stageNum === 5 ? '剩餘下爪次數：30 次'
         : level.stageNum === 6 ? '指定夾出 3 件微微發光的獎品'
-        : level.stageNum === 7 ? '彈跳台：觸頂必掉，彈出任一盒一番賞即可過關' : '');
+        : level.stageNum === 7 ? '彈跳台：觸頂必掉，兩盒一番賞都出貨才過關' : '');
 
       // Highlight active card in briefing modal
       for (let i = 1; i <= LEVEL_CONFIGS.length; i++) {

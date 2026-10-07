@@ -120,11 +120,11 @@ export const LEVEL_CONFIGS: LevelConfig[] = [
   {
     id: 7, stageNum: 7, name: '第七關：幸運彈跳台', shortName: '第 7 關',
     machineMode: 'medium', machineLabel: '彈跳布機台', timeLimitSeconds: 12 * 60,
-    targetWins: 1, isClearAll: false, dollCount: 2, prizeType: 'onepiece',
+    targetWins: 2, isClearAll: false, dollCount: 2, prizeType: 'onepiece',
     difficulty: '地獄魔王', difficultyColor: '#f43f5e',
     description: '兩盒一番賞、98% 強爪、100% 觸頂震落，讓彈跳布決定落點！',
-    objectiveText: '彈出任一盒一番賞',
-    strategyHint: '抓高後掉落，利用彈跳越過 1.2m 擋板，彈出一盒即可過關。'
+    objectiveText: '彈出兩盒一番賞',
+    strategyHint: '抓高後掉落，利用彈跳越過 0.7m 擋板，兩盒都出貨才過關。'
   }
 ];
 

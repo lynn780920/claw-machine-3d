@@ -48,6 +48,24 @@ export class Cabinet {
 
   public floorMatTex!: THREE.CanvasTexture;
   public bounceFloor = false;
+  private bounceSurfaces = new Set<number>();
+
+  public boostBounce(body: RAPIER.RigidBody, physics: PhysicsSystem): boolean {
+    let onCloth = false;
+    for (let i=0;i<body.numColliders();i++) {
+      physics.world.contactPairsWith(body.collider(i),other => {
+        if (!this.bounceSurfaces.has(other.handle)) return;
+        physics.world.contactPair(body.collider(i),other,manifold => {
+          if (manifold.numSolverContacts() > 0) onCloth = true;
+        });
+      });
+    }
+    if (!onCloth) return false;
+    // One bounded arcade spring assist per top release; gravity handles the flight.
+    const deltaV = Math.max(0,10.5-body.linvel().y);
+    body.applyImpulse({x:0,y:body.mass()*deltaV,z:0},true);
+    return true;
+  }
   private bounceClothTex?: THREE.CanvasTexture;
   public backdropCanvas!: HTMLCanvasElement;
   public backdropTex!: THREE.CanvasTexture;
@@ -391,11 +409,13 @@ export class Cabinet {
         material.bumpScale = 0.018;
       }
     });
+    this.bounceSurfaces.clear();
     const addCollider = (size: number[], pos: number[], friction = 0.45, elastic = false) => {
       const body = physics.world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(pos[0], pos[1], pos[2]));
       const shape = RAPIER.ColliderDesc.cuboid(size[0]/2,size[1]/2,size[2]/2).setFriction(friction).setRestitution(elastic ? 0.94 : 0.02);
       if (elastic) shape.setRestitutionCombineRule(RAPIER.CoefficientCombineRule.Max);
-      physics.world.createCollider(shape, body);
+      const collider = physics.world.createCollider(shape, body);
+      if (elastic) this.bounceSurfaces.add(collider.handle);
       this.staticBodies.push(body);
     };
     const halfW = this.width / 2, halfD = this.depth / 2;
