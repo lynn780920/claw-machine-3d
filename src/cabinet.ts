@@ -3,6 +3,7 @@ import * as RAPIER from '@dimforge/rapier3d-compat';
 import { PhysicsSystem } from './physics';
 import { instantiateModel, disposeModel } from './modelAssets';
 import { CABINET_PALETTES, colorCabinetModel } from './cabinetPalette';
+import { ElasticBed } from './elasticBed';
 
 /**
  * 3D Arcade Claw Machine Cabinet
@@ -48,24 +49,7 @@ export class Cabinet {
 
   public floorMatTex!: THREE.CanvasTexture;
   public bounceFloor = false;
-  private bounceSurfaces = new Set<number>();
-
-  public boostBounce(body: RAPIER.RigidBody, physics: PhysicsSystem): boolean {
-    let onCloth = false;
-    for (let i=0;i<body.numColliders();i++) {
-      physics.world.contactPairsWith(body.collider(i),other => {
-        if (!this.bounceSurfaces.has(other.handle)) return;
-        physics.world.contactPair(body.collider(i),other,manifold => {
-          if (manifold.numSolverContacts() > 0) onCloth = true;
-        });
-      });
-    }
-    if (!onCloth) return false;
-    // One bounded arcade spring assist per top release; gravity handles the flight.
-    const deltaV = Math.max(0,10.5-body.linvel().y);
-    body.applyImpulse({x:0,y:body.mass()*deltaV,z:0},true);
-    return true;
-  }
+  public elasticBed?: ElasticBed;
   private bounceClothTex?: THREE.CanvasTexture;
   public backdropCanvas!: HTMLCanvasElement;
   public backdropTex!: THREE.CanvasTexture;
@@ -279,6 +263,8 @@ export class Cabinet {
 
   public rebuildCabinet(mode: string, physics: PhysicsSystem) {
     this.currentTheme = mode;
+    this.elasticBed?.dispose();
+    this.elasticBed = undefined;
     if (this.modelRoot) disposeModel(this.modelRoot);
     this.disposeBaffleMeshes();
 
@@ -409,13 +395,10 @@ export class Cabinet {
         material.bumpScale = 0.018;
       }
     });
-    this.bounceSurfaces.clear();
-    const addCollider = (size: number[], pos: number[], friction = 0.45, elastic = false) => {
+    const addCollider = (size: number[], pos: number[], friction = 0.45) => {
       const body = physics.world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(pos[0], pos[1], pos[2]));
-      const shape = RAPIER.ColliderDesc.cuboid(size[0]/2,size[1]/2,size[2]/2).setFriction(friction).setRestitution(elastic ? 0.94 : 0.02);
-      if (elastic) shape.setRestitutionCombineRule(RAPIER.CoefficientCombineRule.Max);
-      const collider = physics.world.createCollider(shape, body);
-      if (elastic) this.bounceSurfaces.add(collider.handle);
+      const shape = RAPIER.ColliderDesc.cuboid(size[0]/2,size[1]/2,size[2]/2).setFriction(friction).setRestitution(0.02);
+      physics.world.createCollider(shape, body);
       this.staticBodies.push(body);
     };
     const halfW = this.width / 2, halfD = this.depth / 2;
@@ -459,21 +442,29 @@ export class Cabinet {
       if (this.bounceFloor && !this.bounceClothTex) {
         const canvas = document.createElement('canvas'); canvas.width = canvas.height = 256;
         const ctx = canvas.getContext('2d')!;
-        ctx.fillStyle = '#123c48'; ctx.fillRect(0,0,256,256);
+        ctx.fillStyle = '#17242b'; ctx.fillRect(0,0,256,256);
         for (let i=0;i<256;i+=8) {
-          ctx.fillStyle = '#398f98'; ctx.fillRect(i,0,3,256);
-          ctx.fillStyle = '#215d6b'; ctx.fillRect(0,i,256,3);
+          ctx.fillStyle = '#334048'; ctx.fillRect(i,0,3,256);
+          ctx.fillStyle = '#233239'; ctx.fillRect(0,i,256,3);
         }
-        ctx.strokeStyle = '#9ae4dc'; ctx.lineWidth = 4; ctx.strokeRect(6,6,244,244);
         this.bounceClothTex = new THREE.CanvasTexture(canvas);
         this.bounceClothTex.colorSpace = THREE.SRGBColorSpace;
+        this.bounceClothTex.wrapS=this.bounceClothTex.wrapT=THREE.RepeatWrapping;
+        this.bounceClothTex.repeat.set(3,3);
+        this.bounceClothTex.anisotropy=8;
       }
       mat.map = this.bounceFloor ? this.bounceClothTex! : this.floorMatTex;
       mat.bumpMap = mat.map;
       mat.bumpScale = this.bounceFloor ? 0.025 : 0.005;
       if (this.bounceFloor) { mat.color.setHex(0xffffff); mat.metalness = 0; mat.roughness = 0.95; }
       mat.needsUpdate = true;
-      addCollider([w,0.3,d],[(minX+maxX)/2,-0.15,(minZ+maxZ)/2],this.bounceFloor ? 0.35 : 0.65,this.bounceFloor);
+      if (this.bounceFloor) floor.visible=false;
+      else addCollider([w,0.3,d],[(minX+maxX)/2,-0.15,(minZ+maxZ)/2],0.65);
+    }
+    if (this.bounceFloor) {
+      const material=new THREE.MeshStandardMaterial({map:this.bounceClothTex,roughness:0.95,side:THREE.DoubleSide});
+      this.elasticBed=new ElasticBed(physics.world,sections,material);
+      for(const mesh of this.elasticBed.meshes) this.mesh.add(mesh);
     }
     for (const x of [-halfW,halfW]) addCollider([0.12,this.height,this.depth],[x,this.height/2,0]);
     for (const z of [-halfD,halfD]) addCollider([this.width,this.height,0.12],[0,this.height/2,z]);

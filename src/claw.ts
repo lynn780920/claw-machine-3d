@@ -112,7 +112,6 @@ export class Claw {
 
   public carriageLimit = 4.2;
   public forceTopRelease = false;
-  public bouncePending = new Set<RAPIER.RigidBody>();
   private xBounds: [number, number] = [-4.2, 4.2];
   private zBounds: [number, number] = [-4.2, 4.2];
   public homeX = -3.0;
@@ -557,7 +556,6 @@ export class Claw {
     if (this.grabbedBody) {
       const body = this.grabbedBody;
       this.grabbedBody = null;
-      if (this.forceTopRelease && _reason === 'TOP_HIT') this.bouncePending.add(body);
 
       for (let i = 0; i < body.numColliders(); i++) {
         const col = body.collider(i);

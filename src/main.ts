@@ -233,9 +233,6 @@ async function init() {
         claw.update(substepDt, physics, prizesManager);
       });
       simulationSteps++;
-      for (const body of claw.bouncePending) {
-        if (!body.isValid() || cabinet.boostBounce(body,physics)) claw.bouncePending.delete(body);
-      }
       accumulator -= fixedDt;
       checkWinCondition();
     }
@@ -245,6 +242,7 @@ async function init() {
       if (performance.now()-stageExhaustedAt >= 2500) levelSystem.failCurrentLevel();
     }
 
+    cabinet.elasticBed?.updateVisuals();
     // Sync helper guides / indicator ring
     for (const materials of stageMarkers.values()) {
       for (const {material} of materials) material.uniforms.opacity.value = (material.uniforms.width.value < 0.05 ? 0.8 : 0.2) * (0.85+Math.sin(now*0.003)*0.15);
@@ -1225,7 +1223,7 @@ function setupUIEventListeners() {
 
     currentMachineMode = mode;
     claw.forceTopRelease = stageNum === 7;
-    claw.bouncePending.clear();
+    physics.substeps = stageNum === 7 ? 8 : 2;
     const modeSelect = document.getElementById('setting-machinemode') as HTMLSelectElement | null;
     if (modeSelect) modeSelect.value = mode;
 
@@ -1329,7 +1327,7 @@ function setupUIEventListeners() {
         antiswing:'disabled',prizetype:stageNum === 7 ? 'onepiece' : 'mixed',
         ...(stageNum === 6 ? {weight:'0.60',rolling:'0.35'} : {})
       });
-      prizesManager.spawnPrizes(stageNum === 7 ? 2 : stageNum === 5 ? 18 : 12,stageNum === 7 ? 'onepiece' : 'mixed',stageNum === 7 ? 2.2 : 4.8,chuteBounds);
+      prizesManager.spawnPrizes(stageNum === 7 ? 2 : stageNum === 5 ? 18 : 12,stageNum === 7 ? 'onepiece' : 'mixed',stageNum === 7 ? 3.8 : 4.8,chuteBounds);
       if (stageNum === 7) {
         for (const body of prizesManager.bodies) { body.setLinearDamping(0.1); body.setAngularDamping(0.35); }
       }
@@ -1891,7 +1889,9 @@ function setupUIEventListeners() {
   // Restore tuning only after the level configuration API is initialized.
   loadTuningConfigFromStorage();
 
-  levelSystem.startLevel(campaignProgress.unlockedStage-1);
+  const previewStage = import.meta.env.DEV ? Number(new URLSearchParams(location.search).get('previewStage')) : 0;
+  levelSystem.startLevel(previewStage >= 1 && previewStage <= LEVEL_CONFIGS.length
+    ? Math.floor(previewStage)-1 : campaignProgress.unlockedStage-1);
   updateStatsUI();
 }
 

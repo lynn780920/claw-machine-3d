@@ -6,6 +6,7 @@ export class PhysicsSystem {
   private bodies: Map<RAPIER.RigidBody, THREE.Object3D> = new Map();
   private isInitialized = false;
   private supportAuditStep = 0;
+  public substeps = 2;
 
   async init() {
     await RAPIER.init();
@@ -43,12 +44,12 @@ export class PhysicsSystem {
   step(beforeSubstep?: (dt: number) => void) {
     if (!this.isInitialized) return;
 
-    // Substepping: 2 micro-steps per frame (1/120s each) for ultra-accurate collision response and zero tunneling
+    // The compliant bed uses finer substeps; ordinary stages retain their existing cost.
     const originalDt = this.world.integrationParameters.dt;
-    const substepDt = originalDt / 2;
+    const substepDt = originalDt / this.substeps;
     this.world.integrationParameters.dt = substepDt;
 
-    for (let i=0;i<2;i++) {
+    for (let i=0;i<this.substeps;i++) {
       beforeSubstep?.(substepDt);
       this.world.step();
     }
