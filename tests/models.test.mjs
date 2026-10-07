@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { isDelivered, isWedgedInChute } from '../src/delivery.ts';
+import { isDelivered, isWedgedInChute, isPrizeEnteringChute } from '../src/delivery.ts';
 import { LEVEL_CONFIGS } from '../src/levelSystem.ts';
 import { fitMachineCamera } from '../src/renderSetup.ts';
 import { withTimeout } from '../src/modelAssets.ts';
@@ -166,9 +166,9 @@ test('desktop camera frames the playfield at the original arcade distance', () =
   assert.ok(camera.position.z>10 && camera.position.z<11);
 });
 
-test('first stage stocks 42 mixed prizes without changing later stage counts', () => {
+test('first stage stocks a playable mixed assortment without changing later stage counts', () => {
   assert.equal(LEVEL_CONFIGS[0].prizeType,'mixed');
-  assert.deepEqual(LEVEL_CONFIGS.map(level=>level.dollCount),[42,25,5,12]);
+  assert.deepEqual(LEVEL_CONFIGS.map(level=>level.dollCount),[18,25,5,12]);
 });
 
 for (const type of ['pikachu','eevee','gengar','snorlax','psyduck','charizard','squirtle','bulbasaur']) {
@@ -313,5 +313,12 @@ test('a prize wedged across the chute mouth can be captured without scoring a fl
   assert.equal(isWedgedInChute({x:-2,y:2,z:2},0.03,0,chute),false);
   assert.equal(isWedgedInChute({x:-2,y:0.8,z:2},0.8,0,chute),false);
   assert.equal(isWedgedInChute({x:-2,y:0.8,z:2},0.03,-2,chute),false);
-  assert.equal(isWedgedInChute({x:-3.25,y:0.8,z:2},0.03,0,chute),false);
+  assert.equal(isWedgedInChute({x:-3.25,y:0.8,z:2},0.03,0,chute),true);
+});
+
+test('a prize mostly inside the chute opening is delivered even when its center is near the rim',()=>{
+  const chute={minX:-3.3,maxX:-1.1,minZ:0.85,maxZ:2.85};
+  assert.equal(isPrizeEnteringChute({min:{x:-3.15,y:-0.05,z:1.1},max:{x:-0.95,y:1.4,z:2.5}},chute),true);
+  assert.equal(isPrizeEnteringChute({min:{x:-1.35,y:-0.05,z:1.1},max:{x:0.85,y:1.4,z:2.5}},chute),false);
+  assert.equal(isPrizeEnteringChute({min:{x:-3.15,y:0.3,z:1.1},max:{x:-0.95,y:1.4,z:2.5}},chute),false);
 });

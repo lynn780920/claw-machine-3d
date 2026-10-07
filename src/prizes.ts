@@ -112,19 +112,11 @@ export class PrizesManager {
       const stock=randomPrizeStock(count,types,spreadRadius,chuteBounds,Math.random,chuteClearance,stockDimensions);
       for (let index=0;index<stock.length;index++) {
         const item=stock[index];
-        const dropY=Math.max(item.y,4.65+(index%3)*0.08);
+        const dropY=Math.min(2.25,Math.max(item.y,1.35+(index%3)*0.12));
         this.spawnModelPrize(item.x,dropY,item.z,item.type,new THREE.Euler(item.rx,item.ry,item.rz),prizeStockScale(item.type,typeFilter));
-        // Let each newly stocked item meet the existing pile before the next
-        // one appears. This avoids explosive overlap correction at startup.
-        this.physics.prewarmSimulation(60);
+        this.physics.prewarmSimulation(45);
       }
-      this.physics.prewarmSimulation(240);
-      if (chuteBounds) {
-        for (let attempt=0;attempt<3;attempt++) {
-          if (!this.recoverEscapedStock(chuteBounds)) break;
-          this.physics.prewarmSimulation(180);
-        }
-      }
+      this.physics.prewarmSimulation(120);
       return;
     }
     if (typeFilter === 'blindbox') {
@@ -227,20 +219,6 @@ export class PrizesManager {
 
   spawnSinglePrize(x: number, y: number, z: number, prizeType: string) {
     this.spawnPrizeByType(x, y, z, prizeType);
-  }
-
-  private recoverEscapedStock(chute:{minX:number;maxX:number;minZ:number;maxZ:number}) {
-    const escaped=this.bodies.filter(body => {
-      const p=body.translation();
-      const overChute=p.x>chute.minX && p.x<chute.maxX && p.z>chute.minZ && p.z<chute.maxZ;
-      return p.y<0.08 || (overChute && p.y<1.8);
-    });
-    escaped.forEach((body,index) => {
-      body.setTranslation({x:0.65+(index%3)*0.85,y:4.7+index*0.12,z:-1.7+Math.floor(index/3)*0.8},true);
-      body.setLinvel({x:0,y:0,z:0},true);
-      body.setAngvel({x:0,y:0,z:0},true);
-    });
-    return escaped.length;
   }
 
   spawnRandomPresetBarrier() {

@@ -32,7 +32,7 @@ export function randomPrizeStock(
   if (count<=0) return [];
   if (!types.length) throw new RangeError('Prize stock requires at least one type');
   const slots:{x:number;z:number}[] = [];
-  for (let i=0;i<Math.min(count,16);i++) {
+  for (let i=0;i<Math.min(count,24);i++) {
     let best = {x:spread*0.35,z:-spread*0.35}, score = -Infinity;
     for (let attempt=0;attempt<50;attempt++) {
       const candidate = {x:(random()*2-1)*spread*0.52,z:(random()*2-1)*spread*0.45};
@@ -56,9 +56,7 @@ export function randomPrizeStock(
       while (available.length && stock.length<count) {
         const type=inventory[stock.length];
         const dim=dimensions(type);
-        // Stock is laid on its side like a real machine pile. Keeping the pitch
-        // near 90 degrees makes the occupied height predictable before settling.
-        const rx=-Math.PI/2+(random()-0.5)*0.25,ry=(random()-0.5)*0.18,rz=random()*Math.PI*2;
+        const rx=(random()-0.5)*0.35,ry=random()*Math.PI*2,rz=(random()-0.5)*0.35;
         const halfHeight=rotatedPrizeHalfHeight(dim,rx,ry,rz);
         const footprint=Math.max(dim.radius,Math.min(dim.height*0.5,dim.radius*1.25));
         let bestAt=0,bestTop=Infinity,bestClearance=-Infinity;

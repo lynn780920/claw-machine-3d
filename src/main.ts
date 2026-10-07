@@ -10,7 +10,7 @@ import { LevelSystem, LevelConfig, LEVEL_CONFIGS } from './levelSystem';
 import { LeaderboardManager, escapeLeaderboardText } from './leaderboard';
 import { preloadModels, disposeModel, withTimeout } from './modelAssets';
 import { setupStudio, fitMachineCamera } from './renderSetup';
-import { isDelivered, isWedgedInChute } from './delivery';
+import { isDelivered, isWedgedInChute, isPrizeEnteringChute } from './delivery';
 import { buildArcadeEnvironment } from './arcadeEnvironment';
 
 // Game Statistics
@@ -230,12 +230,14 @@ function checkWinCondition() {
     
     const chute = {minX,maxX,minZ,maxZ};
     const prizeMesh = prizesManager.prizes[idx];
-    const nearChute = pos.x > minX && pos.x < maxX && pos.z > minZ && pos.z < maxZ && pos.y < 1.5;
-    const bottomY = nearChute ? new THREE.Box3().setFromObject(prizeMesh).min.y : Infinity;
+    const nearChute = pos.x > minX-0.7 && pos.x < maxX+0.7 && pos.z > minZ-0.7 && pos.z < maxZ+0.7 && pos.y < 1.5;
+    const prizeBounds = nearChute ? new THREE.Box3().setFromObject(prizeMesh) : null;
+    const bottomY = prizeBounds?.min.y ?? Infinity;
     const wedged = isWedgedInChute(pos,bottomY,body.linvel().y,chute);
     const stalledFor = wedged ? (chuteStalls.get(body) ?? 0) + 1 / 60 : 0;
     chuteStalls.set(body,stalledFor);
-    const isEnteringChuteHole = isDelivered(pos,chute) || stalledFor >= 0.45;
+    const isEnteringChuteHole = isDelivered(pos,chute) || stalledFor >= 0.3
+      || (prizeBounds !== null && isPrizeEnteringChute(prizeBounds,chute));
     const isFallenBelowFloor = pos.y < -12;
 
     if (isEnteringChuteHole || isFallenBelowFloor) {
@@ -972,7 +974,7 @@ function setupUIEventListeners() {
     (document.getElementById('setting-sway') as HTMLInputElement).value = '1.4';
     (document.getElementById('setting-length') as HTMLInputElement).value = '9.5';
     (document.getElementById('setting-baffle') as HTMLInputElement).value = '0.7';
-    (document.getElementById('setting-dolls') as HTMLInputElement).value = '42';
+    (document.getElementById('setting-dolls') as HTMLInputElement).value = '18';
     (document.getElementById('setting-prize-weight') as HTMLInputElement).value = '1';
     (document.getElementById('setting-rolling-resistance') as HTMLInputElement).value = '1';
     applyPrizeTuning();
@@ -980,7 +982,7 @@ function setupUIEventListeners() {
     (document.getElementById('setting-antiswing') as HTMLSelectElement).value = 'disabled';
 
     applyDIPSettings();
-    document.getElementById('val-dolls')!.textContent = '42';
+    document.getElementById('val-dolls')!.textContent = '18';
     (document.getElementById('setting-prizetype') as HTMLSelectElement).value = 'mixed';
     respawnCurrentPrizes();
   });
@@ -1244,12 +1246,12 @@ function setupUIEventListeners() {
         sway: '1.4',
         length: '9.5',
         baffle: '0.7',
-        dolls: '42',
+        dolls: '18',
         antiswing: 'disabled',
         prizetype: 'mixed'
       });
 
-      prizesManager.spawnPrizes(42, 'mixed', 4.8, chuteBounds);
+      prizesManager.spawnPrizes(18, 'mixed', 4.8, chuteBounds);
       applyCameraView('medium', cameraViewMode);
     }
   }
