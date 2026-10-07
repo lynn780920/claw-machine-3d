@@ -1841,6 +1841,9 @@ input:checked + .slider.round:before {
   font-family: system-ui, sans-serif;
 }
 .loading-title { font-size: 28px; font-weight: 600; }
+.loading-track { width: min(320px, calc(100vw - 64px)); height: 8px; overflow: hidden; border-radius: 4px; background: #50655a; }
+#asset-progress-fill { width: 0%; height: 100%; background: #27e681; box-shadow: 0 0 14px #27e681; transition: width 0.24s ease; animation: loading-glow 1.2s ease-in-out infinite alternate; }
+@keyframes loading-glow { from { filter: brightness(0.85); } to { filter: brightness(1.35); } }
 #asset-progress { font-variant-numeric: tabular-nums; color: #b1c6b4; max-width: calc(100% - 40px); overflow-wrap: anywhere; text-align: center; }
 #asset-retry { padding: 10px 18px; border: 1px solid #90ab94; border-radius: 4px; background: #3a493e; color: white; cursor: pointer; }
 #asset-retry[hidden] { display: none; }

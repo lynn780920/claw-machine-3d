@@ -73,7 +73,7 @@ export function buildArcadeEnvironment(scene: THREE.Scene) {
         if (object.name.startsWith('Glass')) { (object.material as THREE.Material).dispose(); object.material=new THREE.MeshBasicMaterial({transparent:true,opacity:0.018,depthWrite:false}); }
         if(object.name==='BackSign') {
           (object.material as THREE.Material).dispose();
-          object.material=new THREE.MeshBasicMaterial({map:signTexture(row?'PRIZE LAB':'POKEMON',side<0?'#ff428f':'#35e9ec'),toneMapped:false});
+          object.material=new THREE.MeshBasicMaterial({map:signTexture('賭博就是不歸路',side<0?'#ff428f':'#35e9ec'),toneMapped:false});
         }
       });
       for(let i=0;i<4;i++) {
@@ -84,7 +84,7 @@ export function buildArcadeEnvironment(scene: THREE.Scene) {
         const placement=new THREE.Group(); placement.add(prize); placement.position.set(-2.1+i*1.4,0.75,-0.4);
         machine.add(placement);
       }
-      const header=new THREE.Mesh(new THREE.PlaneGeometry(6.8,1),new THREE.MeshBasicMaterial({map:signTexture(row?'PRIZE LAB':'POKEMON',side<0?'#ff428f':'#35e9ec'),toneMapped:false}));
+      const header=new THREE.Mesh(new THREE.PlaneGeometry(6.8,1),new THREE.MeshBasicMaterial({map:signTexture('賭博就是不歸路',side<0?'#ff428f':'#35e9ec'),toneMapped:false}));
       header.position.set(0,6.8,3.2); machine.add(header);
       const edgeMaterial=new THREE.MeshBasicMaterial({color:palette.trim,toneMapped:false});
       for(const x of [-3.55,3.55]) {

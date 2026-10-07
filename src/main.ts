@@ -58,14 +58,19 @@ const insertCoinBtn = document.getElementById('insert-coin-btn') as HTMLButtonEl
 
 async function init() {
   const loading = document.getElementById('asset-loading')!;
+  const setLoadingProgress = (percent: number, label = `${percent}%`) => {
+    document.getElementById('asset-progress')!.textContent = label;
+    (document.getElementById('asset-progress-fill') as HTMLElement).style.width = `${percent}%`;
+    loading.querySelector('[role="progressbar"]')?.setAttribute('aria-valuenow',String(percent));
+  };
   await preloadModels((loaded,total) => {
-    document.getElementById('asset-progress')!.textContent = `${Math.round(loaded/total*100)}%`;
+    setLoadingProgress(Math.round(loaded/total*85));
   });
-  document.getElementById('asset-progress')!.textContent = '初始化物理引擎';
+  setLoadingProgress(88,'初始化物理引擎');
   // 1. Initialize physics compat environment
   physics = new PhysicsSystem();
   await withTimeout(physics.init(),20000,'Physics');
-  document.getElementById('asset-progress')!.textContent = '建立街機廳';
+  setLoadingProgress(93,'建立街機廳');
   await new Promise(resolve=>requestAnimationFrame(resolve));
 
   // 2. Setup Three.js scene with 3D Arcade Game Room Environment
@@ -151,7 +156,7 @@ async function init() {
   // 5. Connect UI settings, level progression and keyboard event listeners
   setupUIEventListeners();
   setupKeyboardListeners();
-  document.getElementById('asset-progress')!.textContent = '準備畫面';
+  setLoadingProgress(97,'準備畫面');
   await new Promise(resolve=>requestAnimationFrame(resolve));
   await withTimeout(renderer.compileAsync(scene,camera),30000,'Graphics');
 
@@ -210,6 +215,7 @@ async function init() {
   }
   
   animate(0);
+  setLoadingProgress(100);
   loading.remove();
 }
 

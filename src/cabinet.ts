@@ -172,12 +172,12 @@ export class Cabinet {
     let bgBot = '#0c111a';
 
     if (theme === 'large' || theme === 'anime') {
-      mainTitle = '一番賞';
+      mainTitle = '賭博就是不歸路';
       subTitle = 'フィギュアコーナー';
       enTitle = 'ANIME MASTERPIECE';
       accentHex = '#fbbf24';
     } else if (theme === 'kbasket') {
-      mainTitle = 'K - 霸';
+      mainTitle = '賭博就是不歸路';
       subTitle = '超巨大景品專區';
       enTitle = 'MEGA CLAW MACHINE';
       accentHex = '#ef4444';
@@ -439,10 +439,10 @@ export class Cabinet {
     addCollider([this.width,0.15,this.depth],[0,this.height+0.075,0]);
     this.rebuildBaffles(this.chuteWallHeight, physics);
     if (!this.outerRing) {
-      const guideMaterial = new THREE.MeshBasicMaterial({ color: 0xd5e5d6, transparent: true, opacity: 0.35, depthWrite: false, side: THREE.DoubleSide });
-      this.outerRing = new THREE.Mesh(new THREE.RingGeometry(0.5,0.515,40),guideMaterial);
+      const guideMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff66, transparent: true, opacity: 0.95, depthWrite: false, toneMapped: false, side: THREE.DoubleSide });
+      this.outerRing = new THREE.Mesh(new THREE.RingGeometry(0.46,0.52,48),guideMaterial);
       this.outerRing.rotation.x = -Math.PI/2;
-      this.innerCircle = new THREE.Mesh(new THREE.RingGeometry(0.035,0.055,16),guideMaterial);
+      this.innerCircle = new THREE.Mesh(new THREE.CircleGeometry(0.09,32),guideMaterial);
       this.innerCircle.rotation.x = -Math.PI/2;
     }
     this.dropIndicatorGroup.add(this.outerRing,this.innerCircle);
@@ -587,6 +587,6 @@ export class Cabinet {
     this.neonBorderMat.color.setHex(palette.trim);
     this.neonBorderMat.emissive.setHex(palette.trim);
     this.neonBorderMat.emissiveIntensity = 0.22;
-    this.updateMarqueeText('夾樂機台', '', '#ffffff', '#26343d', '#27333c');
+    this.updateMarqueeText('賭博就是不歸路', '', '#ffffff', '#26343d', '#27333c');
   }
 }
