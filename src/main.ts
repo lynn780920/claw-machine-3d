@@ -12,6 +12,7 @@ import { preloadModels, disposeModel, withTimeout } from './modelAssets';
 import { setupStudio, fitMachineCamera } from './renderSetup';
 import { isDelivered, isWedgedInChute, isPrizeEnteringChute } from './delivery';
 import { buildArcadeEnvironment } from './arcadeEnvironment';
+import { loadCampaignProgress, saveCampaignProgress } from './campaignProgress';
 
 // Game Statistics
 let coins = 0;
@@ -19,6 +20,42 @@ let plays = 0;
 let wins = 0;
 let levelSystem: LevelSystem;
 let leaderboardManager: LeaderboardManager;
+let campaignProgress = loadCampaignProgress(LEVEL_CONFIGS.length,localStorage.getItem('claw_player_nickname') || '');
+let stageDrops = 0;
+let stageExhaustedAt = 0;
+const finalTargets = [{type:'eevee',label:'玩偶'},{type:'cookie_box',label:'圓鐵盒'},{type:'mug_box',label:'方盒'}];
+const stageMarkers = new Map<THREE.Object3D,THREE.Mesh>();
+
+function removeStageMarker(prize: THREE.Object3D) {
+  const marker = stageMarkers.get(prize);
+  if (!marker) return;
+  scene.remove(marker);
+  marker.geometry.dispose();
+  (marker.material as THREE.Material).dispose();
+  stageMarkers.delete(prize);
+}
+
+function clearStageMarkers() {
+  for (const prize of stageMarkers.keys()) removeStageMarker(prize);
+}
+
+function updateStageHint(message: string) {
+  const hint = document.getElementById('stage-hint');
+  if (hint) { hint.textContent = message; hint.hidden = !message; }
+}
+
+function spawnMarkedTarget(type: string, id: string, x: number, z: number) {
+  prizesManager.spawnSinglePrize(x, 2.2, z, type);
+  const mesh = prizesManager.prizes.at(-1)!;
+  mesh.userData.stageTarget = id;
+  const bounds = new THREE.Box3().setFromObject(mesh);
+  const ring = new THREE.Mesh(new THREE.RingGeometry(0.48,0.54,32),
+    new THREE.MeshBasicMaterial({color:0x27ff8b,side:THREE.DoubleSide,depthWrite:false,toneMapped:false}));
+  ring.rotation.x = -Math.PI/2;
+  ring.position.set(mesh.position.x,bounds.max.y+0.22,mesh.position.z);
+  scene.add(ring);
+  stageMarkers.set(mesh,ring);
+}
 
 // Three.js Core
 let scene: THREE.Scene;
@@ -151,7 +188,7 @@ async function init() {
   claw = new Claw(scene, physics);
   
   prizesManager = new PrizesManager(scene, physics);
-  prizesManager.onBeforeClear = () => claw.reset();
+  prizesManager.onBeforeClear = () => { claw.reset(); clearStageMarkers(); };
 
   // 5. Connect UI settings, level progression and keyboard event listeners
   setupUIEventListeners();
@@ -191,8 +228,17 @@ async function init() {
       accumulator -= fixedDt;
       checkWinCondition();
     }
+    if (levelSystem?.isRunning && levelSystem.getCurrentConfig().stageNum === 5
+      && stageDrops >= 12 && claw.state === 'IDLE' && levelSystem.stageWins < 3) {
+      if (!stageExhaustedAt) stageExhaustedAt = performance.now();
+      if (performance.now()-stageExhaustedAt >= 2500) levelSystem.failCurrentLevel();
+    }
 
     // Sync helper guides / indicator ring
+    for (const [prize,marker] of stageMarkers) {
+      const bounds = new THREE.Box3().setFromObject(prize);
+      marker.position.set(prize.position.x,bounds.max.y+0.22,prize.position.z);
+    }
     const clawPos = claw.baseMesh.position;
     cabinet.updateIndicator(clawPos.x, clawPos.z, clawPos.y);
 
@@ -265,13 +311,28 @@ function checkWinCondition() {
 
       prizesManager.bodies.splice(idx, 1);
       prizesManager.prizes.splice(idx, 1);
+      removeStageMarker(prizeMesh);
 
-      if (!isEnteringChuteHole) continue;
+      if (!isEnteringChuteHole) {
+        const lostTarget = prizeMesh.userData.stageTarget as string | undefined;
+        if (lostTarget?.startsWith('stage6-')) {
+          spawnMarkedTarget(['eevee','cookie_box','squirtle'][Number(lostTarget.slice(-1))],lostTarget,0.7,-1.25);
+        } else if (lostTarget?.startsWith('stage7-')) {
+          spawnMarkedTarget(finalTargets[levelSystem.stageWins].type,lostTarget,0.7,-1.25);
+        }
+        continue;
+      }
 
       wins++;
       updateStatsUI();
       if (levelSystem) {
-        levelSystem.onItemWon(prizesManager.prizes.length);
+        const targetId = prizeMesh.userData.stageTarget as string | undefined;
+        const cleared = levelSystem.onItemWon(prizesManager.prizes.length,targetId);
+        if (!cleared && levelSystem.getCurrentConfig().stageNum === 7 && targetId?.startsWith('stage7-')) {
+          const next = levelSystem.stageWins;
+          spawnMarkedTarget(finalTargets[next].type,`stage7-${next}`,0.7,-1.25);
+          updateStageHint(`接力 ${next+1}/3：請出貨${finalTargets[next].label}（綠圈標記）`);
+        }
       }
       showWinAlert();
     }
@@ -556,6 +617,12 @@ function updateClawStateUI() {
 // Action button logic that routes based on current claw state (Free unlimited play without coins requirement!)
 function triggerActionButtonAction() {
   if (claw.state === 'IDLE') {
+    if (levelSystem?.getCurrentConfig().stageNum === 5 && stageDrops >= 12) return;
+    if (levelSystem?.getCurrentConfig().stageNum === 5) {
+      stageDrops++;
+      stageExhaustedAt = 0;
+      updateStageHint(`用爪子撥物品入洞｜剩餘下爪 ${12-stageDrops} 次`);
+    }
     plays++;
     updateStatsUI();
     soundEngine.playCoinDropSFX();
@@ -605,6 +672,9 @@ function setupUIEventListeners() {
       const val = playerNicknameInput.value.trim();
       if (val) {
         leaderboardManager.setPlayerName(val);
+        campaignProgress = loadCampaignProgress(LEVEL_CONFIGS.length,val);
+        if (levelSystem) levelSystem.startLevel(campaignProgress.unlockedStage-1);
+        refreshStageUnlocks();
         updateHudPlayerName();
       }
     }
@@ -849,6 +919,7 @@ function setupUIEventListeners() {
   document.querySelectorAll('.stage-jump-btn').forEach((btn) => {
     btn.addEventListener('click', (e) => {
       const stageIdx = parseInt((e.target as HTMLElement).getAttribute('data-stage') || '0');
+      if (stageIdx + 1 > campaignProgress.unlockedStage) return;
       if (briefingModal) briefingModal.style.display = 'none';
       if (levelSystem) levelSystem.startLevel(stageIdx);
     });
@@ -1136,7 +1207,7 @@ function setupUIEventListeners() {
     fitMachineCamera(camera,controls,cabinet,view === 'side');
   }
 
-  function switchMachineMode(mode: string) {
+  function switchMachineMode(mode: string, stageNum = 1) {
     // Normalize aliases
     if (mode === 'sanrio') mode = 'small';
     if (mode === 'standard') mode = 'medium';
@@ -1167,7 +1238,7 @@ function setupUIEventListeners() {
     if (mode === 'small') {
       // 小型機台 (第三關：潮玩盲盒 8分鐘清台戰 - 嚴格按照照片參數)
       claw.setClawScale(0.85);
-      claw.setMachineBounds(chuteHomeX, chuteHomeZ, 2.35, cabinet.height);
+      claw.setMachineBounds(chuteHomeX, chuteHomeZ, 2.05, cabinet.height);
 
       syncDIPPanelUI({
         strong: '95',
@@ -1184,7 +1255,7 @@ function setupUIEventListeners() {
         prizetype: 'blindbox'
       });
 
-      prizesManager.spawnPrizes(5, 'blindbox', 2.5, chuteBounds);
+      prizesManager.spawnPrizes(5, 'blindbox', 2.2, chuteBounds);
 
       cameraViewMode = 'front';
       const camBtnLabel = document.querySelector('#toggle-camera-btn .nav-btn-label');
@@ -1234,6 +1305,25 @@ function setupUIEventListeners() {
 
       prizesManager.spawnPrizes(12, 'giant_appliances', 6.0, chuteBounds);
       applyCameraView('kbasket', cameraViewMode);
+    } else if (stageNum >= 5) {
+      claw.setClawScale(1.0);
+      claw.setMachineBounds(chuteHomeX,chuteHomeZ,3.0,cabinet.height);
+      syncDIPPanelUI({
+        strong:stageNum === 5 ? '61' : '92', height:'76', weak:'69',
+        tophit:stageNum === 5 ? '35' : '13', speed:'2.0', dropspeed:'2.0',
+        sway:'1.4', length:'9.5', baffle:stageNum === 5 ? '0' : '0.7',
+        dolls:stageNum === 5 ? '18' : stageNum === 6 ? '15' : '13',
+        antiswing:'disabled',prizetype:'mixed'
+      });
+      prizesManager.spawnPrizes(stageNum === 5 ? 18 : 12,'mixed',4.8,chuteBounds);
+      if (stageNum === 6) {
+        for (const [index,type] of ['eevee','cookie_box','squirtle'].entries()) {
+          spawnMarkedTarget(type,`stage6-${index}`,0.15+index*0.8,-1.25+index*0.45);
+        }
+      } else if (stageNum === 7) {
+        spawnMarkedTarget(finalTargets[0].type,'stage7-0',0.7,-1.25);
+      }
+      applyCameraView(mode,cameraViewMode);
     } else {
       // 中型機台 (第一關：初試身手 15分鐘夾8樣 - 嚴格按照照片參數)
       claw.setClawScale(1.0);
@@ -1634,16 +1724,30 @@ function setupUIEventListeners() {
     });
   }
 
-  // 🎮 Initialize 4-Stage Challenge Progression System
+  const refreshStageUnlocks = () => {
+    document.querySelectorAll<HTMLButtonElement>('.stage-jump-btn').forEach(button => {
+      const number = Number(button.dataset.stage) + 1;
+      button.disabled = number > campaignProgress.unlockedStage;
+      button.textContent = button.disabled ? `第 ${number} 關尚未解鎖` : `挑戰第 ${number} 關`;
+    });
+  };
+  refreshStageUnlocks();
+
+  // 🎮 Initialize 7-Stage Challenge Progression System
   levelSystem = new LevelSystem({
     onLevelStarted: (level) => {
+      stageDrops = 0;
+      stageExhaustedAt = 0;
       const titleEl = document.getElementById('hud-level-title');
       if (titleEl) titleEl.textContent = level.shortName;
       
-      switchMachineMode(level.machineMode);
+      switchMachineMode(level.machineMode,level.stageNum);
+      updateStageHint(level.stageNum === 5 ? '用爪子撥物品入洞｜剩餘下爪 12 次'
+        : level.stageNum === 6 ? '尋寶：找出 3 件綠圈標記的指定獎品'
+        : level.stageNum === 7 ? '接力 1/3：請出貨玩偶（綠圈標記）' : '');
 
       // Highlight active card in briefing modal
-      for (let i = 1; i <= 4; i++) {
+      for (let i = 1; i <= LEVEL_CONFIGS.length; i++) {
         const card = document.getElementById(`stage-card-${i}`);
         if (card) {
           if (i === level.stageNum) card.classList.add('active-stage');
@@ -1680,6 +1784,9 @@ function setupUIEventListeners() {
       }
     },
     onStageClear: (level, elapsedSeconds, stageWins) => {
+      campaignProgress.unlockedStage = Math.max(campaignProgress.unlockedStage,Math.min(LEVEL_CONFIGS.length,level.stageNum+1));
+      saveCampaignProgress(campaignProgress,leaderboardManager.getPlayerName());
+      refreshStageUnlocks();
       soundEngine.playStageClearSFX();
       launchConfetti();
 
@@ -1743,6 +1850,9 @@ function setupUIEventListeners() {
       if (gameOverModal) gameOverModal.style.display = 'flex';
     },
     onGameVictory: (totalElapsedSeconds, totalWins) => {
+      campaignProgress = {unlockedStage:LEVEL_CONFIGS.length,completed:true};
+      saveCampaignProgress(campaignProgress,leaderboardManager.getPlayerName());
+      refreshStageUnlocks();
       soundEngine.playGameVictorySFX();
       launchConfetti();
 
@@ -1757,26 +1867,6 @@ function setupUIEventListeners() {
       if (totalWinsEl) totalWinsEl.textContent = `${totalWins} 樣`;
       if (totalPlaysEl) totalPlaysEl.textContent = `${plays} 次`;
 
-      // 檢查並紀錄全破大通關紀錄 (誰打破至尊總紀錄)
-      if (leaderboardManager) {
-        const recordResult = leaderboardManager.checkAndRecordGrandVictory(
-          totalElapsedSeconds,
-          formattedTotalTime,
-          totalWins,
-          plays
-        );
-        const victoryBanner = document.getElementById('victory-new-record-banner');
-        const victoryMsg = document.getElementById('victory-record-msg');
-        if (victoryBanner && victoryMsg) {
-          if (recordResult.isNewRecord) {
-            victoryBanner.style.display = 'block';
-            victoryMsg.textContent = `神級操作！【${leaderboardManager.getPlayerName()}】以總耗時 ${formattedTotalTime} 打破至尊夾王歷史紀錄！(原紀錄：${recordResult.previousBest})`;
-          } else {
-            victoryBanner.style.display = 'none';
-          }
-        }
-      }
-
       if (victoryModal) victoryModal.style.display = 'flex';
     }
   });
@@ -1784,8 +1874,7 @@ function setupUIEventListeners() {
   // Restore tuning only after the level configuration API is initialized.
   loadTuningConfigFromStorage();
 
-  // Start Level 1 (機台 #02 中型機台, 限時 15 分鐘, 8 樣過關)
-  levelSystem.startLevel(0);
+  levelSystem.startLevel(campaignProgress.unlockedStage-1);
   updateStatsUI();
 }
 

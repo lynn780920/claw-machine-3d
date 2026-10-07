@@ -32,6 +32,7 @@
       <div id="canvas-container">
         <canvas id="three-canvas"></canvas>
       </div>
+      <div id="stage-hint" hidden></div>
 
       <!-- Win Toast Popup Notification (Appears for 5s ONLY on winning prize) -->
       <div class="win-toast hidden" id="win-toast">
@@ -209,7 +210,7 @@
           <div class="setting-group compact">
             <label>目標出貨數 <span class="value" id="val-stage4-target">3 樣</span></label>
             <input type="range" id="setting-stage4-target" min="1" max="3" value="3" step="1">
-            <span class="setting-hint">調為 1 樣即可直接全破登頂至尊夾王</span>
+            <span class="setting-hint">調為 1 樣可提前晉級第五關</span>
           </div>
 
           <div class="setting-group compact">
@@ -297,7 +298,7 @@
 
         <div class="setting-group">
           <label>出貨口擋板高度 <span class="value" id="val-baffle">0.7</span></label>
-          <input type="range" id="setting-baffle" min="0.3" max="3.0" step="0.1" value="0.7">
+          <input type="range" id="setting-baffle" min="0" max="3.0" step="0.1" value="0.7">
         </div>
 
         <div class="setting-group">
@@ -414,13 +415,13 @@
     <div class="challenge-modal-card briefing-card">
       <div class="modal-header-banner">
         <div class="header-badge-title">
-          <h2>4 大關卡破關挑戰說明</h2>
+          <h2>7 大關卡破關挑戰說明</h2>
         </div>
         <button id="close-briefing-btn" class="modal-close-icon"><svg viewBox="0 0 20 20" fill="currentColor" class="close-icon-svg"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg></button>
       </div>
 
       <div class="briefing-content-body">
-        <p class="briefing-intro">歡迎挑戰 3D 娃娃機破關模式！玩家必須依序征服 4 個不同難度與機台的關卡，限時時間到若未達成目標即 <strong>GAME OVER</strong>！全部過關即可榮登「至尊夾王」！</p>
+        <p class="briefing-intro">挑戰 7 個關卡。完成關卡後會在這個瀏覽器解鎖下一關；可從已解鎖關卡繼續或重玩。</p>
         
         <div class="stages-roadmap-grid">
           <!-- Stage 1 -->
@@ -467,8 +468,29 @@
               <span class="param-badge">限時 8 分鐘</span>
               <span class="param-badge target-boss">目標：夾到 3 樣</span>
             </div>
-            <p class="stage-desc">終極魔王決戰！100% 強爪與 2.4 天車速度對抗 1.1m 高擋板，夾出 3 樣巨型家電即通關全破！</p>
+            <p class="stage-desc">以霸王巨爪挑戰重型家電盒，成功出貨 3 樣即可晉級。</p>
             <button class="stage-jump-btn" data-stage="3">立即挑戰第 4 關</button>
+          </div>
+          <div class="stage-roadmap-item" id="stage-card-5">
+            <div class="stage-tag hard">第 5 關 · 一爪翻盤</div>
+            <div class="stage-machine-name">三爪撥物機台</div>
+            <div class="stage-params-row"><span class="param-badge">12 次下爪</span><span class="param-badge target">出貨 3 樣</span></div>
+            <p class="stage-desc">爪力 61%、觸頂震落 35%、零擋板。用爪子撥動獎品入洞。</p>
+            <button class="stage-jump-btn" data-stage="4">立即挑戰第 5 關</button>
+          </div>
+          <div class="stage-roadmap-item" id="stage-card-6">
+            <div class="stage-tag hard">第 6 關 · 尋寶</div>
+            <div class="stage-machine-name">指定獎品尋寶機台</div>
+            <div class="stage-params-row"><span class="param-badge">限時 10 分鐘</span><span class="param-badge target">3 件綠圈目標</span></div>
+            <p class="stage-desc">先移開障礙，再找出並出貨綠圈標記的獎品。</p>
+            <button class="stage-jump-btn" data-stage="5">立即挑戰第 6 關</button>
+          </div>
+          <div class="stage-roadmap-item" id="stage-card-7">
+            <div class="stage-tag boss">第 7 關 · 最終接力</div>
+            <div class="stage-machine-name">Lynn 最終挑戰</div>
+            <div class="stage-params-row"><span class="param-badge">限時 12 分鐘</span><span class="param-badge target-boss">依序出貨 3 件</span></div>
+            <p class="stage-desc">依序出貨玩偶、圓鐵盒、方盒；其餘獎品位置不重排。</p>
+            <button class="stage-jump-btn" data-stage="6">立即挑戰第 7 關</button>
           </div>
         </div>
 
@@ -477,7 +499,7 @@
           <ul>
             <li>每關倒數計時即時進行，時間倒數為 0 時直接判定 <strong>GAME OVER</strong>。</li>
             <li>達成每關指定出貨數量（或清台）時，將立即過關並獲得下一關晉級資格！</li>
-            <li>可隨時在說明中點擊「立即挑戰」跳轉關卡進行專項特訓。</li>
+            <li>可從已解鎖關卡繼續或重玩；清除瀏覽器資料會移除本機進度。</li>
           </ul>
         </div>
       </div>
@@ -556,7 +578,7 @@
       </div>
 
       <div class="victory-body">
-        <p class="victory-msg">太神了！你已成功攻破全部 4 大關卡，包含最嚴苛的 K-霸巨型家電魔王關！展現了無與倫比的街機甩爪神技！</p>
+        <p class="victory-msg">恭喜完成第七關！七個關卡都已解鎖，可隨時回來重玩。</p>
         
         <div id="victory-new-record-banner" class="record-break-alert-box" style="display: none;">
           <span class="record-break-tag"><svg viewBox="0 0 20 20" fill="currentColor" class="inline-svg-icon" style="color: #facc15;"><path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clip-rule="evenodd"/></svg> 打破歷史總紀錄</span>
@@ -566,7 +588,7 @@
         <div class="victory-stats-grid">
           <div class="victory-stat-item">
             <span class="v-val" id="victory-total-time">18:42</span>
-            <span class="v-label">全破總耗時</span>
+            <span class="v-label">本次遊玩耗時</span>
           </div>
           <div class="victory-stat-item">
             <span class="v-val" id="victory-total-wins">21</span>

@@ -1848,3 +1848,7 @@ input:checked + .slider.round:before {
 #asset-retry { padding: 10px 18px; border: 1px solid #90ab94; border-radius: 4px; background: #3a493e; color: white; cursor: pointer; }
 #asset-retry[hidden] { display: none; }
 
+#stage-hint { position: fixed; z-index: 18; left: 50%; bottom: 18px; transform: translateX(-50%); max-width: calc(100vw - 28px); padding: 10px 14px; border: 1px solid #21d879; background: rgba(12, 26, 22, 0.9); color: #e5fff0; font-size: 14px; font-weight: 700; text-align: center; pointer-events: none; }
+#stage-hint[hidden] { display: none; }
+.stage-jump-btn:disabled { opacity: 0.42; cursor: not-allowed; }
+

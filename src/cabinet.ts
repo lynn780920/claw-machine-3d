@@ -301,13 +301,13 @@ export class Cabinet {
     // 3. Set machine dimensions (Authentic Taiwanese Street Claw Machine Aspect Ratios)
     if (mode === 'sanrio' || mode === 'small') {
       // 小型機台 (真實標準街機比例 寬6.0m x 深5.2m x 櫥窗高6.0m, 底座高5.0m)
-      this.width = 6.0;
-      this.depth = 5.2;
+      this.width = 5.3;
+      this.depth = 4.6;
       this.height = 6.0;
-      this.chuteMinX = -2.70;
-      this.chuteMaxX = -0.90;
-      this.chuteMinZ = 0.65;
-      this.chuteMaxZ = 2.25;
+      this.chuteMinX = -2.38;
+      this.chuteMaxX = -0.83;
+      this.chuteMinZ = 0.55;
+      this.chuteMaxZ = 1.98;
     } else if (mode === 'anime' || mode === 'large') {
       // 中大機台 (寬闊修長大型機台)
       this.width = 8.8;
@@ -451,7 +451,7 @@ export class Cabinet {
 
   /* ── Dynamic Chute Baffle Height & Guard Rail Update ── */
   public setBaffleHeight(height: number, physics: PhysicsSystem) {
-    this.chuteWallHeight = Math.max(0.3, Math.min(3.0, height));
+    this.chuteWallHeight = Math.max(0, Math.min(3.0, height));
     this.rebuildBaffles(this.chuteWallHeight, physics);
   }
 
@@ -469,6 +469,7 @@ export class Cabinet {
       }
     });
     this.baffleBodies = [];
+    if (height === 0) return;
 
     const wallThick = 0.08;
     const chuteW = this.chuteMaxX - this.chuteMinX;
