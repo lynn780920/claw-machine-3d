@@ -7,7 +7,7 @@ import { Claw } from './claw';
 import { PrizesManager } from './prizes';
 import { soundEngine } from './audio';
 import { LevelSystem, LevelConfig, LEVEL_CONFIGS } from './levelSystem';
-import { LeaderboardManager } from './leaderboard';
+import { LeaderboardManager, escapeLeaderboardText } from './leaderboard';
 import { preloadModels, disposeModel, withTimeout } from './modelAssets';
 import { setupStudio, fitMachineCamera } from './renderSetup';
 import { isDelivered } from './delivery';
@@ -630,10 +630,14 @@ function setupUIEventListeners() {
   const closeLeaderboardBtn = document.getElementById('close-leaderboard-btn');
 
   const renderLeaderboardUI = () => {
+    const status = document.getElementById('leaderboard-sync-status');
+    if (status) status.textContent = leaderboardManager.cloudStatus==='connected' ? 'Google Sheet 已更新' :
+      leaderboardManager.cloudStatus==='loading' ? '正在讀取 Google Sheet…' : '雲端暫時無法讀取，顯示本機紀錄';
     // 1. Records Hall (各關最高紀錄保持人)
     const hallContainer = document.getElementById('records-hall-container');
     if (hallContainer) {
-      const records = leaderboardManager.getBestRecords();
+      const records = leaderboardManager.getBestRecords().map(rec=>({...rec,title:escapeLeaderboardText(rec.title),
+        holderName:escapeLeaderboardText(rec.holderName),formattedTime:escapeLeaderboardText(rec.formattedTime),date:escapeLeaderboardText(rec.date)}));
       hallContainer.innerHTML = records.map((rec) => `
         <div class="record-hall-card">
           <div class="record-hall-header">
@@ -646,16 +650,18 @@ function setupUIEventListeners() {
           </div>
           <div class="record-hall-meta">
             <span>達成日期：${rec.date}</span>
-            <span>投幣累積：${rec.plays} 次</span>
+            <span>投幣累積：${rec.plays===null ? '未記錄' : `${rec.plays} 次`}</span>
           </div>
         </div>
-      `).join('');
+      `).join('') || '<div class="empty-events">目前尚無通關紀錄</div>';
     }
 
     // 2. Break Events Timeline (即時打破紀錄歷史動態)
     const eventsContainer = document.getElementById('record-events-container');
     if (eventsContainer) {
-      const events = leaderboardManager.getRecentBreakEvents();
+      const events = leaderboardManager.getRecentBreakEvents().map(ev=>({...ev,playerName:escapeLeaderboardText(ev.playerName),
+        recordType:escapeLeaderboardText(ev.recordType),stageName:escapeLeaderboardText(ev.stageName),
+        timeFormatted:escapeLeaderboardText(ev.timeFormatted),date:escapeLeaderboardText(ev.date)}));
       if (events.length === 0) {
         eventsContainer.innerHTML = `<div class="empty-events" style="color: #94a3b8; font-size: 13px; text-align: center; padding: 18px 0;">目前尚無破紀錄事件，只要以更短時間通關即可名垂榮譽榜！</div>`;
       } else {
@@ -676,10 +682,14 @@ function setupUIEventListeners() {
     }
   };
 
+  leaderboardManager.onRecordsUpdated = renderLeaderboardUI;
+  void leaderboardManager.refreshFromGoogleSheets();
+
   openLeaderboardBtn?.addEventListener('click', () => {
     if (leaderboardModal) {
       renderLeaderboardUI();
       leaderboardModal.style.display = 'flex';
+      void leaderboardManager.refreshFromGoogleSheets();
     }
   });
 

@@ -1,352 +1,179 @@
-/**
- * Leaderboard & Record-Breaking System (破紀錄紀錄榜與玩家暱稱系統)
- *
- * 專門記錄：
- * 1. 誰打破全破至尊最速紀錄
- * 2. 誰打破各關卡最速破關紀錄 (第一關至第四關)
- * 3. 即時破紀錄歷史流水帳 (紀錄誰、何時、破了什麼紀錄)
- * 4. Google Sheets 雲端即時同步寫入
- */
-
 export interface BestRecordItem {
-  recordKey: string; // 'campaign' | 'stage-1' | 'stage-2' | 'stage-3' | 'stage-4'
-  title: string;
-  holderName: string;
-  bestTimeSeconds: number;
-  formattedTime: string;
-  wins: number;
-  plays: number;
-  date: string;
+  recordKey:string;
+  title:string;
+  holderName:string;
+  bestTimeSeconds:number;
+  formattedTime:string;
+  wins:number|null;
+  plays:number|null;
+  date:string;
 }
 
 export interface RecordBreakEvent {
-  id: string;
-  playerName: string;
-  recordType: string;
-  stageName: string;
-  timeFormatted: string;
-  date: string;
+  id:string;
+  playerName:string;
+  recordType:string;
+  stageName:string;
+  timeFormatted:string;
+  date:string;
 }
 
 const NICKNAME_KEY = 'claw_player_nickname';
 const BEST_RECORDS_KEY = 'claw_best_records_v2';
 const RECORD_EVENTS_KEY = 'claw_record_events_v2';
-
+const FICTIONAL_RECORDS:Record<string,string> = {
+  'stage-1':'娃娃達人|155|2026-09-15 15:30','stage-2':'甩爪老手|210|2026-09-15 16:10',
+  'stage-3':'清台神手|260|2026-09-15 18:40','stage-4':'K霸制霸者|320|2026-09-15 20:05',
+  campaign:'至尊傳奇|945|2026-09-15 20:10'
+};
 const DEFAULT_GSHEET_WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbxYVkvXwZ9X9mJN0DZwxh8Cq1tGIarXs1bCpfwytfQkR7VnraTz8YzDlwlV8OgRWqpa/exec';
 
+function isRecord(value:unknown):value is BestRecordItem {
+  if (!value || typeof value!=='object') return false;
+  const r = value as BestRecordItem;
+  return /^(campaign|stage-[1-4])$/.test(r.recordKey) &&
+    ['title','holderName','formattedTime','date'].every(k=>typeof r[k as keyof BestRecordItem]==='string') &&
+    Number.isFinite(r.bestTimeSeconds) && r.bestTimeSeconds>=0 &&
+    [r.wins,r.plays].every(n=>n===null || (typeof n==='number' && Number.isFinite(n) && n>=0));
+}
+
+function isEvent(value:unknown):value is RecordBreakEvent {
+  return !!value && typeof value==='object' &&
+    ['id','playerName','recordType','stageName','timeFormatted','date'].every(k=>typeof (value as Record<string,unknown>)[k]==='string');
+}
+
+export function parseCloudLeaderboard(value:unknown) {
+  const data = value as {records?:unknown;events?:unknown;error?:unknown};
+  if (!data || data.error || !Array.isArray(data.records) || !Array.isArray(data.events) ||
+    !data.records.every(isRecord) || !data.events.every(isEvent)) throw new Error('Invalid cloud leaderboard response');
+  return {records:data.records as BestRecordItem[],events:data.events as RecordBreakEvent[]};
+}
+
+export function escapeLeaderboardText(value:string):string {
+  return value.replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]!));
+}
+
 export class LeaderboardManager {
-  private currentPlayer: string = '';
-  private bestRecords: Record<string, BestRecordItem> = {};
-  private breakEvents: RecordBreakEvent[] = [];
+  private currentPlayer = '';
+  private bestRecords:Record<string,BestRecordItem> = {};
+  private breakEvents:RecordBreakEvent[] = [];
+  private cloudRecords:Record<string,BestRecordItem>|null = null;
+  private cloudEvents:RecordBreakEvent[]|null = null;
+  private refreshTask:Promise<boolean>|null = null;
+  public cloudStatus:'loading'|'connected'|'unavailable' = 'unavailable';
+  public onRecordsUpdated?:()=>void;
 
   constructor() {
-    this.loadPlayerName();
-    this.loadRecords();
-  }
-
-  /* ── 1. 玩家暱稱管理 ── */
-  public getPlayerName(): string {
-    if (!this.currentPlayer) {
+    try {
       this.currentPlayer = localStorage.getItem(NICKNAME_KEY) || '';
-    }
+      const stored:unknown = JSON.parse(localStorage.getItem(BEST_RECORDS_KEY) || '{}');
+      if (stored && typeof stored==='object' && !Array.isArray(stored)) {
+        for (const record of Object.values(stored)) {
+          // Migrate the fictional starter records, retaining real player scores.
+          if (isRecord(record) && FICTIONAL_RECORDS[record.recordKey]!==`${record.holderName}|${record.bestTimeSeconds}|${record.date}`) {
+            this.bestRecords[record.recordKey] = record;
+          }
+        }
+      }
+      const events:unknown = JSON.parse(localStorage.getItem(RECORD_EVENTS_KEY) || '[]');
+      if (Array.isArray(events)) this.breakEvents = events.filter(isEvent).filter(e=>!['init-1','init-2'].includes(e.id));
+    } catch (error) {console.warn('Failed to load cached leaderboard',error);}
+  }
+
+  public getPlayerName() {return this.currentPlayer;}
+
+  public setPlayerName(name:string) {
+    this.currentPlayer = name.trim().slice(0,16) || '神秘玩家';
+    try {localStorage.setItem(NICKNAME_KEY,this.currentPlayer);} catch (error) {console.warn(error);}
     return this.currentPlayer;
-  }
-
-  public setPlayerName(name: string): string {
-    const trimmed = name.trim().slice(0, 16) || '神秘玩家';
-    this.currentPlayer = trimmed;
-    try {
-      localStorage.setItem(NICKNAME_KEY, trimmed);
-    } catch (e) {
-      console.warn('Failed to save nickname', e);
-    }
-    return trimmed;
-  }
-
-  private loadPlayerName() {
-    const saved = localStorage.getItem(NICKNAME_KEY);
-    if (saved) {
-      this.currentPlayer = saved;
-    }
-  }
-
-  /* ── 2. 破紀錄判定與存取 ── */
-  private loadRecords() {
-    try {
-      const rawRecords = localStorage.getItem(BEST_RECORDS_KEY);
-      if (rawRecords) {
-        this.bestRecords = JSON.parse(rawRecords);
-      } else {
-        // 預設經典標竿紀錄
-        this.bestRecords = {
-          'stage-1': {
-            recordKey: 'stage-1',
-            title: '第 1 關 最速出貨紀錄',
-            holderName: '娃娃達人',
-            bestTimeSeconds: 155,
-            formattedTime: '02:35',
-            wins: 8,
-            plays: 9,
-            date: '2026-09-15 15:30'
-          },
-          'stage-2': {
-            recordKey: 'stage-2',
-            title: '第 2 關 最速出貨紀錄',
-            holderName: '甩爪老手',
-            bestTimeSeconds: 210,
-            formattedTime: '03:30',
-            wins: 4,
-            plays: 6,
-            date: '2026-09-15 16:10'
-          },
-          'stage-3': {
-            recordKey: 'stage-3',
-            title: '第 3 關 最速清台紀錄',
-            holderName: '清台神手',
-            bestTimeSeconds: 260,
-            formattedTime: '04:20',
-            wins: 5,
-            plays: 8,
-            date: '2026-09-15 18:40'
-          },
-          'stage-4': {
-            recordKey: 'stage-4',
-            title: '第 4 關 魔王決戰紀錄',
-            holderName: 'K霸制霸者',
-            bestTimeSeconds: 320,
-            formattedTime: '05:20',
-            wins: 3,
-            plays: 5,
-            date: '2026-09-15 20:05'
-          },
-          'campaign': {
-            recordKey: 'campaign',
-            title: '全破大通關 至尊夾王總紀錄',
-            holderName: '至尊傳奇',
-            bestTimeSeconds: 945,
-            formattedTime: '15:45',
-            wins: 20,
-            plays: 28,
-            date: '2026-09-15 20:10'
-          }
-        };
-        this.saveRecords();
-      }
-
-      const rawEvents = localStorage.getItem(RECORD_EVENTS_KEY);
-      if (rawEvents) {
-        this.breakEvents = JSON.parse(rawEvents);
-      } else {
-        this.breakEvents = [
-          {
-            id: 'init-1',
-            playerName: '至尊傳奇',
-            recordType: '打破全破大通關紀錄',
-            stageName: '全破四關',
-            timeFormatted: '15:45',
-            date: '2026-09-15 20:10'
-          },
-          {
-            id: 'init-2',
-            playerName: '清台神手',
-            recordType: '打破第 3 關清台紀錄',
-            stageName: '第 3 關 (盲盒清台)',
-            timeFormatted: '04:20',
-            date: '2026-09-15 18:40'
-          }
-        ];
-        this.saveEvents();
-      }
-    } catch (e) {
-      console.warn('Failed to load records from storage', e);
-    }
   }
 
   private saveRecords() {
     try {
-      localStorage.setItem(BEST_RECORDS_KEY, JSON.stringify(this.bestRecords));
-    } catch (e) {
-      console.warn(e);
+      localStorage.setItem(BEST_RECORDS_KEY,JSON.stringify(this.bestRecords));
+      this.breakEvents = this.breakEvents.slice(-50);
+      localStorage.setItem(RECORD_EVENTS_KEY,JSON.stringify(this.breakEvents));
+    } catch (error) {console.warn(error);}
+  }
+
+  public getBestRecords():BestRecordItem[] {
+    const records = this.cloudRecords ?? this.bestRecords;
+    return ['campaign','stage-1','stage-2','stage-3','stage-4'].map(key=>records[key]).filter(Boolean);
+  }
+
+  public getRecentBreakEvents():RecordBreakEvent[] {
+    return [...(this.cloudEvents ?? this.breakEvents)].sort((a,b)=>b.date.localeCompare(a.date) || b.id.localeCompare(a.id));
+  }
+
+  public refreshFromGoogleSheets():Promise<boolean> {
+    if (this.refreshTask) return this.refreshTask;
+    this.cloudStatus = 'loading';
+    this.onRecordsUpdated?.();
+    this.refreshTask = (async()=>{
+      const controller = new AbortController();
+      const timeout = setTimeout(()=>controller.abort(),10000);
+      try {
+        const response = await fetch(`${DEFAULT_GSHEET_WEBHOOK_URL}?action=leaderboard`,{signal:controller.signal,cache:'no-store'});
+        if (!response.ok) throw new Error('Cloud leaderboard unavailable');
+        const data = parseCloudLeaderboard(await response.json());
+        this.cloudRecords = Object.fromEntries(data.records.map(r=>[r.recordKey,r]));
+        this.cloudEvents = data.events;
+        this.bestRecords = {...this.cloudRecords};
+        this.breakEvents = [...data.events];
+        this.saveRecords();
+        this.cloudStatus = 'connected';
+        return true;
+      } catch (error) {
+        this.cloudStatus = 'unavailable';
+        console.warn('Cloud leaderboard read failed',error);
+        return false;
+      } finally {clearTimeout(timeout);this.onRecordsUpdated?.();}
+    })().finally(()=>{this.refreshTask=null;});
+    return this.refreshTask;
+  }
+
+  private recordWin(key:string,title:string,stageName:string,elapsedSeconds:number,formattedTime:string,wins:number,plays:number,eventName:string) {
+    const prev = (this.cloudRecords ?? this.bestRecords)[key];
+    if (!Number.isFinite(elapsedSeconds) || elapsedSeconds<0 || (prev && elapsedSeconds>=prev.bestTimeSeconds)) {
+      return {isNewRecord:false,recordTitle:'',previousBest:prev?.formattedTime || ''};
     }
-  }
-
-  private saveEvents() {
-    try {
-      localStorage.setItem(RECORD_EVENTS_KEY, JSON.stringify(this.breakEvents.slice(-50)));
-    } catch (e) {
-      console.warn(e);
-    }
-  }
-
-  public getBestRecords(): BestRecordItem[] {
-    return [
-      this.bestRecords['campaign'],
-      this.bestRecords['stage-1'],
-      this.bestRecords['stage-2'],
-      this.bestRecords['stage-3'],
-      this.bestRecords['stage-4']
-    ].filter(Boolean);
-  }
-
-  public getRecentBreakEvents(): RecordBreakEvent[] {
-    return [...this.breakEvents].reverse();
-  }
-
-  /**
-   * 檢查並紀錄單關破紀錄
-   */
-  public checkAndRecordStageWin(
-    stageNum: number,
-    stageName: string,
-    elapsedSeconds: number,
-    formattedTime: string,
-    wins: number,
-    plays: number
-  ): { isNewRecord: boolean; recordTitle: string; previousBest: string } {
-    const key = `stage-${stageNum}`;
-    const prev = this.bestRecords[key];
     const playerName = this.getPlayerName() || '無名英雄';
-    const nowStr = this.getNowString();
-
-    const isBetter = !prev || (elapsedSeconds < prev.bestTimeSeconds);
-
-    if (isBetter) {
-      const title = `第 ${stageNum} 關 最速紀錄`;
-      const prevTime = prev ? prev.formattedTime : '無前次紀錄';
-
-      this.bestRecords[key] = {
-        recordKey: key,
-        title,
-        holderName: playerName,
-        bestTimeSeconds: elapsedSeconds,
-        formattedTime,
-        wins,
-        plays,
-        date: nowStr
-      };
-      this.saveRecords();
-
-      const eventItem: RecordBreakEvent = {
-        id: `${Date.now()}`,
-        playerName,
-        recordType: `刷新第 ${stageNum} 關最速紀錄`,
-        stageName,
-        timeFormatted: formattedTime,
-        date: nowStr
-      };
-      this.breakEvents.push(eventItem);
-      this.saveEvents();
-
-      // 同步到 Google Sheet
-      this.sendToGoogleSheets({
-        event: '打破單關紀錄',
-        player: playerName,
-        recordName: title,
-        stage: stageName,
-        time: formattedTime,
-        date: nowStr
+    const date = this.getNowString();
+    this.bestRecords[key] = {recordKey:key,title,holderName:playerName,bestTimeSeconds:elapsedSeconds,formattedTime,wins,plays,date};
+    this.breakEvents.push({id:crypto.randomUUID(),playerName,recordType:title,stageName,timeFormatted:formattedTime,date});
+    this.saveRecords();
+    this.onRecordsUpdated?.();
+    void this.sendToGoogleSheets({event:eventName,player:playerName,recordName:title,stage:stageName,time:formattedTime,date,
+      recordKey:key,elapsedSeconds,wins,plays}).then(async sent=>{
+        if (sent) {if (this.refreshTask) await this.refreshTask; await this.refreshFromGoogleSheets();}
       });
-
-      return { isNewRecord: true, recordTitle: title, previousBest: prevTime };
-    }
-
-    return { isNewRecord: false, recordTitle: '', previousBest: prev ? prev.formattedTime : '' };
+    return {isNewRecord:true,recordTitle:title,previousBest:prev?.formattedTime || '無前次紀錄'};
   }
 
-  /**
-   * 檢查並紀錄全破大通關紀錄
-   */
-  public checkAndRecordGrandVictory(
-    totalSeconds: number,
-    formattedTime: string,
-    totalWins: number,
-    totalPlays: number
-  ): { isNewRecord: boolean; previousBest: string } {
-    const key = 'campaign';
-    const prev = this.bestRecords[key];
-    const playerName = this.getPlayerName() || '無名英雄';
-    const nowStr = this.getNowString();
-
-    const isBetter = !prev || (totalSeconds < prev.bestTimeSeconds);
-
-    if (isBetter) {
-      const prevTime = prev ? prev.formattedTime : '無前次紀錄';
-
-      this.bestRecords[key] = {
-        recordKey: key,
-        title: '全破大通關 至尊夾王總紀錄',
-        holderName: playerName,
-        bestTimeSeconds: totalSeconds,
-        formattedTime,
-        wins: totalWins,
-        plays: totalPlays,
-        date: nowStr
-      };
-      this.saveRecords();
-
-      const eventItem: RecordBreakEvent = {
-        id: `${Date.now()}`,
-        playerName,
-        recordType: '榮登全破大通關至尊夾王紀錄保持人',
-        stageName: '全破 4 大關卡',
-        timeFormatted: formattedTime,
-        date: nowStr
-      };
-      this.breakEvents.push(eventItem);
-      this.saveEvents();
-
-      // 同步到 Google Sheet
-      this.sendToGoogleSheets({
-        event: '打破全破總紀錄',
-        player: playerName,
-        recordName: '全破至尊夾王紀錄',
-        stage: '4大關全破',
-        time: formattedTime,
-        date: nowStr
-      });
-
-      return { isNewRecord: true, previousBest: prevTime };
-    }
-
-    // 即使未破總時間紀錄，也送出全破紀錄到 Google Sheets
-    this.sendToGoogleSheets({
-      event: '通關全破',
-      player: playerName,
-      recordName: '通關完成',
-      stage: '4大關全破',
-      time: formattedTime,
-      date: nowStr
-    });
-
-    return { isNewRecord: false, previousBest: prev ? prev.formattedTime : '' };
+  public checkAndRecordStageWin(stageNum:number,stageName:string,elapsedSeconds:number,formattedTime:string,wins:number,plays:number) {
+    if (!Number.isInteger(stageNum) || stageNum<1 || stageNum>4) return {isNewRecord:false,recordTitle:'',previousBest:''};
+    return this.recordWin(`stage-${stageNum}`,`第 ${stageNum} 關 最速紀錄`,stageName,elapsedSeconds,formattedTime,wins,plays,'打破單關紀錄');
   }
 
-  private getNowString(): string {
+  public checkAndRecordGrandVictory(totalSeconds:number,formattedTime:string,totalWins:number,totalPlays:number) {
+    const result = this.recordWin('campaign','全破大通關 至尊夾王總紀錄','4大關全破',totalSeconds,formattedTime,totalWins,totalPlays,'打破全破總紀錄');
+    if (!result.isNewRecord && Number.isFinite(totalSeconds) && totalSeconds>=0) {
+      void this.sendToGoogleSheets({event:'通關全破',player:this.getPlayerName() || '無名英雄',recordName:'通關完成',stage:'4大關全破',time:formattedTime,date:this.getNowString()});
+    }
+    return result;
+  }
+
+  private getNowString() {
     const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
   }
 
-  /* ── 3. Google Sheets 雲端即時連動 (純後端自動寫入) ── */
-  public async sendToGoogleSheets(payload: {
-    event: string;
-    player: string;
-    recordName: string;
-    stage: string;
-    time: string;
-    date: string;
-  }): Promise<boolean> {
-    if (import.meta.env.DEV) return false;
+  public async sendToGoogleSheets(payload:{event:string;player:string;recordName:string;stage:string;time:string;date:string;recordKey?:string;elapsedSeconds?:number;wins?:number;plays?:number}):Promise<boolean> {
+    if (import.meta.env?.DEV) return false;
     try {
-      await fetch(DEFAULT_GSHEET_WEBHOOK_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
+      await fetch(DEFAULT_GSHEET_WEBHOOK_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=UTF-8'},body:JSON.stringify(payload)});
+      // An opaque POST is not an acknowledgement; the follow-up read confirms it.
       return true;
-    } catch (e) {
-      console.warn('Google Sheet sync failed', e);
-      return false;
-    }
+    } catch (error) {console.warn('Google Sheet write failed',error);return false;}
   }
 }
