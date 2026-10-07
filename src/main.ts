@@ -954,6 +954,10 @@ function setupUIEventListeners() {
     (document.getElementById('setting-length') as HTMLInputElement).value = '9.5';
     (document.getElementById('setting-baffle') as HTMLInputElement).value = '0.7';
     (document.getElementById('setting-dolls') as HTMLInputElement).value = '42';
+    (document.getElementById('setting-prize-weight') as HTMLInputElement).value = '1';
+    (document.getElementById('setting-rolling-resistance') as HTMLInputElement).value = '1';
+    applyPrizeTuning();
+    saveTuningConfigToStorage();
     (document.getElementById('setting-antiswing') as HTMLSelectElement).value = 'disabled';
 
     applyDIPSettings();
@@ -1260,6 +1264,16 @@ function setupUIEventListeners() {
   });
 
   const dollsInput = document.getElementById('setting-dolls') as HTMLInputElement | null;
+  const prizeWeightInput = document.getElementById('setting-prize-weight') as HTMLInputElement | null;
+  const rollingInput = document.getElementById('setting-rolling-resistance') as HTMLInputElement | null;
+  const applyPrizeTuning = () => {
+    prizesManager.weightMultiplier = parseFloat(prizeWeightInput?.value ?? '1');
+    prizesManager.rollingResistance = parseFloat(rollingInput?.value ?? '1');
+    document.getElementById('val-prize-weight')!.textContent = `${prizesManager.weightMultiplier.toFixed(2)}x`;
+    document.getElementById('val-rolling-resistance')!.textContent = `${prizesManager.rollingResistance.toFixed(2)}x`;
+    prizesManager.applyPrizePhysics();
+  };
+  [prizeWeightInput,rollingInput].forEach(input => input?.addEventListener('input',applyPrizeTuning));
   if (dollsInput) {
     dollsInput.addEventListener('input', () => {
       const valEl = document.getElementById('val-dolls');
@@ -1442,15 +1456,8 @@ function setupUIEventListeners() {
   }
   if (s4Lightweight) {
     s4Lightweight.addEventListener('change', () => {
-      const isLight = s4Lightweight.checked;
-      prizesManager.bodies.forEach(b => {
-        const curMass = b.mass();
-        if (isLight) {
-          b.setAdditionalMass(Math.max(0.08, curMass * 0.4 - curMass), true);
-        } else {
-          b.setAdditionalMass(0, true);
-        }
-      });
+      prizesManager.applianceLightweight = s4Lightweight.checked;
+      prizesManager.applyPrizePhysics();
     });
   }
 
@@ -1460,6 +1467,8 @@ function setupUIEventListeners() {
   const saveTuningConfigToStorage = () => {
     try {
       const cfg = {
+        prizeWeight: prizesManager.weightMultiplier,
+        rollingResistance: prizesManager.rollingResistance,
         godMode: godmodeCheckbox?.checked || false,
         stage3Target: s3Target ? parseInt(s3Target.value) : 5,
         stage3Time: s3Time ? parseInt(s3Time.value) : 8,
@@ -1479,6 +1488,8 @@ function setupUIEventListeners() {
       const raw = localStorage.getItem(TUNING_STORAGE_KEY);
       if (!raw) return;
       const cfg = JSON.parse(raw);
+      if (prizeWeightInput && Number.isFinite(cfg.prizeWeight)) prizeWeightInput.value = String(Math.max(0.25,Math.min(3,cfg.prizeWeight)));
+      if (rollingInput && Number.isFinite(cfg.rollingResistance)) rollingInput.value = String(Math.max(0.25,Math.min(3,cfg.rollingResistance)));
       if (godmodeCheckbox && typeof cfg.godMode === 'boolean') {
         godmodeCheckbox.checked = cfg.godMode;
         claw.config.godMode = cfg.godMode;
@@ -1527,24 +1538,25 @@ function setupUIEventListeners() {
       }
       if (s4Lightweight && cfg.stage4Lightweight !== undefined) {
         s4Lightweight.checked = cfg.stage4Lightweight;
+        prizesManager.applianceLightweight = s4Lightweight.checked;
       }
+      applyPrizeTuning();
     } catch (e) {}
   };
 
   // Wire auto-save to input events
-  [s3Target, s3Time, s4Target, s4Time, s4Baffle, s4Grip].forEach(input => {
+  [s3Target, s3Time, s4Target, s4Time, s4Baffle, s4Grip, prizeWeightInput, rollingInput].forEach(input => {
     input?.addEventListener('change', saveTuningConfigToStorage);
   });
   [godmodeCheckbox, s3Friction, s4Lightweight].forEach(toggle => {
     toggle?.addEventListener('change', saveTuningConfigToStorage);
   });
 
-  // Load any previously saved tuning configuration on startup
-  loadTuningConfigFromStorage();
-
   // Copy parameters button
   document.getElementById('copy-config-btn')?.addEventListener('click', () => {
     const cfg = {
+      prizeWeight: prizesManager.weightMultiplier,
+      rollingResistance: prizesManager.rollingResistance,
       stage3Target: s3Target ? parseInt(s3Target.value) : 5,
       stage3Time: s3Time ? parseInt(s3Time.value) : 8,
       stage3Friction: s3Friction?.checked ?? true,
@@ -1743,6 +1755,9 @@ function setupUIEventListeners() {
       if (victoryModal) victoryModal.style.display = 'flex';
     }
   });
+
+  // Restore tuning only after the level configuration API is initialized.
+  loadTuningConfigFromStorage();
 
   // Start Level 1 (機台 #02 中型機台, 限時 15 分鐘, 8 樣過關)
   levelSystem.startLevel(0);

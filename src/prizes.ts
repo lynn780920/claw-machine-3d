@@ -3,6 +3,7 @@ import * as RAPIER from '@dimforge/rapier3d-compat';
 import { PhysicsSystem } from './physics';
 import { instantiateModel, disposeModel, cartonLabel, APPLIANCE_TYPES, MIXED_PRIZE_TYPES, prizeStockScale, LARGE_POKEMON_DIMENSIONS, FEATURED_POKEMON_TYPES, POKEMON_TYPES } from './modelAssets';
 import { collectHullPoints } from './prizeGeometry';
+import { randomPrizeStock, prizePhysicsProfile } from './prizeStock';
 
 export class PrizesManager {
   public prizes: THREE.Object3D[] = [];
@@ -10,6 +11,25 @@ export class PrizesManager {
   private scene: THREE.Scene;
   private physics: PhysicsSystem;
   public onBeforeClear?: () => void;
+  public weightMultiplier = 1;
+  public rollingResistance = 1;
+  public applianceLightweight = false;
+
+  applyPrizePhysics() {
+    this.bodies.forEach((body,index) => {
+      const type = this.prizes[index].userData.prizeType as string;
+      const profile = prizePhysicsProfile(type,POKEMON_TYPES.includes(type),this.weightMultiplier,this.rollingResistance);
+      const mass = profile.mass*(this.applianceLightweight && APPLIANCE_TYPES.includes(type) ? 0.4 : 1);
+      body.setAdditionalMass(0,true);
+      for (let i=0;i<body.numColliders();i++) {
+        body.collider(i).setMass(mass/body.numColliders());
+      }
+      body.recomputeMassPropertiesFromColliders();
+      body.setLinearDamping(profile.linearDamping);
+      body.setAngularDamping(profile.angularDamping);
+      body.wakeUp();
+    });
+  }
 
   constructor(scene: THREE.Scene, physics: PhysicsSystem) {
     this.scene = scene;
@@ -84,18 +104,8 @@ export class PrizesManager {
     this.clearPrizes();
     if (typeFilter === 'pokemon' || typeFilter === 'mixed') {
       const types = typeFilter === 'mixed' ? MIXED_PRIZE_TYPES : FEATURED_POKEMON_TYPES;
-      // Spread the mixed stock across the floor before letting physics settle the pile.
-      const slots: {x:number;z:number}[] = [];
-      for (let row=0;row<4;row++) for(let col=0;col<5;col++) {
-        const x=-2.7+col*1.35, z=-2.1+row*1.4;
-        if (x < -0.7 && z > 0) continue;
-        slots.push({x,z});
-      }
-      for(let i=0;i<count;i++) {
-        const slot=slots[i%slots.length], layer=Math.floor(i/slots.length);
-        const type=types[i%types.length];
-        const tilt=-0.85-(i%4)*0.16;
-        this.spawnModelPrize(slot.x,0.9+layer*1.15,slot.z,type,new THREE.Euler(tilt,(i%5-2)*0.16,(i%3-1)*0.12),prizeStockScale(type,typeFilter));
+      for (const item of randomPrizeStock(count,types,spreadRadius,chuteBounds)) {
+        this.spawnModelPrize(item.x,item.y,item.z,item.type,new THREE.Euler(item.rx,item.ry,item.rz),prizeStockScale(item.type,typeFilter));
       }
       this.physics.prewarmSimulation(600);
       return;
@@ -277,7 +287,11 @@ export class PrizesManager {
     if (plush) {
       shape=RAPIER.ColliderDesc.convexHull(collectHullPoints(group)) ?? RAPIER.ColliderDesc.capsule(Math.max(0,half.y-capsuleRadius),capsuleRadius);
     }
-    shape.setMass(type === 'giant_bear' ? 0.6 : 0.35).setFriction(plush ? 0.65 : 0.42).setRestitution(0.03).setContactSkin(0.008);
+    const profile = prizePhysicsProfile(type,plush,this.weightMultiplier,this.rollingResistance);
+    const mass = profile.mass*(this.applianceLightweight && APPLIANCE_TYPES.includes(type) ? 0.4 : 1);
+    body.setLinearDamping(profile.linearDamping);
+    body.setAngularDamping(profile.angularDamping);
+    shape.setMass(mass).setFriction(profile.friction).setRestitution(profile.restitution).setContactSkin(0.008);
     this.physics.world.createCollider(shape,body);
     this.physics.registerBody(body,group);
     this.scene.add(group);

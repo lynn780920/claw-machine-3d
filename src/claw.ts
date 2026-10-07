@@ -4,6 +4,7 @@ import { PhysicsSystem } from './physics';
 import { PrizesManager } from './prizes';
 import { instantiateModel } from './modelAssets';
 import { ClawFinger } from './clawCollisions';
+import { stepSuspension, suspensionOffset } from './clawSuspension';
 
 export type ClawState =
   | 'IDLE'
@@ -86,8 +87,6 @@ export class Claw {
   // Carriage velocity & acceleration tracking for zero-lag braking inertia
   private lastCarrX = 0;
   private lastCarrZ = 0;
-  private lastCarrVelX = 0;
-  private lastCarrVelZ = 0;
   private smoothCarrVelX = 0;
   private smoothCarrVelZ = 0;
   private lastSmoothCarrVelX = 0;
@@ -95,7 +94,7 @@ export class Claw {
   private lastDirX = 0;
   private lastDirZ = 0;
 
-  // Harmonic Pendulum variables (55° max sway)
+  // Damped suspension angles, driven by carriage acceleration.
   public swayAngleX = 0;
   public swayAngleZ = 0;
   private swayVelX = 0;
@@ -132,6 +131,7 @@ export class Claw {
       }
       if (this.baseMesh) {
         this.baseMesh.position.set(homeX, this.carriageY - this.ropeLength, homeZ);
+        for (const finger of this.fingers) finger.move(this.config.clawOpenAngle,[]);
       }
       this.swayAngleX = 0;
       this.swayAngleZ = 0;
@@ -143,8 +143,6 @@ export class Claw {
       this.lastSmoothCarrVelZ = 0;
       this.lastCarrX = homeX;
       this.lastCarrZ = homeZ;
-      this.lastCarrVelX = 0;
-      this.lastCarrVelZ = 0;
     }
   }
 
@@ -209,84 +207,22 @@ export class Claw {
     this.smoothCarrVelX += (rawCarrVelX - this.smoothCarrVelX) * smoothFactor;
     this.smoothCarrVelZ += (rawCarrVelZ - this.smoothCarrVelZ) * smoothFactor;
 
-    // Detect sudden velocity change (急停煞車頓甩 / 換向頓甩):
-    const deltaVx = rawCarrVelX - this.lastCarrVelX;
-    const deltaVz = rawCarrVelZ - this.lastCarrVelZ;
-    this.lastCarrVelX = rawCarrVelX;
-    this.lastCarrVelZ = rawCarrVelZ;
+    const deltaVx = this.smoothCarrVelX - this.lastSmoothCarrVelX;
+    const deltaVz = this.smoothCarrVelZ - this.lastSmoothCarrVelZ;
+    this.lastSmoothCarrVelX = this.smoothCarrVelX;
+    this.lastSmoothCarrVelZ = this.smoothCarrVelZ;
 
     this.lastCarrX = carrPos.x;
     this.lastCarrZ = carrPos.z;
 
     const minBaseY = 1.1;
 
-    // Visual pendulum swing arm scaled by swayScale (沉穩適中大甩幅)
-    const baseVisualArm = 1.25;
-    const visualSwingArm = baseVisualArm * (this.config.swayScale || 1.35);
-
-    // Taiwanese arcade resonant pendulum frequency for authentic "正2拍" swing:
-    // In IDLE: T = 1.95s (heavy solid metal claw pendulum cadence, calm, steady and responsive)
-    // In DESCENDING: Mathematically tuned to 1.45*PI / dropDuration so it strictly completes 2 BEATS (外甩第1拍 + 回甩直插第2拍) without generating a 3rd swing!
-    let omegaSq: number;
-    let targetTrailAngleX = 0;
-    let targetTrailAngleZ = 0;
-
-    if (this.state === 'DESCENDING') {
-      const dropDistance = Math.max(1.8, (this.carriageY - this.config.minRopeLength) - (minBaseY + 0.35));
-      const dropDuration = dropDistance / Math.max(0.5, this.config.dropSpeed);
-      // Exactly 2 beats over the descent duration (Swing 1 out, Swing 2 in, landing on 2nd beat arc):
-      const omega = (Math.PI * 1.45) / dropDuration;
-      omegaSq = omega * omega;
-    } else {
-      // Calm, heavy arcade pendulum cadence (T = 1.95s)
-      const omegaIdle = (Math.PI * 2) / 1.95;
-      omegaSq = omegaIdle * omegaIdle;
-    }
-
-    // Operator carriage movement coupling:
-    // When moving, the claw promptly trails behind the carriage with authentic dynamic lag;
-    // When reversing direction or stopping, momentum carries the claw across center into natural swing!
-    if (this.state === 'IDLE') {
-      const maxSpeed = Math.max(0.1, this.config.moveSpeed);
-      const trailAngleMax = 0.36; // Dynamic trailing tilt angle (~20.6 degrees)
-      const normVx = Math.max(-1.0, Math.min(1.0, rawCarrVelX / maxSpeed));
-      const normVz = Math.max(-1.0, Math.min(1.0, rawCarrVelZ / maxSpeed));
-      targetTrailAngleX = -normVx * trailAngleMax;
-      targetTrailAngleZ = -normVz * trailAngleMax;
-
-      const deltaVx = rawCarrVelX - this.lastCarrVelX;
-      const deltaVz = rawCarrVelZ - this.lastCarrVelZ;
-      const impulseCoeff = 0.38;
-      this.swayVelX -= (deltaVx / Math.max(0.5, visualSwingArm)) * impulseCoeff;
-      this.swayVelZ -= (deltaVz / Math.max(0.5, visualSwingArm)) * impulseCoeff;
-    }
-    this.lastCarrVelX = rawCarrVelX;
-    this.lastCarrVelZ = rawCarrVelZ;
-
-    // Restoring acceleration pulls towards the dynamic trailing angle equilibrium
-    const swayAccelX = -omegaSq * Math.sin(this.swayAngleX - targetTrailAngleX);
-    const swayAccelZ = -omegaSq * Math.sin(this.swayAngleZ - targetTrailAngleZ);
-
-    this.swayVelX += swayAccelX * deltaTime;
-    this.swayVelZ += swayAccelZ * deltaTime;
-
-    // Air damping: steady resonance in IDLE; smooth momentum retention during descent
-    let dampingFactor = this.config.antiSwingEnabled ? 0.88 : 0.9975;
-    if (this.state === 'DESCENDING') {
-      dampingFactor = 0.9990;
-    }
-    this.swayVelX *= dampingFactor;
-    this.swayVelZ *= dampingFactor;
-
-    this.swayAngleX += this.swayVelX * deltaTime;
-    this.swayAngleZ += this.swayVelZ * deltaTime;
-
-    // Authentic arcade max swing angle (~43 degrees / 0.75 rad for steady full swing)
-    const maxAngle = 0.75;
-    this.swayAngleX = Math.max(-maxAngle, Math.min(maxAngle, this.swayAngleX));
-    this.swayAngleZ = Math.max(-maxAngle, Math.min(maxAngle, this.swayAngleZ));
-
     // ── B. Cable Length Animation ──
+    if (this.state === 'DESCENDING' && prizesManager?.bodies.some(body =>
+      this.fingers.some(finger => finger.contact(body)) ||
+      Array.from({length:body.numColliders()},(_,i)=>i).some(i=>this.baseBody.collider(0).contactCollider(body.collider(i),0.025)))) {
+      this.triggerGrab(prizesManager);
+    }
     if (Math.abs(this.ropeLength - this.targetRopeLength) > 0.01) {
       const speed = this.targetRopeLength > this.ropeLength
         ? this.config.dropSpeed
@@ -297,49 +233,29 @@ export class Claw {
         : Math.max(this.targetRopeLength, this.ropeLength - step);
     }
 
-    // Physical Pendulum Horizontal Offset
-    const maxOffset = this.carriageLimit * 1.05;
-    const swayOffsetX = Math.max(-maxOffset, Math.min(maxOffset, visualSwingArm * Math.sin(this.swayAngleX)));
-    const swayOffsetZ = Math.max(-maxOffset, Math.min(maxOffset, visualSwingArm * Math.sin(this.swayAngleZ)));
-
-    // Stable vertical height: cable tension holds height steady, eliminating vertical bobbing ("上下上")
-    const verticalSwayDisplacement = (1.0 - Math.cos(this.swayAngleX) * Math.cos(this.swayAngleZ)) * 0.15;
-    const rawTargetY = carrPos.y - this.ropeLength + verticalSwayDisplacement;
-    const targetY = Math.max(minBaseY, rawTargetY);
-
-    // Enforce Glass Cabinet Interior Physical Collision Bounds
-    const minClawX = -this.carriageLimit;
-    const maxClawX = this.carriageLimit;
-    const minClawZ = -this.carriageLimit;
-    const maxClawZ = this.carriageLimit;
-
-    let finalX = carrPos.x + swayOffsetX;
-    let finalZ = carrPos.z + swayOffsetZ;
-
-    if (finalX < minClawX) {
-      finalX = minClawX;
-      this.swayVelX = Math.abs(this.swayVelX) * 0.35; // Soft bounce off glass wall
-      this.swayAngleX = (minClawX - carrPos.x) / visualSwingArm;
-    } else if (finalX > maxClawX) {
-      finalX = maxClawX;
-      this.swayVelX = -Math.abs(this.swayVelX) * 0.35;
-      this.swayAngleX = (maxClawX - carrPos.x) / visualSwingArm;
-    }
-
-    if (finalZ < minClawZ) {
-      finalZ = minClawZ;
-      this.swayVelZ = Math.abs(this.swayVelZ) * 0.35; // Soft bounce off glass wall
-      this.swayAngleZ = (minClawZ - carrPos.z) / visualSwingArm;
-    } else if (finalZ > maxClawZ) {
-      finalZ = maxClawZ;
-      this.swayVelZ = -Math.abs(this.swayVelZ) * 0.35;
-      this.swayAngleZ = (maxClawZ - carrPos.z) / visualSwingArm;
-    }
-
+    const anchor = this.baseMesh.getObjectByName('CableAnchor');
+    const anchorLocal = anchor
+      ? this.baseMesh.worldToLocal(anchor.getWorldPosition(new THREE.Vector3())).multiplyScalar(this.baseMesh.scale.x)
+      : new THREE.Vector3(0,0.44*this.baseMesh.scale.x,0);
+    // A taut suspension changes period with payout, not with an imposed animation beat.
+    this.ropeLength = Math.min(this.ropeLength,carrPos.y-minBaseY);
+    const length = Math.max(0.2,this.ropeLength-0.1-anchorLocal.y);
+    const swingX = stepSuspension(this.swayAngleX,this.swayVelX,deltaVx,length,deltaTime,this.config.swayScale,this.config.antiSwingEnabled);
+    const swingZ = stepSuspension(this.swayAngleZ,this.swayVelZ,deltaVz,length,deltaTime,this.config.swayScale,this.config.antiSwingEnabled);
+    this.swayAngleX = swingX.angle; this.swayVelX = swingX.velocity;
+    this.swayAngleZ = swingZ.angle; this.swayVelZ = swingZ.velocity;
     const swayQuat = new THREE.Quaternion().setFromEuler(
       new THREE.Euler(-this.swayAngleZ * 0.70, 0, this.swayAngleX * 0.70, 'YXZ')
     );
-
+    const anchorOffset = anchorLocal.clone().applyQuaternion(swayQuat);
+    const offset = suspensionOffset(length,this.swayAngleX,this.swayAngleZ,
+      [-this.carriageLimit-carrPos.x+anchorOffset.x,this.carriageLimit-carrPos.x+anchorOffset.x],
+      [-this.carriageLimit-carrPos.z+anchorOffset.z,this.carriageLimit-carrPos.z+anchorOffset.z]);
+    const cableTop = new THREE.Vector3(carrPos.x,carrPos.y-0.1,carrPos.z);
+    const cableBottom = cableTop.clone().add(new THREE.Vector3(offset.x,offset.y,offset.z));
+    const finalX = cableBottom.x-anchorOffset.x;
+    const finalZ = cableBottom.z-anchorOffset.z;
+    const targetY = cableBottom.y-anchorOffset.y;
     this.baseBody.setNextKinematicTranslation({ x: finalX, y: targetY, z: finalZ });
     this.baseBody.setNextKinematicRotation({ x: swayQuat.x, y: swayQuat.y, z: swayQuat.z, w: swayQuat.w });
 
@@ -347,8 +263,6 @@ export class Claw {
     this.baseMesh.quaternion.copy(swayQuat);
 
     // ── C. Cable Visual: Connects directly from carriage bottom to top eyelet ring ──
-    const cableTop = new THREE.Vector3(carrPos.x, carrPos.y - 0.1, carrPos.z);
-    const cableBottom = new THREE.Vector3(finalX, targetY + 0.44, finalZ);
     this.cableLine.geometry.setFromPoints([cableTop, cableBottom]);
 
     // ── D. Smooth Arm Angle Animation (Authentic arcade solenoid speed 9.5) ──
@@ -565,16 +479,13 @@ export class Claw {
       this.grabbedContactAngle = this.currentArmAngle;
       this.targetArmAngle = this.grabbedContactAngle;
 
+
       for (let i = 0; i < targetBody.numColliders(); i++) {
         const col = targetBody.collider(i);
         col.setSensor(false);
-        col.setFriction(0.95);
-        col.setRestitution(0.01);
       }
 
       // 提起時保持合理阻尼
-      targetBody.setLinearDamping(0.35);
-      targetBody.setAngularDamping(0.40);
       targetBody.wakeUp();
 
       // Spherical Joint 錨定接觸點，並啟用碰撞與接觸響應
@@ -615,15 +526,9 @@ export class Claw {
       const body = this.grabbedBody;
       this.grabbedBody = null;
 
-      // 重置阻尼至真實空氣阻力數值
-      body.setLinearDamping(0.15);
-      body.setAngularDamping(0.25);
-
       for (let i = 0; i < body.numColliders(); i++) {
         const col = body.collider(i);
         col.setSensor(false);
-        col.setFriction(0.65);
-        col.setRestitution(0.08);
       }
 
       body.wakeUp();

@@ -929,6 +929,17 @@ input:checked + .slider.round:before {
 }
 
 /* Drop button (Circular Arcade style) */
+.console-overlay {
+  position: absolute;
+  bottom: 40px;
+  left: 25px;
+  z-index: 50;
+}
+
+@media (max-width: 768px) {
+  .console-overlay { display: none; }
+}
+
 .drop-arcade-btn {
   width: 70px;
   height: 70px;
