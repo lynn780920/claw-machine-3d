@@ -11,7 +11,7 @@ import { LeaderboardManager, escapeLeaderboardText } from './leaderboard';
 import { preloadModels, disposeModel, withTimeout } from './modelAssets';
 import { setupStudio, fitMachineCamera } from './renderSetup';
 import { isDelivered, isWedgedInChute, isPrizeEnteringChute } from './delivery';
-import { buildArcadeEnvironment } from './arcadeEnvironment';
+import { buildArcadeEnvironment, layoutArcadeNeighbors } from './arcadeEnvironment';
 import { loadCampaignProgress, saveCampaignProgress } from './campaignProgress';
 
 // Game Statistics
@@ -34,6 +34,8 @@ function removeStageMarker(prize: THREE.Object3D) {
     entry.material.emissiveIntensity = entry.intensity;
   }
   stageMarkers.delete(prize);
+  const light = prize.getObjectByName('TargetGlow');
+  if (light instanceof THREE.PointLight) { light.removeFromParent(); light.dispose(); }
 }
 
 function clearStageMarkers() {
@@ -56,10 +58,13 @@ function spawnMarkedTarget(type: string, id: string, x: number, z: number) {
       if (!(material instanceof THREE.MeshStandardMaterial)) continue;
       materials.push({material,emissive:material.emissive.clone(),intensity:material.emissiveIntensity});
       material.emissive.setHex(0x8fffd0);
-      material.emissiveIntensity = 0.28;
+      material.emissiveIntensity = 1.8;
     }
   });
   stageMarkers.set(mesh,materials);
+  const glow = new THREE.PointLight(0x8fffd0, 3, 2.5, 2);
+  glow.name = 'TargetGlow';
+  mesh.add(glow);
 }
 
 // Three.js Core
@@ -241,7 +246,7 @@ async function init() {
 
     // Sync helper guides / indicator ring
     for (const materials of stageMarkers.values()) {
-      for (const {material} of materials) material.emissiveIntensity = 0.28 + Math.sin(now*0.0025)*0.07;
+      for (const {material} of materials) material.emissiveIntensity = 1.8 + Math.sin(now*0.003)*0.55;
     }
     const clawPos = claw.baseMesh.position;
     cabinet.updateIndicator(clawPos.x, clawPos.z, clawPos.y);
@@ -1300,29 +1305,29 @@ function setupUIEventListeners() {
       claw.setMachineBounds(chuteHomeX, chuteHomeZ, 4.8, cabinet.height);
 
       syncDIPPanelUI({
-        strong: '89',
-        height: '72',
-        weak: '60',
-        tophit: '29',
-        speed: '2.2',
+        strong: '75',
+        height: '55',
+        weak: '43',
+        tophit: '35',
+        speed: '2.0',
         dropspeed: '2.0',
-        sway: '1.2',
-        length: '10.0',
-        baffle: '0.9',
-        dolls: '12',
+        sway: '1.4',
+        length: '9.5',
+        baffle: '0',
+        dolls: '18',
         antiswing: 'disabled',
         prizetype: 'giant_appliances', weight:'0.60', rolling:'0.35'
       });
 
-      prizesManager.spawnPrizes(12, 'giant_appliances', 6.0, chuteBounds);
+      prizesManager.spawnPrizes(18, 'giant_appliances', 6.0, chuteBounds);
       applyCameraView('kbasket', cameraViewMode);
     } else if (stageNum >= 5) {
       claw.setClawScale(1.0);
       claw.setMachineBounds(chuteHomeX,chuteHomeZ,3.0,cabinet.height);
       syncDIPPanelUI({
-        strong:stageNum === 5 ? '61' : stageNum === 6 ? '88' : '92', height:'76', weak:stageNum === 6 ? '65' : '69',
+        strong:stageNum === 5 ? '75' : stageNum === 6 ? '88' : '92', height:stageNum === 5 ? '55' : '76', weak:stageNum === 5 ? '43' : stageNum === 6 ? '65' : '69',
         tophit:stageNum === 5 ? '35' : stageNum === 6 ? '20' : '13', speed:stageNum === 6 ? '2.6' : '2.0', dropspeed:'2.0',
-        sway:stageNum === 6 ? '1.6' : '1.4', length:'9.5', baffle:stageNum === 5 ? '0' : stageNum === 6 ? '0.6' : '0.7',
+        sway:stageNum === 6 ? '1.6' : '1.4', length:'9.5', baffle:stageNum === 5 ? '0.3' : stageNum === 6 ? '0.6' : '0.7',
         dolls:stageNum === 5 ? '18' : stageNum === 6 ? '15' : '13',
         antiswing:'disabled',prizetype:'mixed',
         ...(stageNum === 6 ? {weight:'0.60',rolling:'0.35'} : {})
@@ -1360,6 +1365,7 @@ function setupUIEventListeners() {
       applyCameraView('medium', cameraViewMode);
     }
     claw.setPlayfieldBounds(cabinet.width,cabinet.depth);
+    layoutArcadeNeighbors(scene,cabinet.width);
   }
 
   // 🎥 Perspective Angle Toggle (Front eye-level / Side chute depth inspection)

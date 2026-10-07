@@ -91,20 +91,20 @@ export const LEVEL_CONFIGS: LevelConfig[] = [
     timeLimitSeconds: 8 * 60, // 8 分鐘 (480秒)
     targetWins: 3,
     isClearAll: false,
-    dollCount: 12,
+    dollCount: 18,
     prizeType: 'giant_appliances',
     difficulty: '地獄魔王',
     difficultyColor: '#ef4444',
-    description: '1.35x 霸王巨爪與 0.9m 擋板，限時 8 分鐘內夾出 3 樣巨型家電！',
+    description: '1.35x 霸王巨爪、出貨口無擋板，限時 8 分鐘內夾出 3 樣巨型家電！',
     objectiveText: '夾出 3 樣巨型家電',
-    strategyHint: '89% 強爪與 2.2 天車速度，抓取重盒邊緣拉拔！'
+    strategyHint: '75% 強爪與 2.0 天車速度，抓取重盒邊緣拉拔！'
   },
   {
     id: 5, stageNum: 5, name: '第五關：一爪翻盤台', shortName: '第 5 關',
     machineMode: 'medium', machineLabel: '三爪撥物機台', timeLimitSeconds: 10 * 60,
     targetWins: 3, isClearAll: false, dollCount: 18, prizeType: 'mixed',
     difficulty: '困難', difficultyColor: '#22c55e',
-    description: '限 30 次下爪出貨 3 樣。爪力 61%、觸頂震落 35%、出貨口無擋板。',
+    description: '限 30 次下爪出貨 3 樣。爪力 75%、觸頂震落 35%、擋板高度 0.3m。',
     objectiveText: '30 次下爪內出貨 3 樣',
     strategyHint: '不一定要夾起來；用爪子撥動獎品，讓它滑進洞口。'
   },

@@ -16,6 +16,23 @@ function signTexture(title: string, color: string) {
   return texture;
 }
 
+export function layoutArcadeNeighbors(scene: THREE.Scene, cabinetWidth: number) {
+  const room = scene.getObjectByName('CyberpunkArcade');
+  if (!room) return;
+  for (const side of [-1, 1]) {
+    let edge = cabinetWidth / 2 + 0.9;
+    for (let row = 0; row < 2; row++) {
+      const machine = room.getObjectByName(`Neighbor_${side}_${row}`);
+      if (!machine) continue;
+      machine.position.x = 0;
+      machine.updateMatrixWorld(true);
+      const bounds = new THREE.Box3().setFromObject(machine);
+      machine.position.x = side < 0 ? -edge - bounds.max.x : edge - bounds.min.x;
+      edge += bounds.max.x - bounds.min.x + 0.9;
+    }
+  }
+}
+
 export function buildArcadeEnvironment(scene: THREE.Scene) {
   const room=new THREE.Group(); room.name='CyberpunkArcade';
   const metal=new THREE.MeshStandardMaterial({color:0x33343b,metalness:0.55,roughness:0.55});
