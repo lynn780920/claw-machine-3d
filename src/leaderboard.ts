@@ -16,6 +16,7 @@ export interface RecordBreakEvent {
   stageName:string;
   timeFormatted:string;
   date:string;
+  plays:number|null;
 }
 
 const NICKNAME_KEY = 'claw_player_nickname';
@@ -39,7 +40,14 @@ function isRecord(value:unknown):value is BestRecordItem {
 
 function isEvent(value:unknown):value is RecordBreakEvent {
   return !!value && typeof value==='object' &&
-    ['id','playerName','recordType','stageName','timeFormatted','date'].every(k=>typeof (value as Record<string,unknown>)[k]==='string');
+    ['id','playerName','recordType','stageName','timeFormatted','date'].every(k=>typeof (value as Record<string,unknown>)[k]==='string') &&
+    ((value as RecordBreakEvent).plays===null || Number.isFinite((value as RecordBreakEvent).plays));
+}
+
+export function isBetterRecord(candidate:{bestTimeSeconds:number;plays:number|null}, current?:{bestTimeSeconds:number;plays:number|null}) {
+  if (!current) return true;
+  if (candidate.bestTimeSeconds !== current.bestTimeSeconds) return candidate.bestTimeSeconds < current.bestTimeSeconds;
+  return (candidate.plays ?? Number.POSITIVE_INFINITY) < (current.plays ?? Number.POSITIVE_INFINITY);
 }
 
 export function parseCloudLeaderboard(value:unknown) {
@@ -113,7 +121,7 @@ export class LeaderboardManager {
     for (const record of Object.values(this.pendingRecords)) {
       if (!events.some(e=>e.recordType===record.title && e.date===record.date && e.playerName===record.holderName)) {
         events.push({id:`pending-${record.recordKey}`,playerName:record.holderName,recordType:record.title,
-          stageName:record.title,timeFormatted:record.formattedTime,date:record.date});
+          stageName:record.title,timeFormatted:record.formattedTime,date:record.date,plays:record.plays});
       }
     }
     return events.sort((a,b)=>b.date.localeCompare(a.date) || b.id.localeCompare(a.id));
@@ -134,7 +142,7 @@ export class LeaderboardManager {
         const data = parseCloudLeaderboard(await response.json());
         this.cloudRecords = Object.fromEntries(data.records.map(r=>[r.recordKey,r]));
         for (const [key,pending] of Object.entries(this.pendingRecords)) {
-          if (this.cloudRecords[key]?.bestTimeSeconds <= pending.bestTimeSeconds) delete this.pendingRecords[key];
+          if (!isBetterRecord(pending,this.cloudRecords[key])) delete this.pendingRecords[key];
         }
         this.cloudEvents = data.events;
         this.bestRecords = {...this.cloudRecords};
@@ -153,14 +161,15 @@ export class LeaderboardManager {
 
   private recordWin(key:string,title:string,stageName:string,elapsedSeconds:number,formattedTime:string,wins:number,plays:number,eventName:string) {
     const prev = this.getBestRecords().find(record=>record.recordKey===key);
-    if (!Number.isFinite(elapsedSeconds) || elapsedSeconds<0 || (prev && elapsedSeconds>=prev.bestTimeSeconds)) {
+    const candidate = {bestTimeSeconds:elapsedSeconds,plays};
+    if (!Number.isFinite(elapsedSeconds) || elapsedSeconds<0 || !isBetterRecord(candidate,prev)) {
       return {isNewRecord:false,recordTitle:'',previousBest:prev?.formattedTime || ''};
     }
     const playerName = this.getPlayerName() || '無名英雄';
     const date = this.getNowString();
     this.bestRecords[key] = {recordKey:key,title,holderName:playerName,bestTimeSeconds:elapsedSeconds,formattedTime,wins,plays,date};
     this.pendingRecords[key] = this.bestRecords[key];
-    this.breakEvents.push({id:crypto.randomUUID(),playerName,recordType:title,stageName,timeFormatted:formattedTime,date});
+    this.breakEvents.push({id:crypto.randomUUID(),playerName,recordType:title,stageName,timeFormatted:formattedTime,date,plays});
     this.saveRecords();
     this.onRecordsUpdated?.();
     void this.sendToGoogleSheets({event:eventName,player:playerName,recordName:title,stage:stageName,time:formattedTime,date,
@@ -180,10 +189,10 @@ export class LeaderboardManager {
     if (!result.isNewRecord && Number.isFinite(totalSeconds) && totalSeconds>=0) {
       const playerName = this.getPlayerName() || '無名英雄';
       const date = this.getNowString();
-      this.breakEvents.push({id:crypto.randomUUID(),playerName,recordType:'七關全破',stageName:'7大關全破',timeFormatted:formattedTime,date});
+      this.breakEvents.push({id:crypto.randomUUID(),playerName,recordType:'七關全破',stageName:'7大關全破',timeFormatted:formattedTime,date,plays:totalPlays});
       this.saveRecords();
       this.onRecordsUpdated?.();
-      void this.sendToGoogleSheets({event:'通關全破',player:playerName,recordName:'通關完成',stage:'7大關全破',time:formattedTime,date})
+      void this.sendToGoogleSheets({event:'通關全破',player:playerName,recordName:'通關完成',stage:'7大關全破',time:formattedTime,date,plays:totalPlays})
         .then(async sent=>{if (sent) {if (this.refreshTask) await this.refreshTask; await this.refreshFromGoogleSheets();}});
     }
     return result;

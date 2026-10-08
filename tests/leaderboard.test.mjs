@@ -12,8 +12,8 @@ beforeEach(()=>{
   globalThis.fetch=async()=>{throw new Error('Unexpected network request in test');};
 });
 afterEach(()=>{globalThis.fetch=originalFetch;delete globalThis.localStorage;});
-const record=(name,time=60)=>({recordKey:'stage-1',title:'第 1 關 最速紀錄',holderName:name,bestTimeSeconds:time,formattedTime:'01:00',wins:null,plays:null,date:'2026-10-07 08:00:00'});
-const event=(name,date)=>({id:`sheet-${date}`,playerName:name,recordType:'第 1 關 最速紀錄',stageName:'第一關',timeFormatted:'01:00',date});
+const record=(name,time=60,plays=null)=>({recordKey:'stage-1',title:'第 1 關 最速紀錄',holderName:name,bestTimeSeconds:time,formattedTime:'01:00',wins:null,plays,date:'2026-10-07 08:00:00'});
+const event=(name,date)=>({id:`sheet-${date}`,playerName:name,recordType:'第 1 關 最速紀錄',stageName:'第一關',timeFormatted:'01:00',date,plays:null});
 
 test('fresh players do not see fictional record holders',()=>{
   const manager=new LeaderboardManager();
@@ -67,12 +67,13 @@ test('stages five to seven persist and remain visible while cloud confirmation i
 });
 
 test('record detection uses cloud scores, rejects ties and invalid times',async()=>{
-  globalThis.fetch=async()=>({ok:true,json:async()=>({records:[record('保持人',10)],events:[]})});
+  globalThis.fetch=async()=>({ok:true,json:async()=>({records:[record('保持人',10,8)],events:[]})});
   const manager=new LeaderboardManager();
   manager.sendToGoogleSheets=async()=>false;
   await manager.refreshFromGoogleSheets();
   manager.setPlayerName('新玩家');
   assert.equal(manager.checkAndRecordStageWin(1,'第一關',10,'00:10',8,9).isNewRecord,false);
+  assert.equal(manager.checkAndRecordStageWin(1,'第一關',10,'00:10',8,7).isNewRecord,true);
   assert.equal(manager.checkAndRecordStageWin(1,'第一關',NaN,'00:00',8,9).isNewRecord,false);
   assert.equal(manager.checkAndRecordStageWin(1,'第一關',9,'00:09',8,9).isNewRecord,true);
 });
@@ -81,8 +82,9 @@ const backend=await fs.readFile(new URL('../scripts/google-sheet-leaderboard.gs'
 function scriptFixture(rows) {
   const writes=[];
   const sheet={getSheetId:()=>0,getLastRow:()=>rows.length+1,getRange:(row,col,count,width)=>{
-    assert.deepEqual([row,col,count,width],[2,1,rows.length,6]);
-    return {getDisplayValues:()=>rows};
+    if(row===1 && col===7) return {getValue:()=>rows.length ? '投幣數' : '',setValue:value=>writes.push(['header',value])};
+    assert.deepEqual([row,col,count,width],[2,1,rows.length,7]);
+    return {getDisplayValues:()=>rows.map(r=>[...r,''].slice(0,7))};
   },appendRow:values=>writes.push(values)};
   const context=vm.createContext({SpreadsheetApp:{getActiveSpreadsheet:()=>{
     return {getId:()=>'1VOVpscLtE5kj0MIl5hVEH0aWISu1UuTJxzIqNLl9y5w',getSheets:()=>[{getSheetId:()=>12345,appendRow(){throw new Error('Wrong worksheet touched');}},sheet]};
@@ -107,12 +109,14 @@ test('Apps Script GET reads only gid 0, recomputes global winners and performs n
   assert.doesNotThrow(()=>parseCloudLeaderboard(data));
 });
 
-test('Apps Script POST retains six original columns, locks writes and neutralizes spreadsheet formulas',()=>{
+test('Apps Script POST adds coin count, locks writes and neutralizes spreadsheet formulas',()=>{
   const {context,writes}=scriptFixture([]);
-  const response=context.doPost({postData:{contents:JSON.stringify({date:'2026-10-07 12:00:00',player:'=IMPORTXML("x")',event:'打破單關紀錄',recordName:'第 1 關 最速紀錄',stage:'第一關',time:'00:59'})}});
+  const response=context.doPost({postData:{contents:JSON.stringify({date:'2026-10-07 12:00:00',player:'=IMPORTXML("x")',event:'打破單關紀錄',recordName:'第 1 關 最速紀錄',stage:'第一關',time:'00:59',plays:12})}});
   assert.equal(response.text,'OK');
-  assert.equal(writes[0].length,6);
-  assert.ok(writes[0][1].startsWith("'="));
+  const recordRow=writes.find(row=>row.length===7);
+  assert.equal(recordRow.length,7);
+  assert.equal(recordRow[6],12);
+  assert.ok(recordRow[1].startsWith("'="));
 });
 
 test('cloud returns stages five to seven and separates four-stage and seven-stage totals',()=>{

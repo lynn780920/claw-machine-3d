@@ -1712,6 +1712,38 @@ input:checked + .slider.round:before {
   width: 100%;
 }
 
+.reward-card-area {
+  display: grid;
+  grid-template-columns: minmax(150px, 210px) 1fr;
+  align-items: center;
+  gap: 14px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(251, 191, 36, 0.28);
+}
+
+#reward-card-canvas {
+  display: block;
+  width: 100%;
+  max-width: 210px;
+  aspect-ratio: 2 / 3;
+  border: 1px solid #d6a937;
+  border-radius: 6px;
+  background: #111827;
+  box-shadow: 0 8px 26px rgba(0,0,0,0.42);
+}
+
+.reward-card-actions { display: grid; gap: 10px; }
+.reward-share-btn { background: #c79016; color: #fff; border-color: #f9d56e; }
+.reward-download-btn { background: #183b56; color: #fff; border-color: #38bdf8; }
+.reward-card-actions button:disabled { opacity: 0.45; cursor: wait; }
+
+@media (max-width: 520px) {
+  .reward-card-area { grid-template-columns: 1fr; }
+  #reward-card-canvas { margin: 0 auto; max-width: 240px; }
+  .reward-card-actions { grid-template-columns: 1fr 1fr; }
+}
+
 @media (max-width: 680px) {
   .stages-roadmap-grid {
     grid-template-columns: 1fr;
