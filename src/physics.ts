@@ -25,8 +25,10 @@ export class PhysicsSystem {
   prewarmSimulation(steps = 25) {
     if (!this.isInitialized || !this.world) return;
     const originalDt = this.world.integrationParameters.dt;
-    this.world.integrationParameters.dt = originalDt / 2;
-    for (let i = 0; i < steps; i++) {
+    const substeps = Math.max(1, Math.round(this.substeps));
+    this.world.integrationParameters.dt = originalDt / substeps;
+    // Keep the settling duration while using the same spring precision as gameplay.
+    for (let i = 0; i < Math.ceil(steps * substeps / 2); i++) {
       this.world.step();
     }
     this.world.integrationParameters.dt = originalDt;

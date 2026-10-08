@@ -33,7 +33,7 @@ export function layoutArcadeNeighbors(scene: THREE.Scene, cabinetWidth: number) 
   }
 }
 
-export function buildArcadeEnvironment(scene: THREE.Scene) {
+export function buildArcadeEnvironment(scene: THREE.Scene, compact = false) {
   const room=new THREE.Group(); room.name='CyberpunkArcade';
   const metal=new THREE.MeshStandardMaterial({color:0x33343b,metalness:0.55,roughness:0.55});
   const wall=new THREE.MeshStandardMaterial({color:0x34303c,roughness:0.85});
@@ -75,7 +75,7 @@ export function buildArcadeEnvironment(scene: THREE.Scene) {
   for(const side of [-1,1]) {
     const lamp=new THREE.PointLight(side<0 ? 0xff408f : 0x3af2ed,100,30,2);
     lamp.position.set(side*10,6,-6); room.add(lamp);
-    for(let row=0;row<2;row++) {
+    for(let row=0;row<(compact ? 1 : 2);row++) {
       const machine=instantiateModel('cabinet'); machine.name=`Neighbor_${side}_${row}`;
       const palette = side < 0
         ? (row === 0 ? CABINET_PALETTES.small : CABINET_PALETTES.large)

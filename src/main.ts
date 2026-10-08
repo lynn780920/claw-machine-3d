@@ -16,6 +16,8 @@ import { loadCampaignProgress, saveCampaignProgress } from './campaignProgress';
 import { getStageRuntimeConfig, loadStageConfigsFromGoogleSheets } from './stageConfig';
 import { loadAnnouncementFromGoogleSheets, SiteAnnouncement } from './announcement';
 
+const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
+
 // Game Statistics
 let coins = 0;
 let plays = 0;
@@ -149,22 +151,23 @@ async function init() {
   camera.position.set(0, 5.6, 9.2); // Player eye-level front-facing view matching user screenshot
 
   // Auto-detect Mobile Device & Power Saver Defaults
-  const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
-  let powerSaverMode = false;
+  let powerSaverMode = isMobileDevice;
+  const normalPixelRatio = Math.min(window.devicePixelRatio || 1, 1.5);
+  const saverPixelRatio = Math.min(window.devicePixelRatio || 1, isMobileDevice ? 1.25 : 1);
 
-  // Mobile-optimized Renderer setup (capped pixel ratio 1.0 on mobile to stop battery drain)
-  renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('three-canvas') as HTMLCanvasElement, antialias: true, powerPreference: 'high-performance' });
+  // Limit mobile fill rate before allocating the WebGL drawing buffer.
+  renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('three-canvas') as HTMLCanvasElement, antialias: !isMobileDevice, powerPreference: 'high-performance' });
+  renderer.setPixelRatio(powerSaverMode ? saverPixelRatio : normalPixelRatio);
   renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.setPixelRatio(powerSaverMode ? 1.0 : Math.min(Math.max(window.devicePixelRatio, 1.5), 2));
   renderer.shadowMap.enabled = !powerSaverMode;
   renderer.shadowMap.type = THREE.PCFShadowMap;
   setupStudio(scene,renderer);
-  buildArcadeEnvironment(scene);
+  buildArcadeEnvironment(scene,isMobileDevice);
 
   // Global Power Saver Toggle
   (window as any).togglePowerSaver = (enable?: boolean) => {
     powerSaverMode = (enable !== undefined) ? enable : !powerSaverMode;
-    renderer.setPixelRatio(powerSaverMode ? 1.0 : Math.min(Math.max(window.devicePixelRatio, 1.5), 2));
+    renderer.setPixelRatio(powerSaverMode ? saverPixelRatio : normalPixelRatio);
     renderer.shadowMap.enabled = !powerSaverMode;
     scene.traverse((obj) => {
       if (obj instanceof THREE.Mesh) {
@@ -1335,7 +1338,8 @@ function setupUIEventListeners() {
     const runtime = getStageRuntimeConfig(stageNum);
     currentMachineMode = mode;
     claw.forceTopRelease = runtime.forceTopRelease;
-    physics.substeps = Math.max(1,Math.round(runtime.physicsSubsteps));
+    physics.substeps = Math.max(1,Math.min(isMobileDevice && runtime.bounceFloor ? 4 : 8,Math.round(runtime.physicsSubsteps)));
+    physics.world.integrationParameters.numSolverIterations = runtime.bounceFloor ? 8 : 20;
     const modeSelect = document.getElementById('setting-machinemode') as HTMLSelectElement | null;
     if (modeSelect) modeSelect.value = mode;
 

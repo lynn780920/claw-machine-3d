@@ -3,12 +3,13 @@ import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import * as RAPIER from '@dimforge/rapier3d-compat';
 import {ElasticBed} from '../src/elasticBed.ts';
+import {PhysicsSystem} from '../src/physics.ts';
 
-async function drop(height,tilt=0) {
+async function drop(height,tilt=0,timestep=1/480,iterations=20) {
   await RAPIER.init();
   const world=new RAPIER.World({x:0,y:-22,z:0});
-  world.timestep=1/480;
-  world.integrationParameters.numSolverIterations=20;
+  world.timestep=timestep;
+  world.integrationParameters.numSolverIterations=iterations;
   const bed=new ElasticBed(world,[['test',-2,2,-2,2]],new THREE.MeshStandardMaterial());
   const rotation=new THREE.Quaternion().setFromEuler(new THREE.Euler(tilt,0,tilt/2));
   const box=world.createRigidBody(RAPIER.RigidBodyDesc.dynamic().setTranslation(0.12,height,0.1).setRotation(rotation).setCcdEnabled(true));
@@ -44,6 +45,29 @@ test('off-center spring contacts transfer rotation to a tilted box',async () => 
   const result=await drop(3,0.28);
   assert.ok(result.launched);
   assert.ok(result.maxSpin>0.5);
+});
+
+test('mobile solver budget still rebounds a dropped prize',async () => {
+  const result=await drop(3.4,0,1/240,8);
+  assert.ok(result.launched && result.peak>1.6,'mobile cloth lost its bounce');
+});
+
+test('stage setup settles cloth with the gameplay spring timestep',async () => {
+  const physics = new PhysicsSystem();
+  await physics.init();
+  physics.substeps = 4;
+  physics.world.integrationParameters.numSolverIterations = 8;
+  const bed = new ElasticBed(physics.world,[['test',-3,3,-3,3]],new THREE.MeshStandardMaterial());
+  const box = physics.world.createRigidBody(RAPIER.RigidBodyDesc.dynamic().setTranslation(0,1.5,0).setCcdEnabled(true));
+  physics.world.createCollider(RAPIER.ColliderDesc.cuboid(0.85,0.975,0.6).setMass(0.22),box);
+  const timestep = physics.world.timestep;
+  try {
+    physics.prewarmSimulation(25);
+    bed.updateVisuals();
+    assert.equal(physics.world.timestep,timestep);
+    const positions = bed.meshes[0].geometry.getAttribute('position');
+    for (let i=0;i<positions.count;i++) assert.ok(Number.isFinite(positions.getY(i)) && Math.abs(positions.getY(i)) < 2);
+  } finally {bed.dispose();physics.clear();}
 });
 
 test('cloth leaves the chute open and disposes all spring bodies',async () => {

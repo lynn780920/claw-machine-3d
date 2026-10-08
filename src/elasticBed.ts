@@ -7,7 +7,7 @@ export type BedSection = [string, number, number, number, number];
 export class ElasticBed {
   readonly meshes: THREE.Mesh[] = [];
   private bodies: RAPIER.RigidBody[] = [];
-  private patches: {mesh:THREE.Mesh; cells:RAPIER.RigidBody[]; nx:number; nz:number}[] = [];
+  private patches: {mesh:THREE.Mesh; cells:RAPIER.RigidBody[]; heights:number[]; nx:number; nz:number}[] = [];
   private world:RAPIER.World;
   private material:THREE.Material;
 
@@ -17,7 +17,7 @@ export class ElasticBed {
     this.bodies.push(anchor);
     const nodes: {body:RAPIER.RigidBody;x:number;z:number;w:number;d:number}[] = [];
     for (const [,x0,x1,z0,z1] of sections) {
-      const nx=Math.max(1,Math.ceil((x1-x0)/0.8)), nz=Math.max(1,Math.ceil((z1-z0)/0.8));
+      const nx=Math.max(1,Math.ceil((x1-x0)/1.05)), nz=Math.max(1,Math.ceil((z1-z0)/1.05));
       const w=(x1-x0)/nx, d=(z1-z0)/nz;
       const cells:RAPIER.RigidBody[]=[];
       for (let iz=0;iz<nz;iz++) for (let ix=0;ix<nx;ix++) {
@@ -39,7 +39,7 @@ export class ElasticBed {
       const mesh=new THREE.Mesh(geometry,material);
       mesh.position.set((x0+x1)/2,0,(z0+z1)/2);
       mesh.name='ElasticCloth'; mesh.receiveShadow=true; mesh.frustumCulled=false;
-      this.meshes.push(mesh); this.patches.push({mesh,cells,nx,nz});
+      this.meshes.push(mesh); this.patches.push({mesh,cells,heights:Array(cells.length).fill(0),nx,nz});
     }
     // Neighbor springs transfer tension between loaded and unloaded cloth regions.
     for (let i=0;i<nodes.length;i++) for(let j=i+1;j<nodes.length;j++) {
@@ -54,13 +54,20 @@ export class ElasticBed {
   }
 
   updateVisuals() {
-    for (const {mesh,cells,nx,nz} of this.patches) {
+    for (const {mesh,cells,heights,nx,nz} of this.patches) {
+      let changed=false;
+      for (let i=0;i<cells.length;i++) {
+        const height=cells[i].translation().y+0.025;
+        if (Math.abs(height-heights[i])>0.00001) changed=true;
+        heights[i]=height;
+      }
+      if (!changed) continue;
       const positions=mesh.geometry.getAttribute('position') as THREE.BufferAttribute;
       for (let iz=0;iz<=nz;iz++) for (let ix=0;ix<=nx;ix++) {
         let y=0,count=0;
         for(const dz of [-1,0]) for(const dx of [-1,0]) {
           const x=ix+dx,z=iz+dz;
-          if(x>=0 && x<nx && z>=0 && z<nz) { y+=cells[z*nx+x].translation().y+0.025; count++; }
+          if(x>=0 && x<nx && z>=0 && z<nz) { y+=heights[z*nx+x]; count++; }
         }
         positions.setY(iz*(nx+1)+ix,y/Math.max(1,count));
       }
