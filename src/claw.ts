@@ -103,7 +103,7 @@ export class Claw {
   // Arm animation angle
   private currentArmAngle = 0.85;
   private targetArmAngle = 0.85;
-  private grabbedContactAngle = -0.50;
+  private gripContactLostTime = 0;
 
   constructor(scene: THREE.Scene, physics: PhysicsSystem) {
     this.physicsRef = physics;
@@ -299,21 +299,21 @@ export class Claw {
     // ── D. Smooth Arm Angle Animation (Authentic arcade solenoid speed 9.5) ──
     // Clamps arm angle dynamically: closes tightly into 密爪 when empty/grabbing, or hugs perimeter when grasping prize!
     let effectiveTargetAngle = this.targetArmAngle;
-    if (this.grabbedBody && this.state !== 'OPENING' && this.state !== 'IDLE' && this.state !== 'DESCENDING') {
-      effectiveTargetAngle = this.grabbedContactAngle;
-    } else if (this.state === 'GRABBING') {
+    if (this.grabbedBody || this.state === 'GRABBING') {
       // 下爪到底合爪瞬間：電磁閥通電，確實全力收緊至密爪！
       effectiveTargetAngle = this.config.clawCloseAngle;
     }
     for (const finger of this.fingers) {
-      const angle = this.grabbedBody && this.state !== 'OPENING'
-        ? this.grabbedContactAngle
-        : finger.angle + (effectiveTargetAngle-finger.angle)*Math.min(1,9.5*deltaTime);
-      // Once a prize is captured, the shared collar locks all three rigid prongs
-      // to one angle. The prize may still rotate or slip out under Rapier physics.
-      finger.move(angle,this.grabbedBody ? [] : prizesManager?.bodies ?? []);
+      const angle = finger.angle + (effectiveTargetAngle-finger.angle)*Math.min(1,9.5*deltaTime);
+      finger.move(angle,prizesManager?.bodies ?? []);
     }
     this.currentArmAngle = this.fingers.reduce((sum,finger)=>sum+finger.angle,0)/3;
+    if (this.grabbedBody) {
+      const contacts = this.fingers.filter(finger=>finger.contact(this.grabbedBody!));
+      this.gripContactLostTime = contacts.length < 2 ? this.gripContactLostTime + deltaTime : 0;
+      // The helper joint must not carry a prize after it slips clear of the fingers.
+      if (this.gripContactLostTime > 0.18) this.releasePrize(physics);
+    }
 
     // Mechanical Collar Movement (精簡行程，緊貼頂盤內側，滑塊絕不上凸下露)
     const t = (this.currentArmAngle - this.config.clawCloseAngle) /
@@ -369,7 +369,7 @@ export class Claw {
       }
 
       case 'GRABBING':
-        if (this.stateTimer > 0.45) {
+        if (this.stateTimer > 0.65) {
           this.attemptGrab(physics, prizesManager);
           this.state = 'ASCENDING';
           this.stateTimer = 0;
@@ -470,7 +470,9 @@ export class Claw {
 
     for (const pBody of prizesManager.bodies) {
       if (pBody === this.grabbedBody) continue;
-      if (this.fingers.filter(finger => finger.contact(pBody)).length < 2) continue;
+      const grippingFingers = this.fingers.filter(finger =>
+        finger.angle <= this.config.clawOpenAngle - 0.15 && finger.contact(pBody));
+      if (grippingFingers.length < 2) continue;
       const bPos = pBody.translation();
       const dx = bPos.x - basePos.x;
       const dz = bPos.z - basePos.z;
@@ -508,11 +510,9 @@ export class Claw {
       const prizeAnchor = anchor.clone().sub(new THREE.Vector3(bPos.x,bPos.y,bPos.z))
         .applyQuaternion(new THREE.Quaternion().copy(targetBody.rotation()).invert());
 
-      // 真實三爪由同一個滑套連動：採用最外側的安全接觸角，避免單爪
-      // 停在不同角度後看起來像軟折或翻進獎品內。
-      this.grabbedContactAngle = Math.max(...this.fingers.map(finger=>finger.angle));
-      this.targetArmAngle = this.grabbedContactAngle;
-      for (const finger of this.fingers) finger.move(this.grabbedContactAngle,[]);
+      // Maintain inward solenoid pressure while the rigid fingers follow contacts.
+      this.targetArmAngle = this.config.clawCloseAngle;
+      this.gripContactLostTime = 0;
 
 
       for (let i = 0; i < targetBody.numColliders(); i++) {
@@ -547,7 +547,7 @@ export class Claw {
   }
 
   private releasePrize(physics: PhysicsSystem, _reason: 'NORMAL' | 'WEAK_DROP' | 'TOP_HIT' | 'CHUTE_RELEASE' = 'NORMAL') {
-    this.grabbedContactAngle = this.config.clawCloseAngle;
+    this.gripContactLostTime = 0;
     this.targetArmAngle = this.config.clawOpenAngle;
     if (this.grabbedJoint) {
       try {

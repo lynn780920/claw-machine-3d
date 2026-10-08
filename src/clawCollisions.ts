@@ -93,7 +93,10 @@ export class ClawFinger {
             const shapePosition = part.position.clone().applyQuaternion(rotation).add(position);
             const shapeRotation = rotation.clone().multiply(part.rotation);
             const contact = body.collider(i).contactShape(part.collider.shape,shapePosition,shapeRotation,0.006);
-            if (contact && contact.distance < 0.003) {
+            // A tiny solver allowance lets a moving finger exert contact pressure
+            // on dynamic prizes; fixed objects retain a strict geometric stop.
+            const stopDistance = body.isDynamic() ? -0.002 : 0.003;
+            if (contact && contact.distance < stopDistance) {
               body.wakeUp();
               return true;
             }
