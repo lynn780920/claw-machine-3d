@@ -27,7 +27,7 @@ export class PhysicsSystem {
     const originalDt = this.world.integrationParameters.dt;
     const substeps = Math.max(1, Math.round(this.substeps));
     this.world.integrationParameters.dt = originalDt / substeps;
-    // Keep the settling duration while using the same spring precision as gameplay.
+    // Keep the settling duration while using the same collision precision as gameplay.
     for (let i = 0; i < Math.ceil(steps * substeps / 2); i++) {
       this.world.step();
     }
@@ -46,7 +46,7 @@ export class PhysicsSystem {
   step(beforeSubstep?: (dt: number) => void) {
     if (!this.isInitialized) return;
 
-    // The compliant bed uses finer substeps; ordinary stages retain their existing cost.
+    // Substeps keep fast claw and prize collisions synchronized.
     const originalDt = this.world.integrationParameters.dt;
     const substepDt = originalDt / this.substeps;
     this.world.integrationParameters.dt = substepDt;

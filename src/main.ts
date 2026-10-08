@@ -270,7 +270,6 @@ async function init() {
       if (performance.now()-stageExhaustedAt >= 2500) levelSystem.failCurrentLevel();
     }
 
-    cabinet.elasticBed?.updateVisuals();
     // Sync helper guides / indicator ring
     for (const materials of stageMarkers.values()) {
       for (const {material} of materials) material.uniforms.opacity.value = (material.uniforms.width.value < 0.05 ? 0.8 : 0.2) * (0.85+Math.sin(now*0.003)*0.15);
@@ -1338,7 +1337,7 @@ function setupUIEventListeners() {
     const runtime = getStageRuntimeConfig(stageNum);
     currentMachineMode = mode;
     claw.forceTopRelease = runtime.forceTopRelease;
-    physics.substeps = Math.max(1,Math.min(isMobileDevice && runtime.bounceFloor ? 4 : 8,Math.round(runtime.physicsSubsteps)));
+    physics.substeps = Math.max(1,Math.min(runtime.bounceFloor ? 2 : 8,Math.round(runtime.physicsSubsteps)));
     physics.world.integrationParameters.numSolverIterations = runtime.bounceFloor ? 8 : 20;
     const modeSelect = document.getElementById('setting-machinemode') as HTMLSelectElement | null;
     if (modeSelect) modeSelect.value = mode;
