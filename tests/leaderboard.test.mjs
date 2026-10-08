@@ -126,3 +126,15 @@ test('cloud returns stages five to seven and separates four-stage and seven-stag
   assert.doesNotThrow(()=>parseCloudLeaderboard(data));
   assert.equal(writes.length,0);
 });
+
+test('cloud exposes only genuine seven-stage completions for the champion ticker',()=>{
+  const {context,writes}=scriptFixture([
+    ['2026-10-08 12:00','舊關玩家','通關全破','通關完成','4大關全破','04:00'],
+    ['2026-10-08 12:01','新玩家','打破全破總紀錄','七關全破 最速總紀錄','7大關全破','07:00'],
+    ['2026-10-08 12:02','最新玩家','通關全破','通關完成','7大關全破','09:00']]);
+  const data=JSON.parse(context.doGet().text);
+  assert.equal(data.records.find(r=>r.recordKey==='campaign-7').holderName,'新玩家');
+  assert.deepEqual(data.events.map(e=>e.playerName),['新玩家','最新玩家']);
+  assert.equal(data.events.at(-1).recordType,'七關全破');
+  assert.equal(writes.length,0);
+});

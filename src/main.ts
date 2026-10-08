@@ -716,6 +716,16 @@ function setupUIEventListeners() {
   const closeLeaderboardBtn = document.getElementById('close-leaderboard-btn');
 
   const renderLeaderboardUI = () => {
+    const championText = document.getElementById('champion-marquee-text');
+    if (championText) {
+      const champion = leaderboardManager.getRecentBreakEvents().find(event =>
+        event.stageName === '7大關全破' && /七關全破/.test(event.recordType));
+      championText.textContent = champion
+        ? champion.recordType.includes('最速總紀錄')
+          ? `恭喜『${champion.playerName}』榮登至尊寶座打破紀錄！歡迎各路高手繼續挑戰` 
+          : `恭喜『${champion.playerName}』完成七關挑戰！歡迎各路高手繼續挑戰`
+        : '七關全破大魔王等你來挑戰！';
+    }
     const status = document.getElementById('leaderboard-sync-status');
     if (status) status.textContent = leaderboardManager.hasPendingRecords ? '新紀錄已保存在本機，等待 Google Sheet 確認' : leaderboardManager.cloudStatus==='connected' ? 'Google Sheet 已更新' :
       leaderboardManager.cloudStatus==='loading' ? '正在讀取 Google Sheet…' : '雲端暫時無法讀取，顯示本機紀錄';
@@ -725,22 +735,14 @@ function setupUIEventListeners() {
       const records = leaderboardManager.getBestRecords().map(rec=>({...rec,title:escapeLeaderboardText(rec.title),
         holderName:escapeLeaderboardText(rec.holderName),formattedTime:escapeLeaderboardText(rec.formattedTime),date:escapeLeaderboardText(rec.date)}));
       hallContainer.innerHTML = records.map((rec) => `
-        <div class="record-hall-card">
-          <div class="record-hall-header">
-            <span class="record-badge">${rec.title}</span>
-            <span class="record-time">${rec.formattedTime}</span>
-          </div>
-          <div class="record-hall-holder">
-            <span class="holder-label">歷史紀錄保持人</span>
-            <span class="holder-name">${rec.holderName}</span>
-          </div>
-          <div class="record-hall-meta">
-            <span>達成日期：${rec.date}</span>
-            <span>投幣累積：${rec.plays===null ? '未記錄' : `${rec.plays} 次`}</span>
-          </div>
+        <div class="record-hall-card ${rec.recordKey==='campaign-7' ? 'grand-record' : ''}">
+          <span class="record-badge">${rec.title}</span>
+          <strong class="holder-name">${rec.holderName}</strong>
+          <strong class="record-time">${rec.formattedTime}</strong>
+          <span class="record-date">${rec.date}</span>
         </div>
       `).join('') + LEVEL_CONFIGS.filter(level=>!records.some(record=>record.recordKey===`stage-${level.stageNum}`))
-        .map(level=>`<div class="record-hall-card"><span class="record-badge">第 ${level.stageNum} 關 最速紀錄</span><p>尚無通關紀錄</p></div>`).join('');
+        .map(level=>`<div class="record-hall-card empty-record"><span class="record-badge">第 ${level.stageNum} 關 最速紀錄</span><span class="holder-name">尚無通關紀錄</span></div>`).join('');
     }
 
     // 2. Break Events Timeline (即時打破紀錄歷史動態)
@@ -750,19 +752,18 @@ function setupUIEventListeners() {
         recordType:escapeLeaderboardText(ev.recordType),stageName:escapeLeaderboardText(ev.stageName),
         timeFormatted:escapeLeaderboardText(ev.timeFormatted),date:escapeLeaderboardText(ev.date)}));
       if (events.length === 0) {
-        eventsContainer.innerHTML = `<div class="empty-events" style="color: #94a3b8; font-size: 13px; text-align: center; padding: 18px 0;">目前尚無破紀錄事件，只要以更短時間通關即可名垂榮譽榜！</div>`;
+        eventsContainer.innerHTML = `<div class="empty-events">目前尚無通關動態</div>`;
       } else {
         eventsContainer.innerHTML = events.slice(0, 15).map((ev) => `
           <div class="record-event-row">
-            <div class="event-indicator"><svg viewBox="0 0 20 20" fill="currentColor" class="inline-svg-icon" style="color: #facc15;"><path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clip-rule="evenodd"/></svg></div>
             <div class="event-detail">
               <div class="event-text">
                 <span class="event-player">${ev.playerName}</span> 
-                <span class="event-type">${ev.recordType}</span>！
-                (最速成績：<span class="event-time">${ev.timeFormatted}</span>)
+                <span class="event-type">${ev.recordType}</span>
               </div>
               <div class="event-date">${ev.date} · ${ev.stageName}</div>
             </div>
+            <strong class="event-time">${ev.timeFormatted}</strong>
           </div>
         `).join('');
       }
@@ -771,6 +772,7 @@ function setupUIEventListeners() {
 
   leaderboardManager.onRecordsUpdated = renderLeaderboardUI;
   void leaderboardManager.refreshFromGoogleSheets();
+  window.setInterval(() => { void leaderboardManager.refreshFromGoogleSheets(); }, 5 * 60 * 1000);
 
   openLeaderboardBtn?.addEventListener('click', () => {
     if (leaderboardModal) {
@@ -1486,91 +1488,7 @@ function setupUIEventListeners() {
     });
   }
 
-  // 🎯 Stage 3 Custom Difficulty Settings (盲盒清台戰調參)
-  const s3Target = document.getElementById('setting-stage3-target') as HTMLInputElement | null;
-  const s3Time = document.getElementById('setting-stage3-time') as HTMLInputElement | null;
-  const s3Friction = document.getElementById('setting-stage3-friction') as HTMLInputElement | null;
-
-  if (s3Target) {
-    s3Target.addEventListener('input', () => {
-      const val = parseInt(s3Target.value);
-      const valEl = document.getElementById('val-stage3-target');
-      if (valEl) valEl.textContent = `${val} 盒`;
-      levelSystem.updateConfig(3, {
-        targetWins: val,
-        isClearAll: val >= 5,
-        objectiveText: val >= 5 ? '清台！(台內 5 盒盲盒全數清空)' : `夾出 ${val} 盒盲盒`
-      });
-    });
-  }
-  if (s3Time) {
-    s3Time.addEventListener('input', () => {
-      const val = parseInt(s3Time.value);
-      const valEl = document.getElementById('val-stage3-time');
-      if (valEl) valEl.textContent = `${val} 分鐘`;
-      levelSystem.updateConfig(3, { timeLimitSeconds: val * 60 });
-    });
-  }
-  if (s3Friction) {
-    s3Friction.addEventListener('change', () => {
-      const frictionVal = s3Friction.checked ? 1.5 : 0.45;
-      prizesManager.bodies.forEach(b => {
-        for (let i = 0; i < b.numColliders(); i++) {
-          b.collider(i).setFriction(frictionVal);
-        }
-      });
-    });
-  }
-
-  // ⚡ Stage 4 Custom Difficulty Settings (K-霸家電魔王關調參)
-  const s4Target = document.getElementById('setting-stage4-target') as HTMLInputElement | null;
-  const s4Time = document.getElementById('setting-stage4-time') as HTMLInputElement | null;
-  const s4Baffle = document.getElementById('setting-stage4-baffle') as HTMLInputElement | null;
-  const s4Grip = document.getElementById('setting-stage4-grip') as HTMLInputElement | null;
-  const s4Lightweight = document.getElementById('setting-stage4-lightweight') as HTMLInputElement | null;
-
-  if (s4Target) {
-    s4Target.addEventListener('input', () => {
-      const val = parseInt(s4Target.value);
-      const valEl = document.getElementById('val-stage4-target');
-      if (valEl) valEl.textContent = `${val} 樣`;
-      levelSystem.updateConfig(4, { targetWins: val, objectiveText: `夾出 ${val} 樣巨型家電` });
-    });
-  }
-  if (s4Time) {
-    s4Time.addEventListener('input', () => {
-      const val = parseInt(s4Time.value);
-      const valEl = document.getElementById('val-stage4-time');
-      if (valEl) valEl.textContent = `${val} 分鐘`;
-      levelSystem.updateConfig(4, { timeLimitSeconds: val * 60 });
-    });
-  }
-  if (s4Baffle) {
-    s4Baffle.addEventListener('input', () => {
-      const val = parseFloat(s4Baffle.value);
-      const valEl = document.getElementById('val-stage4-baffle');
-      if (valEl) valEl.textContent = `${val.toFixed(1)} m`;
-      if (cabinet && physics) {
-        cabinet.setBaffleHeight(val, physics);
-      }
-    });
-  }
-  if (s4Grip) {
-    s4Grip.addEventListener('input', () => {
-      const val = parseFloat(s4Grip.value);
-      const valEl = document.getElementById('val-stage4-grip');
-      if (valEl) valEl.textContent = `${val.toFixed(1)}x`;
-      claw.config.superGripMultiplier = val;
-    });
-  }
-  if (s4Lightweight) {
-    s4Lightweight.addEventListener('change', () => {
-      prizesManager.applianceLightweight = s4Lightweight.checked;
-      prizesManager.applyPrizePhysics();
-    });
-  }
-
-  // 🚀 Stage Debug Shortcuts & Persistence
+  // Shared physics tuning persistence; retired stage-specific overrides are ignored.
   const TUNING_STORAGE_KEY = 'claw_custom_tuning_v2';
 
   const saveTuningConfigToStorage = () => {
@@ -1579,14 +1497,6 @@ function setupUIEventListeners() {
         prizeWeight: prizesManager.weightMultiplier,
         rollingResistance: prizesManager.rollingResistance,
         godMode: godmodeCheckbox?.checked || false,
-        stage3Target: s3Target ? parseInt(s3Target.value) : 5,
-        stage3Time: s3Time ? parseInt(s3Time.value) : 8,
-        stage3Friction: s3Friction?.checked ?? true,
-        stage4Target: s4Target ? parseInt(s4Target.value) : 3,
-        stage4Time: s4Time ? parseInt(s4Time.value) : 8,
-        stage4Baffle: s4Baffle ? parseFloat(s4Baffle.value) : 1.1,
-        stage4Grip: s4Grip ? parseFloat(s4Grip.value) : 1.0,
-        stage4Lightweight: s4Lightweight?.checked || false,
       };
       localStorage.setItem(TUNING_STORAGE_KEY, JSON.stringify(cfg));
     } catch (e) {}
@@ -1603,61 +1513,15 @@ function setupUIEventListeners() {
         godmodeCheckbox.checked = cfg.godMode;
         claw.config.godMode = cfg.godMode;
       }
-      if (s3Target && cfg.stage3Target !== undefined) {
-        s3Target.value = String(cfg.stage3Target);
-        const el = document.getElementById('val-stage3-target');
-        if (el) el.textContent = `${cfg.stage3Target} 盒`;
-        levelSystem.updateConfig(3, {
-          targetWins: cfg.stage3Target,
-          isClearAll: cfg.stage3Target >= 5,
-          objectiveText: cfg.stage3Target >= 5 ? '清台！(台內 5 盒盲盒全數清空)' : `夾出 ${cfg.stage3Target} 盒盲盒`
-        });
-      }
-      if (s3Time && cfg.stage3Time !== undefined) {
-        s3Time.value = String(cfg.stage3Time);
-        const el = document.getElementById('val-stage3-time');
-        if (el) el.textContent = `${cfg.stage3Time} 分鐘`;
-        levelSystem.updateConfig(3, { timeLimitSeconds: cfg.stage3Time * 60 });
-      }
-      if (s3Friction && cfg.stage3Friction !== undefined) {
-        s3Friction.checked = cfg.stage3Friction;
-      }
-      if (s4Target && cfg.stage4Target !== undefined) {
-        s4Target.value = String(cfg.stage4Target);
-        const el = document.getElementById('val-stage4-target');
-        if (el) el.textContent = `${cfg.stage4Target} 樣`;
-        levelSystem.updateConfig(4, { targetWins: cfg.stage4Target, objectiveText: `夾出 ${cfg.stage4Target} 樣巨型家電` });
-      }
-      if (s4Time && cfg.stage4Time !== undefined) {
-        s4Time.value = String(cfg.stage4Time);
-        const el = document.getElementById('val-stage4-time');
-        if (el) el.textContent = `${cfg.stage4Time} 分鐘`;
-        levelSystem.updateConfig(4, { timeLimitSeconds: cfg.stage4Time * 60 });
-      }
-      if (s4Baffle && cfg.stage4Baffle !== undefined) {
-        s4Baffle.value = String(cfg.stage4Baffle);
-        const el = document.getElementById('val-stage4-baffle');
-        if (el) el.textContent = `${Number(cfg.stage4Baffle).toFixed(1)} m`;
-      }
-      if (s4Grip && cfg.stage4Grip !== undefined) {
-        s4Grip.value = String(cfg.stage4Grip);
-        const el = document.getElementById('val-stage4-grip');
-        if (el) el.textContent = `${Number(cfg.stage4Grip).toFixed(1)}x`;
-        claw.config.superGripMultiplier = cfg.stage4Grip;
-      }
-      if (s4Lightweight && cfg.stage4Lightweight !== undefined) {
-        s4Lightweight.checked = cfg.stage4Lightweight;
-        prizesManager.applianceLightweight = s4Lightweight.checked;
-      }
       applyPrizeTuning();
     } catch (e) {}
   };
 
   // Wire auto-save to input events
-  [s3Target, s3Time, s4Target, s4Time, s4Baffle, s4Grip, prizeWeightInput, rollingInput].forEach(input => {
+  [prizeWeightInput, rollingInput].forEach(input => {
     input?.addEventListener('change', saveTuningConfigToStorage);
   });
-  [godmodeCheckbox, s3Friction, s4Lightweight].forEach(toggle => {
+  [godmodeCheckbox].forEach(toggle => {
     toggle?.addEventListener('change', saveTuningConfigToStorage);
   });
 
@@ -1666,14 +1530,6 @@ function setupUIEventListeners() {
     const cfg = {
       prizeWeight: prizesManager.weightMultiplier,
       rollingResistance: prizesManager.rollingResistance,
-      stage3Target: s3Target ? parseInt(s3Target.value) : 5,
-      stage3Time: s3Time ? parseInt(s3Time.value) : 8,
-      stage3Friction: s3Friction?.checked ?? true,
-      stage4Target: s4Target ? parseInt(s4Target.value) : 3,
-      stage4Time: s4Time ? parseInt(s4Time.value) : 8,
-      stage4Baffle: s4Baffle ? parseFloat(s4Baffle.value) : 1.1,
-      stage4Grip: s4Grip ? parseFloat(s4Grip.value) : 1.0,
-      stage4Lightweight: s4Lightweight?.checked || false,
       godMode: godmodeCheckbox?.checked || false,
     };
     const text = JSON.stringify(cfg, null, 2);
@@ -1688,13 +1544,10 @@ function setupUIEventListeners() {
     }
   });
 
-  document.getElementById('jump-stage3-btn')?.addEventListener('click', () => {
-    levelSystem.startLevel(2); // Stage 3 is index 2
-    settingsPanel?.classList.remove('open');
-    settingsPanel?.classList.add('collapsed');
-  });
-  document.getElementById('jump-stage4-btn')?.addEventListener('click', () => {
-    levelSystem.startLevel(3); // Stage 4 is index 3
+  document.getElementById('admin-jump-stage-btn')?.addEventListener('click', () => {
+    const stage = Number((document.getElementById('admin-stage-select') as HTMLSelectElement | null)?.value);
+    if (!Number.isInteger(stage) || stage < 1 || stage > LEVEL_CONFIGS.length) return;
+    levelSystem.startLevel(stage - 1);
     settingsPanel?.classList.remove('open');
     settingsPanel?.classList.add('collapsed');
   });
@@ -1800,7 +1653,9 @@ function setupUIEventListeners() {
       if (winsCountEl) winsCountEl.textContent = `${stageWins} 樣`;
 
       // 檢查並紀錄單關破紀錄 (誰打破紀錄)
-      if (leaderboardManager) {
+      const recordBanner = document.getElementById('clear-new-record-banner');
+      if (recordBanner) recordBanner.style.display = 'none';
+      if (leaderboardManager && !levelSystem.isAssistedClear) {
         const recordResult = leaderboardManager.checkAndRecordStageWin(
           level.stageNum,
           level.name,
@@ -1809,7 +1664,6 @@ function setupUIEventListeners() {
           stageWins,
           plays
         );
-        const recordBanner = document.getElementById('clear-new-record-banner');
         const recordMsg = document.getElementById('clear-record-msg');
         if (recordBanner && recordMsg) {
           if (recordResult.isNewRecord) {
@@ -1848,10 +1702,10 @@ function setupUIEventListeners() {
     onGameVictory: (totalElapsedSeconds, totalWins) => {
       const finalLevel = levelSystem.getCurrentConfig();
       const finalSeconds = Math.max(1,finalLevel.timeLimitSeconds-levelSystem.remainingSeconds);
-      leaderboardManager.checkAndRecordStageWin(finalLevel.stageNum,finalLevel.name,finalSeconds,
+      if (!levelSystem.isAssistedClear) leaderboardManager.checkAndRecordStageWin(finalLevel.stageNum,finalLevel.name,finalSeconds,
         levelSystem.getFormattedTime(finalSeconds),levelSystem.stageWins,plays);
       const fullCampaignSeconds = levelSystem.getFullCampaignSeconds();
-      if (fullCampaignSeconds!==null) leaderboardManager.checkAndRecordGrandVictory(fullCampaignSeconds,
+      if (!levelSystem.isAssistedCampaign && fullCampaignSeconds!==null) leaderboardManager.checkAndRecordGrandVictory(fullCampaignSeconds,
         levelSystem.getFormattedTime(fullCampaignSeconds),totalWins,plays);
       campaignProgress = {unlockedStage:LEVEL_CONFIGS.length,completed:true};
       saveCampaignProgress(campaignProgress,leaderboardManager.getPlayerName());

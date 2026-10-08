@@ -178,7 +178,13 @@ export class LeaderboardManager {
   public checkAndRecordGrandVictory(totalSeconds:number,formattedTime:string,totalWins:number,totalPlays:number) {
     const result = this.recordWin('campaign-7','七關全破 最速總紀錄','7大關全破',totalSeconds,formattedTime,totalWins,totalPlays,'打破全破總紀錄');
     if (!result.isNewRecord && Number.isFinite(totalSeconds) && totalSeconds>=0) {
-      void this.sendToGoogleSheets({event:'通關全破',player:this.getPlayerName() || '無名英雄',recordName:'通關完成',stage:'7大關全破',time:formattedTime,date:this.getNowString()});
+      const playerName = this.getPlayerName() || '無名英雄';
+      const date = this.getNowString();
+      this.breakEvents.push({id:crypto.randomUUID(),playerName,recordType:'七關全破',stageName:'7大關全破',timeFormatted:formattedTime,date});
+      this.saveRecords();
+      this.onRecordsUpdated?.();
+      void this.sendToGoogleSheets({event:'通關全破',player:playerName,recordName:'通關完成',stage:'7大關全破',time:formattedTime,date})
+        .then(async sent=>{if (sent) {if (this.refreshTask) await this.refreshTask; await this.refreshFromGoogleSheets();}});
     }
     return result;
   }

@@ -145,6 +145,8 @@ export class LevelSystem {
   public isRunning: boolean = false;
   public isGameOver: boolean = false;
   public isGameVictory: boolean = false;
+  public isAssistedClear: boolean = false;
+  public isAssistedCampaign: boolean = false;
   
   private totalCampaignWins: number = 0;
   private totalCampaignSeconds: number = 0;
@@ -174,8 +176,12 @@ export class LevelSystem {
   private stageEndTime: number = 0;
 
   public startLevel(levelIndex: number, initialPrizeCount?: number) {
-    if (levelIndex!==this.currentLevelIndex+1 || !this.clearedStages.has(this.currentLevelIndex)) this.clearedStages.clear();
+    if (levelIndex!==this.currentLevelIndex+1 || !this.clearedStages.has(this.currentLevelIndex)) {
+      this.clearedStages.clear();
+      this.isAssistedCampaign = false;
+    }
     this.stopTimer();
+    this.isAssistedClear = false;
     this.currentLevelIndex = Math.max(0, Math.min(levelIndex, LEVEL_CONFIGS.length - 1));
     const config = this.getCurrentConfig();
 
@@ -307,6 +313,8 @@ export class LevelSystem {
 
   public forceStageClear() {
     this.clearedStages.clear();
+    this.isAssistedClear = true;
+    this.isAssistedCampaign = true;
     this.triggerStageClear();
   }
 

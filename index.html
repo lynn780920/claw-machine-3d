@@ -46,6 +46,9 @@
 
       <!-- Unified Floating Top Nav Bar (Two-Tier Responsive Challenge HUD & Action Pills) -->
       <div class="top-nav-container">
+        <div class="champion-marquee" aria-label="最新七關通關者">
+          <span id="champion-marquee-text" class="champion-marquee-text">七關全破大魔王等你來挑戰！</span>
+        </div>
         <!-- Tier 1: Challenge HUD Status Row -->
         <div class="hud-status-row">
           <!-- Player Nickname Capsule -->
@@ -168,74 +171,16 @@
           <div class="godmode-desc">開啟後爪子抓到物品 100% 鎖死不放、絕不轉弱、絕不觸頂震落，直達出貨口才鬆爪！</div>
         </div>
 
-        <!-- 🎯 關卡專項難度調校 (解決第三、第四關太難問題) -->
-        <h3 class="section-title special">關卡專項難度調校 (自訂破關難度)</h3>
-
-        <!-- Stage 3 Tuning Card -->
-        <div class="stage-tune-card stage-3">
-          <div class="stage-tune-badge">第 3 關 · 潮玩盲盒清台戰</div>
-          
-          <div class="setting-group compact">
-            <label>目標出貨數 (清台門檻) <span class="value" id="val-stage3-target">5 盒</span></label>
-            <input type="range" id="setting-stage3-target" min="1" max="5" value="5" step="1">
-            <span class="setting-hint">可調降為 1~2 盒輕鬆過關</span>
-          </div>
-
-          <div class="setting-group compact">
-            <label>限時時間 (分鐘) <span class="value" id="val-stage3-time">8 分鐘</span></label>
-            <input type="range" id="setting-stage3-time" min="1" max="30" value="8" step="1">
-          </div>
-
-          <div class="setting-row-toggle">
-            <label>盲盒超強防滑摩擦力 (一夾就起)</label>
-            <label class="switch small">
-              <input type="checkbox" id="setting-stage3-friction" checked>
-              <span class="slider round"></span>
-            </label>
-          </div>
-        </div>
-
-        <!-- Stage 4 Tuning Card -->
-        <div class="stage-tune-card stage-4">
-          <div class="stage-tune-badge boss">第 4 關 · K-霸巨型家電魔王關</div>
-          
-          <div class="setting-group compact">
-            <label>目標出貨數 <span class="value" id="val-stage4-target">3 樣</span></label>
-            <input type="range" id="setting-stage4-target" min="1" max="3" value="3" step="1">
-            <span class="setting-hint">調為 1 樣可提前晉級第五關</span>
-          </div>
-
-          <div class="setting-group compact">
-            <label>限時時間 (分鐘) <span class="value" id="val-stage4-time">8 分鐘</span></label>
-            <input type="range" id="setting-stage4-time" min="1" max="30" value="8" step="1">
-          </div>
-
-          <div class="setting-group compact">
-            <label>出貨口擋板高度 <span class="value" id="val-stage4-baffle">0.0 m</span></label>
-            <input type="range" id="setting-stage4-baffle" min="0" max="1.5" value="0" step="0.1">
-            <span class="setting-hint">可直接調降至 0.3m 輕鬆將大盒滾落出貨口</span>
-          </div>
-
-          <div class="setting-group compact">
-            <label>霸王爪超級抓力倍率 <span class="value" id="val-stage4-grip">1.0x</span></label>
-            <input type="range" id="setting-stage4-grip" min="1.0" max="3.0" value="1.0" step="0.2">
-          </div>
-
-          <div class="setting-row-toggle">
-            <label>家電羽量化模式 (降低 60% 重量防滑爪)</label>
-            <label class="switch small">
-              <input type="checkbox" id="setting-stage4-lightweight">
-              <span class="slider round"></span>
-            </label>
-          </div>
-        </div>
-
-        <!-- 🚀 關卡測試捷徑 -->
+        <!-- 關卡測試捷徑 -->
         <div class="stage-debug-row">
-          <button id="jump-stage3-btn" class="stage-quick-btn jump3">跳轉第 3 關</button>
-          <button id="jump-stage4-btn" class="stage-quick-btn jump4">跳轉第 4 關</button>
+          <label for="admin-stage-select">跳轉關卡</label>
+          <select id="admin-stage-select" aria-label="選擇跳轉關卡">
+            <option value="1">第 1 關</option><option value="2">第 2 關</option><option value="3">第 3 關</option>
+            <option value="4">第 4 關</option><option value="5">第 5 關</option><option value="6">第 6 關</option><option value="7">第 7 關</option>
+          </select>
+          <button id="admin-jump-stage-btn" class="stage-quick-btn jump">跳轉</button>
           <button id="force-clear-btn" class="stage-quick-btn clear">一鍵直接通關</button>
-          <button id="copy-config-btn" class="stage-quick-btn copy" style="grid-column: span 3; background: linear-gradient(135deg, #0284c7, #0369a1); border: 1px solid #38bdf8; padding: 10px; margin-top: 4px;"><svg viewBox="0 0 20 20" fill="currentColor" class="inline-svg-icon"><path d="M8 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z"/><path d="M6 3a2 2 0 00-2 2v11a2 2 0 002 2h8a2 2 0 002-2V5a2 2 0 00-2-2 3 3 0 01-3 3H9a3 3 0 01-3-3z"/></svg> 複製當前調參代碼 (傳給助理寫入原始碼)</button>
+          <button id="copy-config-btn" class="stage-quick-btn copy" style="grid-column: 1 / -1; background: linear-gradient(135deg, #0284c7, #0369a1); border: 1px solid #38bdf8; padding: 10px; margin-top: 4px;"><svg viewBox="0 0 20 20" fill="currentColor" class="inline-svg-icon"><path d="M8 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z"/><path d="M6 3a2 2 0 00-2 2v11a2 2 0 002 2h8a2 2 0 002-2V5a2 2 0 00-2-2 3 3 0 01-3 3H9a3 3 0 01-3-3z"/></svg> 複製當前調參代碼 (傳給助理寫入原始碼)</button>
         </div>
 
         <h3 class="section-title">主板微調開關 (DIP SWITCH)</h3>
@@ -626,7 +571,7 @@
     <div class="challenge-modal-card leaderboard-card">
       <div class="modal-header-banner">
         <div class="header-badge-title">
-          <h2>破紀錄榮譽榜 (誰打破紀錄)</h2>
+          <h2>榮譽榜</h2>
         </div>
         <button id="close-leaderboard-btn" class="modal-close-icon"><svg viewBox="0 0 20 20" fill="currentColor" class="close-icon-svg"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg></button>
       </div>
@@ -639,7 +584,7 @@
         </div>
 
         <!-- Section B: 即時破紀錄流水動態 (誰在何時打破紀錄) -->
-        <h3 class="records-section-title" style="margin-top: 20px;">最新破紀錄即時動態</h3>
+        <h3 class="records-section-title">最新通關動態</h3>
         <div class="record-events-timeline" id="record-events-container">
           <!-- Dynamically populated via JS -->
         </div>

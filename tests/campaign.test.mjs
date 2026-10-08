@@ -42,3 +42,23 @@ test('stage six counts only marked prizes and stage seven requires both boxes', 
   game.stopTimer();
   delete globalThis.window;
 });
+
+test('admin clear is marked assisted through the clear callback and resets on a fresh stage', () => {
+  globalThis.window = {setInterval};
+  let assistedAtClear = false;
+  const game = new LevelSystem({
+    onLevelStarted:()=>{},onTick:()=>{},onProgressUpdated:()=>{},
+    onStageClear:()=>{assistedAtClear = game.isAssistedClear;},onGameOver:()=>{},onGameVictory:()=>{}
+  });
+  game.startLevel(2);
+  game.forceStageClear();
+  assert.equal(assistedAtClear,true);
+  assert.equal(game.isAssistedCampaign,true);
+  game.nextLevel();
+  assert.equal(game.isAssistedClear,false);
+  assert.equal(game.isAssistedCampaign,true);
+  game.startLevel(0);
+  assert.equal(game.isAssistedCampaign,false);
+  game.stopTimer();
+  delete globalThis.window;
+});
