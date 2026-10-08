@@ -14,6 +14,7 @@ export interface StageRuntimeConfig {
   cableLength: number;
   baffleHeight: number;
   antiSwing: boolean;
+  clawSize: number;
   clawScale: number;
   spawnSpread: number;
   weight: number;
@@ -28,19 +29,20 @@ export interface StageRuntimeConfig {
 }
 
 export const STAGE_RUNTIME_CONFIGS: StageRuntimeConfig[] = [
-  {stageNum:1,strong:100,weakenHeight:76,weak:69,topHit:13,carriageSpeed:2,dropSpeed:2,sway:1.4,cableLength:9.5,baffleHeight:0.7,antiSwing:false,clawScale:1,spawnSpread:4.8,weight:1,rollingResistance:1,basePrizeCount:42,targetPrizeCount:0,maxDrops:0,bounceFloor:false,forceTopRelease:false,physicsSubsteps:2,stageHint:''},
-  {stageNum:2,strong:95,weakenHeight:62,weak:49,topHit:15,carriageSpeed:1.8,dropSpeed:2,sway:1.4,cableLength:7.5,baffleHeight:1,antiSwing:false,clawScale:1.15,spawnSpread:4.8,weight:1,rollingResistance:1,basePrizeCount:25,targetPrizeCount:0,maxDrops:0,bounceFloor:false,forceTopRelease:false,physicsSubsteps:2,stageHint:''},
-  {stageNum:3,strong:86,weakenHeight:68,weak:57,topHit:23,carriageSpeed:3,dropSpeed:2,sway:1,cableLength:9.5,baffleHeight:0.1,antiSwing:false,clawScale:0.85,spawnSpread:2.2,weight:0.6,rollingResistance:0.35,basePrizeCount:5,targetPrizeCount:0,maxDrops:0,bounceFloor:false,forceTopRelease:false,physicsSubsteps:2,stageHint:''},
-  {stageNum:4,strong:75,weakenHeight:55,weak:43,topHit:35,carriageSpeed:2,dropSpeed:2,sway:1.4,cableLength:9.5,baffleHeight:0,antiSwing:false,clawScale:1.35,spawnSpread:6,weight:0.6,rollingResistance:0.35,basePrizeCount:18,targetPrizeCount:0,maxDrops:0,bounceFloor:false,forceTopRelease:false,physicsSubsteps:2,stageHint:''},
-  {stageNum:5,strong:75,weakenHeight:55,weak:43,topHit:35,carriageSpeed:2,dropSpeed:2,sway:1.4,cableLength:9.5,baffleHeight:0.3,antiSwing:false,clawScale:1,spawnSpread:4.8,weight:1,rollingResistance:1,basePrizeCount:18,targetPrizeCount:0,maxDrops:30,bounceFloor:false,forceTopRelease:false,physicsSubsteps:2,stageHint:'剩餘下爪次數：30 次'},
-  {stageNum:6,strong:88,weakenHeight:76,weak:65,topHit:20,carriageSpeed:2.6,dropSpeed:2,sway:1.6,cableLength:9.5,baffleHeight:0.6,antiSwing:false,clawScale:1,spawnSpread:4.8,weight:0.6,rollingResistance:0.35,basePrizeCount:12,targetPrizeCount:3,maxDrops:0,bounceFloor:false,forceTopRelease:false,physicsSubsteps:2,stageHint:'指定夾出 3 件微微發光的獎品'},
-  {stageNum:7,strong:98,weakenHeight:76,weak:98,topHit:100,carriageSpeed:2,dropSpeed:2,sway:1.4,cableLength:9.5,baffleHeight:0.7,antiSwing:false,clawScale:1,spawnSpread:3.8,weight:1,rollingResistance:1,basePrizeCount:2,targetPrizeCount:0,maxDrops:0,bounceFloor:true,forceTopRelease:true,physicsSubsteps:8,stageHint:'彈跳台：觸頂必掉，兩盒一番賞都出貨才過關'}
+  {stageNum:1,strong:100,weakenHeight:76,weak:69,topHit:13,carriageSpeed:2,dropSpeed:2,sway:1.4,cableLength:9.5,baffleHeight:0.7,antiSwing:false,clawSize:2,clawScale:1,spawnSpread:4.8,weight:1,rollingResistance:1,basePrizeCount:42,targetPrizeCount:0,maxDrops:0,bounceFloor:false,forceTopRelease:false,physicsSubsteps:2,stageHint:''},
+  {stageNum:2,strong:95,weakenHeight:62,weak:49,topHit:15,carriageSpeed:1.8,dropSpeed:2,sway:1.4,cableLength:7.5,baffleHeight:1,antiSwing:false,clawSize:3,clawScale:1.15,spawnSpread:4.8,weight:1,rollingResistance:1,basePrizeCount:25,targetPrizeCount:0,maxDrops:0,bounceFloor:false,forceTopRelease:false,physicsSubsteps:2,stageHint:''},
+  {stageNum:3,strong:86,weakenHeight:68,weak:57,topHit:23,carriageSpeed:3,dropSpeed:2,sway:1,cableLength:9.5,baffleHeight:0.1,antiSwing:false,clawSize:1,clawScale:0.85,spawnSpread:2.2,weight:0.6,rollingResistance:0.35,basePrizeCount:5,targetPrizeCount:0,maxDrops:0,bounceFloor:false,forceTopRelease:false,physicsSubsteps:2,stageHint:''},
+  {stageNum:4,strong:75,weakenHeight:55,weak:43,topHit:35,carriageSpeed:2,dropSpeed:2,sway:1.4,cableLength:9.5,baffleHeight:0,antiSwing:false,clawSize:4,clawScale:1.35,spawnSpread:6,weight:0.6,rollingResistance:0.35,basePrizeCount:18,targetPrizeCount:0,maxDrops:0,bounceFloor:false,forceTopRelease:false,physicsSubsteps:2,stageHint:''},
+  {stageNum:5,strong:75,weakenHeight:55,weak:43,topHit:35,carriageSpeed:2,dropSpeed:2,sway:1.4,cableLength:9.5,baffleHeight:0.3,antiSwing:false,clawSize:2,clawScale:1,spawnSpread:4.8,weight:1,rollingResistance:1,basePrizeCount:18,targetPrizeCount:0,maxDrops:30,bounceFloor:false,forceTopRelease:false,physicsSubsteps:2,stageHint:'剩餘下爪次數：30 次'},
+  {stageNum:6,strong:88,weakenHeight:76,weak:65,topHit:20,carriageSpeed:2.6,dropSpeed:2,sway:1.6,cableLength:9.5,baffleHeight:0.6,antiSwing:false,clawSize:2,clawScale:1,spawnSpread:4.8,weight:0.6,rollingResistance:0.35,basePrizeCount:12,targetPrizeCount:3,maxDrops:0,bounceFloor:false,forceTopRelease:false,physicsSubsteps:2,stageHint:'指定夾出 3 件微微發光的獎品'},
+  {stageNum:7,strong:98,weakenHeight:76,weak:98,topHit:100,carriageSpeed:2,dropSpeed:2,sway:1.4,cableLength:9.5,baffleHeight:0.7,antiSwing:false,clawSize:2,clawScale:1,spawnSpread:3.8,weight:1,rollingResistance:1,basePrizeCount:2,targetPrizeCount:0,maxDrops:0,bounceFloor:true,forceTopRelease:true,physicsSubsteps:8,stageHint:'彈跳台：觸頂必掉，兩盒一番賞都出貨才過關'}
 ];
 
 const numberFields: Array<keyof StageRuntimeConfig> = [
   'strong','weakenHeight','weak','topHit','carriageSpeed','dropSpeed','sway','cableLength','baffleHeight',
   'clawScale','spawnSpread','weight','rollingResistance','basePrizeCount','targetPrizeCount','maxDrops','physicsSubsteps'
 ];
+const clawSizeScales = [0.85,1,1.15,1.35] as const;
 
 function finiteNumber(value: unknown, fallback: number) {
   const number = Number(value);
@@ -72,6 +74,14 @@ export function applyRemoteStageConfigs(value: unknown): boolean {
     level.strategyHint = String(row.strategyHint || level.strategyHint).slice(0,240);
     const runtimeValues = runtime as unknown as Record<string,unknown>;
     for (const field of numberFields) runtimeValues[field] = finiteNumber(row[field],Number(runtimeValues[field]));
+    const requestedClawSize = Math.round(finiteNumber(row.clawSize,0));
+    if (requestedClawSize >= 1 && requestedClawSize <= 4) {
+      runtime.clawSize = requestedClawSize;
+      runtime.clawScale = clawSizeScales[requestedClawSize-1];
+    } else {
+      runtime.clawSize = clawSizeScales.reduce((best,scale,index) =>
+        Math.abs(scale-runtime.clawScale)<Math.abs(clawSizeScales[best-1]-runtime.clawScale) ? index+1 : best,1);
+    }
     runtime.stageHint = String(row.stageHint ?? runtime.stageHint).slice(0,120);
     runtime.antiSwing = row.antiSwing === true || String(row.antiSwing).toUpperCase() === 'TRUE';
     runtime.bounceFloor = row.bounceFloor === true || String(row.bounceFloor).toUpperCase() === 'TRUE';

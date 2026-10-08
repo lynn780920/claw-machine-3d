@@ -983,7 +983,6 @@ function setupUIEventListeners() {
   const openBriefingBtn = document.getElementById('open-briefing-btn');
   const briefingModal = document.getElementById('briefing-modal');
   const closeBriefingBtn = document.getElementById('close-briefing-btn');
-  const startChallengeBtn = document.getElementById('start-challenge-btn');
   const openFreeStageSelect = () => {
     if (!campaignProgress.completed) return;
     for (const id of ['game-victory-modal','stage-clear-modal','game-over-modal']) {
@@ -992,21 +991,30 @@ function setupUIEventListeners() {
     }
     if (briefingModal) briefingModal.style.display='flex';
   };
-  document.getElementById('open-stage-select-btn')?.addEventListener('click',openFreeStageSelect);
   document.getElementById('victory-select-stage-btn')?.addEventListener('click',openFreeStageSelect);
 
-  if (openBriefingBtn && briefingModal) {
-    openBriefingBtn.addEventListener('click', () => {
-      briefingModal.style.display = 'flex';
+  const stageSelectList = document.getElementById('stage-select-list');
+  if (stageSelectList) {
+    LEVEL_CONFIGS.forEach((level,index) => {
+      const card = document.createElement('div');
+      card.className = 'stage-roadmap-item stage-select-item';
+      card.id = `stage-card-${level.stageNum}`;
+      const label = document.createElement('span');
+      label.className = 'stage-select-number';
+      label.textContent = `第 ${level.stageNum} 關`;
+      const button = document.createElement('button');
+      button.className = 'stage-jump-btn';
+      button.dataset.stage = String(index);
+      card.append(label,button);
+      stageSelectList.appendChild(card);
     });
+  }
+
+  if (openBriefingBtn && briefingModal) {
+    openBriefingBtn.addEventListener('click', openFreeStageSelect);
   }
   if (closeBriefingBtn && briefingModal) {
     closeBriefingBtn.addEventListener('click', () => {
-      briefingModal.style.display = 'none';
-    });
-  }
-  if (startChallengeBtn && briefingModal) {
-    startChallengeBtn.addEventListener('click', () => {
       briefingModal.style.display = 'none';
     });
   }
@@ -1620,8 +1628,9 @@ function setupUIEventListeners() {
   }
 
   const refreshStageUnlocks = () => {
-    const selectButton = document.getElementById('open-stage-select-btn');
-    if (selectButton) selectButton.style.display=campaignProgress.completed ? '' : 'none';
+    const progress = document.getElementById('stage-select-progress');
+    if (progress) progress.textContent = campaignProgress.completed ? '七關已全數通過，可自由選擇重玩。' : '完成全部七關後即可自由選擇關卡。';
+    if (openBriefingBtn instanceof HTMLButtonElement) openBriefingBtn.disabled = !campaignProgress.completed;
     document.querySelectorAll<HTMLButtonElement>('.stage-jump-btn').forEach(button => {
       const number = Number(button.dataset.stage) + 1;
       button.disabled = number > campaignProgress.unlockedStage;

@@ -1392,10 +1392,20 @@ input:checked + .slider.round:before {
 
 .stages-roadmap-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
   margin-bottom: 12px;
 }
+
+.stage-select-item {
+  align-items: center;
+  flex-direction: row;
+  justify-content: space-between;
+  min-width: 0;
+  padding: 10px 12px;
+}
+
+.stage-select-number { color: #f8fafc; font-weight: 800; }
 
 .stage-roadmap-item {
   background: rgba(30, 41, 59, 0.7);
@@ -1479,6 +1489,8 @@ input:checked + .slider.round:before {
   transition: all 0.2s ease;
   margin-top: 4px;
 }
+
+.stage-select-item .stage-jump-btn { margin-top: 0; }
 
 .stage-jump-btn:hover {
   background: #0284c7;

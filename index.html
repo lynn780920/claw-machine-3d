@@ -82,20 +82,16 @@
 
         <!-- Tier 2: Functional Control Action Pills -->
         <div class="hud-actions-row">
-          <!-- Stage Briefing & Objectives Button -->
-          <button id="open-briefing-btn" class="nav-pill-btn briefing">
+          <!-- Other Stages Button -->
+          <button id="open-briefing-btn" class="nav-pill-btn briefing" disabled title="全破七關後開放自由選關">
             <span class="btn-icon"><svg viewBox="0 0 20 20" fill="currentColor" class="hud-svg"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/><path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clip-rule="evenodd"/></svg></span>
-            <span class="nav-btn-label">說明</span>
+            <span class="nav-btn-label">其他關卡</span>
           </button>
 
           <!-- Record Breaking Leaderboard Button -->
           <button id="open-leaderboard-btn" class="nav-pill-btn records">
             <span class="btn-icon"><svg viewBox="0 0 20 20" fill="currentColor" class="hud-svg"><path fill-rule="evenodd" d="M10 2a1 1 0 011 1v1.323l3.954 1.582 1.599-.8a1 1 0 01.894 1.79l-1.233.616 1.738 5.42a1 1 0 01-.285 1.05A3.989 3.989 0 0115 15a3.989 3.989 0 01-2.667-1.019 1 1 0 01-.285-1.05l1.715-5.349L11 6.477V16h2a1 1 0 110 2H7a1 1 0 110-2h2V6.477L6.237 7.582l1.715 5.349a1 1 0 01-.285 1.05A3.989 3.989 0 015 15a3.989 3.989 0 01-2.667-1.019 1 1 0 01-.285-1.05l1.738-5.42-1.233-.617a1 1 0 01.894-1.788l1.599.799L9 4.323V3a1 1 0 011-1z" clip-rule="evenodd"/></svg></span>
             <span class="nav-btn-label">紀錄榜</span>
-          </button>
-
-          <button id="open-stage-select-btn" class="nav-pill-btn briefing" style="display:none">
-            <span class="nav-btn-label">自由選關</span>
           </button>
 
           <!-- Admin Backend Password Settings Button -->
@@ -347,102 +343,19 @@
     </div>
   </div>
 
-  <!-- Stage Briefing Modal (關卡說明視窗) -->
+  <!-- Unlocked Stage Selection -->
   <div id="briefing-modal" class="challenge-modal-overlay" style="display: none;">
     <div class="challenge-modal-card briefing-card">
       <div class="modal-header-banner">
         <div class="header-badge-title">
-          <h2>7 大關卡破關挑戰說明</h2>
+          <h2>選擇關卡</h2>
         </div>
         <button id="close-briefing-btn" class="modal-close-icon"><svg viewBox="0 0 20 20" fill="currentColor" class="close-icon-svg"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg></button>
       </div>
 
       <div class="briefing-content-body">
-        <p class="briefing-intro">挑戰 7 個關卡。完成關卡後會在這個瀏覽器解鎖下一關；可從已解鎖關卡繼續或重玩。</p>
-        
-        <div class="stages-roadmap-grid">
-          <!-- Stage 1 -->
-          <div class="stage-roadmap-item" id="stage-card-1">
-            <div class="stage-tag easy">第 1 關 · 簡單</div>
-            <div class="stage-machine-name">標準街機 (初試身手)</div>
-            <div class="stage-params-row">
-              <span class="param-badge">限時 15 分鐘</span>
-              <span class="param-badge target">目標：夾到 8 樣</span>
-            </div>
-            <p class="stage-desc">初試身手暖身關！機台爪力充沛且容錯率高，抓準下爪時機與二收合爪點即可輕鬆過關。</p>
-            <button class="stage-jump-btn" data-stage="0">立即挑戰第 1 關</button>
-          </div>
-
-          <!-- Stage 2 -->
-          <div class="stage-roadmap-item" id="stage-card-2">
-            <div class="stage-tag medium">第 2 關 · 普通</div>
-            <div class="stage-machine-name">大型機台 (動漫公仔賞)</div>
-            <div class="stage-params-row">
-              <span class="param-badge">限時 10 分鐘</span>
-              <span class="param-badge target">目標：夾到 4 樣</span>
-            </div>
-            <p class="stage-desc">技術進階挑戰！動漫模型重盒考驗卡爪角度與甩幅，需善用反向甩爪卡住角位托出。</p>
-            <button class="stage-jump-btn" data-stage="1">立即挑戰第 2 關</button>
-          </div>
-
-          <!-- Stage 3 -->
-          <div class="stage-roadmap-item" id="stage-card-3">
-            <div class="stage-tag hard">第 3 關 · 困難</div>
-            <div class="stage-machine-name">小型機台 (潮玩盲盒清台)</div>
-            <div class="stage-params-row">
-              <span class="param-badge">限時 8 分鐘</span>
-              <span class="param-badge target-clear">目標：限時清台</span>
-            </div>
-            <p class="stage-desc">極速清台任務！台內 POP MART 盲盒必須在 8 分鐘內全部清空 (清台) ! 時間到即 GAME OVER！</p>
-            <button class="stage-jump-btn" data-stage="2">立即挑戰第 3 關</button>
-          </div>
-
-          <!-- Stage 4 -->
-          <div class="stage-roadmap-item" id="stage-card-4">
-            <div class="stage-tag boss">第 4 關 · 魔王</div>
-            <div class="stage-machine-name">K-霸直立機台 (巨型家電決戰)</div>
-            <div class="stage-params-row">
-              <span class="param-badge">限時 8 分鐘</span>
-              <span class="param-badge target-boss">目標：夾到 3 樣</span>
-            </div>
-            <p class="stage-desc">以霸王巨爪挑戰重型家電盒，成功出貨 3 樣即可晉級。</p>
-            <button class="stage-jump-btn" data-stage="3">立即挑戰第 4 關</button>
-          </div>
-          <div class="stage-roadmap-item" id="stage-card-5">
-            <div class="stage-tag hard">第 5 關 · 一爪翻盤</div>
-            <div class="stage-machine-name">三爪撥物機台</div>
-            <div class="stage-params-row"><span class="param-badge">30 次下爪</span><span class="param-badge target">出貨 3 樣</span></div>
-            <p class="stage-desc">爪力 75%、觸頂震落 35%、擋板 0.3m。用爪子撥動獎品入洞。</p>
-            <button class="stage-jump-btn" data-stage="4">立即挑戰第 5 關</button>
-          </div>
-          <div class="stage-roadmap-item" id="stage-card-6">
-            <div class="stage-tag hard">第 6 關 · 尋寶</div>
-            <div class="stage-machine-name">指定獎品尋寶機台</div>
-            <div class="stage-params-row"><span class="param-badge">限時 10 分鐘</span><span class="param-badge target">指定夾出 3 件</span></div>
-            <p class="stage-desc">指定夾出 3 件微微發光的獎品。</p>
-            <button class="stage-jump-btn" data-stage="5">立即挑戰第 6 關</button>
-          </div>
-          <div class="stage-roadmap-item" id="stage-card-7">
-            <div class="stage-tag boss">第 7 關 · 幸運彈跳台</div>
-            <div class="stage-machine-name">彈跳布機台</div>
-            <div class="stage-params-row"><span class="param-badge">限時 12 分鐘</span><span class="param-badge target-boss">彈出 2 盒</span></div>
-            <p class="stage-desc">兩盒一番賞，98% 強爪、100% 觸頂震落，兩盒都彈過 0.7m 擋板才過關。</p>
-            <button class="stage-jump-btn" data-stage="6">立即挑戰第 7 關</button>
-          </div>
-        </div>
-
-        <div class="briefing-rules-notice">
-          <strong>通關重要規則：</strong>
-          <ul>
-            <li>每關倒數計時即時進行，時間倒數為 0 時直接判定 <strong>GAME OVER</strong>。</li>
-            <li>達成每關指定出貨數量（或清台）時，將立即過關並獲得下一關晉級資格！</li>
-            <li>可從已解鎖關卡繼續或重玩；清除瀏覽器資料會移除本機進度。</li>
-          </ul>
-        </div>
-      </div>
-
-      <div class="modal-footer-row">
-        <button id="start-challenge-btn" class="modal-action-btn primary-start">開始挑戰</button>
+        <p id="stage-select-progress" class="briefing-intro"></p>
+        <div id="stage-select-list" class="stages-roadmap-grid stage-select-grid"></div>
       </div>
     </div>
   </div>
