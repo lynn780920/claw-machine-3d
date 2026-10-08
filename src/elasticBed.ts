@@ -18,7 +18,7 @@ export class ElasticBed {
       const x=(x0+x1)/2,z=(z0+z1)/2;
       const body=world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(x,-0.075,z));
       world.createCollider(RAPIER.ColliderDesc.cuboid(width/2,0.075,depth/2)
-        .setFriction(0.2).setRestitution(0.88)
+        .setFriction(0.2).setRestitution(0.90)
         .setRestitutionCombineRule(RAPIER.CoefficientCombineRule.Max),body);
       this.bodies.push(body);
       const geometry=new THREE.PlaneGeometry(width,depth);

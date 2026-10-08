@@ -18,6 +18,10 @@ test('Google Sheet stage rows update all seven stages and reject incomplete data
   assert.equal(applyRemoteStageConfigs({configs}),true);
   assert.equal(LEVEL_CONFIGS[0].timeLimitSeconds,originalLevel[0].timeLimitSeconds+1);
   assert.equal(STAGE_RUNTIME_CONFIGS[6].stageHint,'第7關提示');
+  configs[0].clawSize=4;
+  assert.equal(applyRemoteStageConfigs({configs}),true);
+  assert.equal(STAGE_RUNTIME_CONFIGS[0].clawScale,1.35);
+  assert.equal(STAGE_RUNTIME_CONFIGS[0].clawSize,4);
   assert.equal(applyRemoteStageConfigs({configs:configs.slice(0,6)}),false);
   LEVEL_CONFIGS.splice(0,LEVEL_CONFIGS.length,...originalLevel);
   STAGE_RUNTIME_CONFIGS.splice(0,STAGE_RUNTIME_CONFIGS.length,...originalRuntime);

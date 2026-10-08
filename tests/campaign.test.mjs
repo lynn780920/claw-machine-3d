@@ -6,14 +6,16 @@ import {loadCampaignProgress, saveCampaignProgress} from '../src/campaignProgres
 test('browser progress restores an unlocked stage and ignores corrupt data', () => {
   const values = new Map();
   globalThis.localStorage = {getItem:key => values.get(key) ?? null,setItem:(key,value) => values.set(key,value)};
-  assert.deepEqual(loadCampaignProgress(7),{unlockedStage:1,completed:false});
+  assert.deepEqual(loadCampaignProgress(7),{unlockedStage:1,currentStage:1,completed:false});
   saveCampaignProgress({unlockedStage:5,completed:false},'Lynn');
-  assert.deepEqual(loadCampaignProgress(7,'Lynn'),{unlockedStage:5,completed:false});
-  assert.deepEqual(loadCampaignProgress(7,'Someone Else'),{unlockedStage:1,completed:false});
+  assert.deepEqual(loadCampaignProgress(7,'Lynn'),{unlockedStage:5,currentStage:5,completed:false});
+  saveCampaignProgress({unlockedStage:5,currentStage:3,completed:false},'Lynn');
+  assert.deepEqual(loadCampaignProgress(7,'Lynn'),{unlockedStage:5,currentStage:3,completed:false});
+  assert.deepEqual(loadCampaignProgress(7,'Someone Else'),{unlockedStage:1,currentStage:1,completed:false});
   saveCampaignProgress({unlockedStage:7,completed:true},'Champion');
-  assert.deepEqual(loadCampaignProgress(7,'Champion'),{unlockedStage:7,completed:true});
+  assert.deepEqual(loadCampaignProgress(7,'Champion'),{unlockedStage:7,currentStage:7,completed:true});
   values.set('claw_campaign_progress_v1:lynn','{');
-  assert.deepEqual(loadCampaignProgress(7),{unlockedStage:1,completed:false});
+  assert.deepEqual(loadCampaignProgress(7),{unlockedStage:1,currentStage:1,completed:false});
   delete globalThis.localStorage;
 });
 

@@ -4,6 +4,7 @@ const storageKey = (playerName: string) => `${KEY}:${encodeURIComponent(playerNa
 
 export interface CampaignProgress {
   unlockedStage: number;
+  currentStage: number;
   completed: boolean;
 }
 
@@ -12,9 +13,11 @@ export function loadCampaignProgress(stageCount: number, playerName = ''): Campa
     const saved = JSON.parse(localStorage.getItem(storageKey(playerName)) || '{}');
     const unlockedStage = saved.completed === true ? stageCount : Number.isInteger(saved.unlockedStage)
       ? Math.max(1, Math.min(stageCount, saved.unlockedStage)) : 1;
-    return {unlockedStage, completed: saved.completed === true};
+    const currentStage = Number.isInteger(saved.currentStage)
+      ? Math.max(1, Math.min(stageCount, saved.currentStage)) : unlockedStage;
+    return {unlockedStage, currentStage, completed: saved.completed === true};
   } catch {
-    return {unlockedStage: 1, completed: false};
+    return {unlockedStage: 1, currentStage: 1, completed: false};
   }
 }
 

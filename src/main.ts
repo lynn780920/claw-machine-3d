@@ -13,7 +13,7 @@ import { setupStudio, fitMachineCamera } from './renderSetup';
 import { isDelivered, isWedgedInChute, isPrizeEnteringChute } from './delivery';
 import { buildArcadeEnvironment, layoutArcadeNeighbors } from './arcadeEnvironment';
 import { loadCampaignProgress, saveCampaignProgress } from './campaignProgress';
-import { getStageRuntimeConfig, loadStageConfigsFromGoogleSheets } from './stageConfig';
+import { getStageRuntimeConfig, loadStageConfigsFromGoogleSheets, stageConfigSource } from './stageConfig';
 import { loadAnnouncementFromGoogleSheets, SiteAnnouncement } from './announcement';
 
 const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
@@ -152,11 +152,11 @@ async function init() {
 
   // Auto-detect Mobile Device & Power Saver Defaults
   let powerSaverMode = isMobileDevice;
-  const normalPixelRatio = Math.min(window.devicePixelRatio || 1, 1.5);
-  const saverPixelRatio = Math.min(window.devicePixelRatio || 1, isMobileDevice ? 1.25 : 1);
+  const normalPixelRatio = Math.min(window.devicePixelRatio || 1, isMobileDevice ? 1.75 : 1.5);
+  const saverPixelRatio = Math.min(window.devicePixelRatio || 1, isMobileDevice ? 1.5 : 1);
 
   // Limit mobile fill rate before allocating the WebGL drawing buffer.
-  renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('three-canvas') as HTMLCanvasElement, antialias: !isMobileDevice, powerPreference: 'high-performance' });
+  renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('three-canvas') as HTMLCanvasElement, antialias: true, powerPreference: 'high-performance' });
   renderer.setPixelRatio(powerSaverMode ? saverPixelRatio : normalPixelRatio);
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.shadowMap.enabled = !powerSaverMode;
@@ -487,29 +487,28 @@ async function renderRewardCard(playerName: string, formattedTime: string, total
   const image = new Image();
   image.src = `${import.meta.env.BASE_URL}reward-card-base.jpg`;
   await new Promise<void>((resolve,reject)=>{image.onload=()=>resolve();image.onerror=()=>reject(new Error('Reward card image failed to load'));});
+  canvas.width = image.naturalWidth;
+  canvas.height = image.naturalHeight;
   context.clearRect(0,0,canvas.width,canvas.height);
   context.drawImage(image,0,0,canvas.width,canvas.height);
-  context.fillStyle = 'rgba(255, 248, 218, 0.95)';
-  context.fillRect(58,1082,908,400);
-  context.strokeStyle = '#9a5a13';
-  context.lineWidth = 5;
-  context.strokeRect(58,1082,908,400);
-  context.textAlign = 'center';
-  context.fillStyle = '#59320f';
-  context.font = '700 48px "Microsoft JhengHei", sans-serif';
-  context.fillText('恭喜七關全破',512,1160);
-  context.fillStyle = '#c22d27';
-  context.font = '900 64px "Microsoft JhengHei", sans-serif';
+  const centerX = canvas.width/2;
+  const now = new Date();
+  const stamp = `${now.getFullYear()}/${String(now.getMonth()+1).padStart(2,'0')}/${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
   const safePlayer = playerName.trim().slice(0,16) || '神秘玩家';
-  context.fillText(`玩家 ID：${safePlayer}`,512,1245);
-  context.fillStyle = '#59320f';
-  context.font = '700 36px "Microsoft JhengHei", sans-serif';
-  context.fillText(`通關時間 ${formattedTime}　投幣 ${totalPlays} 次　出貨 ${totalWins} 件`,512,1320);
-  context.font = '600 30px "Microsoft JhengHei", sans-serif';
-  context.fillText('榮獲「線上娃娃機破關王」稱號',512,1385);
-  context.fillStyle = '#8b5a24';
-  context.font = '500 24px "Microsoft JhengHei", sans-serif';
-  context.fillText(new Date().toLocaleDateString('zh-TW'),512,1440);
+  context.beginPath();
+  context.roundRect(canvas.width*0.19,canvas.height*0.888,canvas.width*0.62,canvas.height*0.065,canvas.width*0.015);
+  context.fillStyle = '#fff0c7';
+  context.fill();
+  context.strokeStyle = '#d3a046';
+  context.lineWidth = canvas.width*0.003;
+  context.stroke();
+  context.textAlign = 'center';
+  context.fillStyle = '#843019';
+  context.font = `900 ${Math.round(canvas.width*0.038)}px "Microsoft JhengHei", sans-serif`;
+  context.fillText(`玩家 ID：${safePlayer}`,centerX,canvas.height*0.918,canvas.width*0.57);
+  context.fillStyle = '#683b18';
+  context.font = `700 ${Math.round(canvas.width*0.026)}px "Microsoft JhengHei", sans-serif`;
+  context.fillText(`通關 ${formattedTime} · ${totalPlays} 次投幣 · ${stamp}`,centerX,canvas.height*0.942,canvas.width*0.57);
   rewardCardBlob = await canvasBlob(canvas);
   if (shareButton) shareButton.disabled = !rewardCardBlob;
   if (downloadButton) downloadButton.disabled = !rewardCardBlob;
@@ -777,7 +776,7 @@ function setupUIEventListeners() {
       if (val) {
         leaderboardManager.setPlayerName(val);
         campaignProgress = loadCampaignProgress(LEVEL_CONFIGS.length,val);
-        if (levelSystem) levelSystem.startLevel(campaignProgress.unlockedStage-1);
+        if (levelSystem) levelSystem.startLevel(campaignProgress.currentStage-1);
         refreshStageUnlocks();
         updateHudPlayerName();
       }
@@ -821,13 +820,14 @@ function setupUIEventListeners() {
   const renderLeaderboardUI = () => {
     const championText = document.getElementById('champion-marquee-text');
     if (championText) {
-      const champion = leaderboardManager.getRecentBreakEvents().find(event =>
-        event.stageName === '7大關全破' && /七關全破/.test(event.recordType));
-      championText.textContent = champion
-        ? champion.recordType.includes('最速總紀錄')
-          ? `恭喜『${champion.playerName}』榮登至尊寶座打破紀錄！歡迎各路高手繼續挑戰` 
-          : `恭喜『${champion.playerName}』完成七關挑戰！歡迎各路高手繼續挑戰`
-        : '七關全破大魔王等你來挑戰！';
+      const champion = leaderboardManager.getBestRecords()
+        .filter(record => record.recordKey === 'stage-7' || record.recordKey === 'campaign-7')
+        .sort((a,b)=>b.date.localeCompare(a.date) || (b.recordKey === 'campaign-7' ? 1 : -1))[0];
+      if (champion) {
+        const minutes = Math.floor(champion.bestTimeSeconds / 60);
+        const seconds = Math.floor(champion.bestTimeSeconds % 60);
+        championText.textContent = `恭喜${champion.holderName}玩家榮登至尊魔王，耗時${minutes}分${String(seconds).padStart(2,'0')}秒，次數${champion.plays ?? '未記錄'}次，歡迎大家挑戰魔王！`;
+      } else championText.textContent = '七關全破大魔王等你來挑戰！';
     }
     const status = document.getElementById('leaderboard-sync-status');
     if (status) status.textContent = leaderboardManager.hasPendingRecords ? '新紀錄已保存在本機，等待 Google Sheet 確認' : leaderboardManager.cloudStatus==='connected' ? 'Google Sheet 已更新' :
@@ -1335,6 +1335,11 @@ function setupUIEventListeners() {
 
     const level = LEVEL_CONFIGS[Math.max(0,Math.min(LEVEL_CONFIGS.length-1,stageNum-1))];
     const runtime = getStageRuntimeConfig(stageNum);
+    const configStatus = document.getElementById('stage-config-status');
+    if (configStatus) {
+      const source = {sheet:'Google Sheet',cache:'上次成功讀取的工作表設定',default:'預設值（工作表未連線）'}[stageConfigSource];
+      configStatus.textContent = `第 ${stageNum} 關 · ${runtime.clawSize} 號爪（${runtime.clawScale}×）· ${source}`;
+    }
     currentMachineMode = mode;
     claw.forceTopRelease = runtime.forceTopRelease;
     physics.substeps = Math.max(1,Math.min(runtime.bounceFloor ? 2 : 8,Math.round(runtime.physicsSubsteps)));
@@ -1400,7 +1405,7 @@ function setupUIEventListeners() {
       applyRuntimeSettings();
       spawnRuntimePrizes();
       if (stageNum === 7) {
-        for (const body of prizesManager.bodies) { body.setLinearDamping(0.1); body.setAngularDamping(0.35); }
+        for (const body of prizesManager.bodies) { body.setLinearDamping(0.04); body.setAngularDamping(0.35); }
       }
       if (stageNum === 6) {
         for (const [index,type] of ['eevee','cookie_box','squirtle'].slice(0,Math.max(0,Math.min(3,Math.round(runtime.targetPrizeCount)))).entries()) {
@@ -1645,6 +1650,8 @@ function setupUIEventListeners() {
   // 🎮 Initialize 7-Stage Challenge Progression System
   levelSystem = new LevelSystem({
     onLevelStarted: (level) => {
+      campaignProgress.currentStage = level.stageNum;
+      saveCampaignProgress(campaignProgress,leaderboardManager.getPlayerName());
       stageDrops = 0;
       stageExhaustedAt = 0;
       stagePlaysStart = plays;
@@ -1694,6 +1701,7 @@ function setupUIEventListeners() {
     },
     onStageClear: (level, elapsedSeconds, stageWins) => {
       campaignProgress.unlockedStage = Math.max(campaignProgress.unlockedStage,Math.min(LEVEL_CONFIGS.length,level.stageNum+1));
+      campaignProgress.currentStage = Math.min(LEVEL_CONFIGS.length,level.stageNum+1);
       saveCampaignProgress(campaignProgress,leaderboardManager.getPlayerName());
       refreshStageUnlocks();
       soundEngine.playStageClearSFX();
@@ -1770,7 +1778,7 @@ function setupUIEventListeners() {
       const fullCampaignSeconds = levelSystem.getFullCampaignSeconds();
       if (!levelSystem.isAssistedCampaign && fullCampaignSeconds!==null) leaderboardManager.checkAndRecordGrandVictory(fullCampaignSeconds,
         levelSystem.getFormattedTime(fullCampaignSeconds),totalWins,campaignPlays);
-      campaignProgress = {unlockedStage:LEVEL_CONFIGS.length,completed:true};
+      campaignProgress = {unlockedStage:LEVEL_CONFIGS.length,currentStage:LEVEL_CONFIGS.length,completed:true};
       saveCampaignProgress(campaignProgress,leaderboardManager.getPlayerName());
       refreshStageUnlocks();
       soundEngine.playGameVictorySFX();
@@ -1798,7 +1806,7 @@ function setupUIEventListeners() {
 
   const previewStage = import.meta.env.DEV ? Number(new URLSearchParams(location.search).get('previewStage')) : 0;
   levelSystem.startLevel(previewStage >= 1 && previewStage <= LEVEL_CONFIGS.length
-    ? Math.floor(previewStage)-1 : campaignProgress.unlockedStage-1);
+    ? Math.floor(previewStage)-1 : campaignProgress.currentStage-1);
   updateStatsUI();
 }
 

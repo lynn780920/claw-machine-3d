@@ -43,6 +43,8 @@ const numberFields: Array<keyof StageRuntimeConfig> = [
   'clawScale','spawnSpread','weight','rollingResistance','basePrizeCount','targetPrizeCount','maxDrops','physicsSubsteps'
 ];
 const clawSizeScales = [0.85,1,1.15,1.35] as const;
+const CONFIG_CACHE_KEY = 'claw_stage_config_cache_v1';
+export let stageConfigSource: 'sheet' | 'cache' | 'default' = 'default';
 
 function finiteNumber(value: unknown, fallback: number) {
   const number = Number(value);
@@ -59,6 +61,10 @@ export function applyRemoteStageConfigs(value: unknown): boolean {
     const stageNum = Number(row.stageNum);
     if (!Number.isInteger(stageNum) || stageNum < 1 || stageNum > LEVEL_CONFIGS.length || seen.has(stageNum)) return false;
     seen.add(stageNum);
+  }
+  for (const raw of rows) {
+    const row = raw as Record<string, unknown>;
+    const stageNum = Number(row.stageNum);
     const level = LEVEL_CONFIGS[stageNum - 1];
     const runtime = STAGE_RUNTIME_CONFIGS[stageNum - 1];
     level.name = String(row.name || level.name).slice(0,80);
@@ -91,14 +97,23 @@ export function applyRemoteStageConfigs(value: unknown): boolean {
 }
 
 export async function loadStageConfigsFromGoogleSheets(): Promise<boolean> {
+  // Keep the last verified settings through temporary network failures.
+  try {
+    const cached = JSON.parse(localStorage.getItem(CONFIG_CACHE_KEY) || 'null');
+    if (applyRemoteStageConfigs(cached)) stageConfigSource = 'cache';
+  } catch { /* Storage may be unavailable or contain invalid data. */ }
   const controller = new AbortController();
-  const timeout = window.setTimeout(()=>controller.abort(),6000);
+  const timeout = window.setTimeout(()=>controller.abort(),15000);
   try {
     const response = await fetch(`${STAGE_CONFIG_URL}?action=stage-config&t=${Date.now()}`,{cache:'no-store',signal:controller.signal});
     if (!response.ok) return false;
-    return applyRemoteStageConfigs(await response.json());
+    const data = await response.json();
+    if (!applyRemoteStageConfigs(data)) return false;
+    stageConfigSource = 'sheet';
+    try { localStorage.setItem(CONFIG_CACHE_KEY,JSON.stringify(data)); } catch { /* Settings still apply without storage. */ }
+    return true;
   } catch (error) {
-    console.warn('Using built-in stage settings because Google Sheet configuration is unavailable',error);
+    console.warn('Google Sheet unavailable; using last verified or built-in stage settings',error);
     return false;
   } finally {
     clearTimeout(timeout);
