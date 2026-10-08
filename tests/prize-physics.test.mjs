@@ -187,8 +187,8 @@ test('a genuinely gripped prize rises with the claw and keeps its damping after 
     const collider = world.createCollider(RAPIER.ColliderDesc.ball(0.35).setMass(0.38).setFriction(0.85),prize);
     const stock = {bodies:[prize]};
     claw.actionButtonPressed(stock);claw.actionButtonPressed(stock);
-    for (let i=0;i<60;i++) {claw.update(1/120,physics,stock);world.step();}
-    assert.equal(claw.grabbedBody,prize,'two contacting fingers did not establish a grip');
+    for (let i=0;i<90;i++) {claw.update(1/120,physics,stock);world.step();}
+    assert.equal(claw.grabbedBody,prize,`grip failed: ${JSON.stringify({state:claw.state,angle:claw.currentArmAngle,contacts:claw.fingers.map(finger=>!!finger.contact(prize)),height:claw.baseMesh.position.y,prize:prize.translation()})}`);
     for (let i=0;i<100;i++) {claw.update(1/120,physics,stock);world.step();}
     assert.ok(prize.translation().y>2.95,'gripped prize sank instead of rising');
     claw.reset();

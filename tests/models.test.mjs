@@ -11,7 +11,7 @@ import { PRIZE_TYPES } from '../src/modelAssets.ts';
 import { APPLIANCE_TYPES, MIXED_PRIZE_TYPES, prizeStockScale } from '../src/modelAssets.ts';
 import { collectHullPoints, centerAndScaleHullPoints } from '../src/prizeGeometry.ts';
 import * as RAPIER from '@dimforge/rapier3d-compat';
-import { ClawFinger } from '../src/clawCollisions.ts';
+import { ClawFinger, moveCoupledFingers } from '../src/clawCollisions.ts';
 import { LARGE_POKEMON_DIMENSIONS, POKEMON_TYPES, FEATURED_POKEMON_TYPES, applyPlushMaterial } from '../src/modelAssets.ts';
 import { CABINET_PALETTES, colorCabinetModel } from '../src/cabinetPalette.ts';
 
@@ -228,6 +228,34 @@ test('GLB fingers stop closing at a prize surface instead of penetrating it',asy
         const projection = part.projectPoint(point,true);
         return projection && point.distanceTo(new THREE.Vector3(projection.point.x,projection.point.y,projection.point.z))<0.01;
       }),'scaled GLB finger surface is outside its collision shape');
+    }
+  } finally {world.free();}
+});
+
+test('a shared collar keeps all three rigid claws level when one finger meets a box',async()=>{
+  await RAPIER.init();
+  const world = new RAPIER.World({x:0,y:0,z:0});
+  try {
+    const asset = await load('claw');
+    const root = asset.getObjectByName('ClawRoot');
+    root.position.y = 2;
+    const fingers = [1,2,3].map(i=>new ClawFinger(world,root.getObjectByName(`ArmHinge_${i}`)));
+    const prize = world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(0.36,1.38,0));
+    world.createCollider(RAPIER.ColliderDesc.ball(0.16),prize);
+    let angle = fingers[0].angle;
+    for(let i=0;i<150;i++) {
+      angle = moveCoupledFingers(fingers,Math.max(-0.5,angle-0.015),[prize]);
+      world.step();
+    }
+    assert.ok(angle > -0.45,'collar passed through a rigid box');
+    assert.ok(fingers.every(finger=>Math.abs(finger.angle-angle)<1e-6),'prongs did not follow one collar');
+    assert.ok(fingers[0].contact(prize),'blocked prong lost contact');
+    moveCoupledFingers(fingers,ClawFinger.MAX_ANGLE,[]);
+    for(const finger of fingers) {
+      const hinge = finger.hinge.getWorldPosition(new THREE.Vector3());
+      const tip = finger.hinge.localToWorld(new THREE.Vector3(0.1,-0.79,0));
+      assert.ok(hinge.y-tip.y>0.55,'open prong hangs too high');
+      assert.ok(Math.hypot(tip.x,tip.z)<0.96,'open prong spreads too far sideways');
     }
   } finally {world.free();}
 });

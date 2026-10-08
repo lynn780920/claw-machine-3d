@@ -3,7 +3,7 @@ import * as RAPIER from '@dimforge/rapier3d-compat';
 import { PhysicsSystem } from './physics';
 import { PrizesManager } from './prizes';
 import { instantiateModel } from './modelAssets';
-import { ClawFinger } from './clawCollisions';
+import { ClawFinger, moveCoupledFingers } from './clawCollisions';
 import { stepSuspension, suspensionOffset } from './clawSuspension';
 
 export type ClawState =
@@ -67,7 +67,7 @@ export class Claw {
     weakHeightThreshold: 0.76,  // 76% 電壓轉弱高度 (照片)
     topHitForce: 6.0,
 
-    clawOpenAngle: 0.85,       // Wide open angle (~49 deg outward)
+    clawOpenAngle: 0.52,       // Rigid prongs hang mostly downward at rest.
     clawCloseAngle: -0.50,     // Tight closed angle (authentic 密爪: tips touch at center)
 
     // Admin / DIP Switch Overrides
@@ -101,8 +101,8 @@ export class Claw {
   private swayVelZ = 0;
 
   // Arm animation angle
-  private currentArmAngle = 0.85;
-  private targetArmAngle = 0.85;
+  private currentArmAngle = 0.52;
+  private targetArmAngle = 0.52;
   private gripContactLostTime = 0;
 
   constructor(scene: THREE.Scene, physics: PhysicsSystem) {
@@ -210,6 +210,7 @@ export class Claw {
     this.targetRopeLength = this.ropeLength;
     this.targetArmAngle = this.config.clawOpenAngle;
     this.currentArmAngle = this.targetArmAngle;
+    moveCoupledFingers(this.fingers,this.targetArmAngle,[]);
   }
 
   /* ================================================================
@@ -303,11 +304,10 @@ export class Claw {
       // 下爪到底合爪瞬間：電磁閥通電，確實全力收緊至密爪！
       effectiveTargetAngle = this.config.clawCloseAngle;
     }
-    for (const finger of this.fingers) {
-      const angle = finger.angle + (effectiveTargetAngle-finger.angle)*Math.min(1,9.5*deltaTime);
-      finger.move(angle,prizesManager?.bodies ?? []);
-    }
-    this.currentArmAngle = this.fingers.reduce((sum,finger)=>sum+finger.angle,0)/3;
+    const nextAngle = this.currentArmAngle +
+      (effectiveTargetAngle-this.currentArmAngle)*Math.min(1,9.5*deltaTime);
+    const obstacles = prizesManager?.bodies ?? [];
+    this.currentArmAngle = moveCoupledFingers(this.fingers,nextAngle,obstacles);
     if (this.grabbedBody) {
       const contacts = this.fingers.filter(finger=>finger.contact(this.grabbedBody!));
       this.gripContactLostTime = contacts.length < 2 ? this.gripContactLostTime + deltaTime : 0;

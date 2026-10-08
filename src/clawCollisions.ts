@@ -3,11 +3,11 @@ import * as RAPIER from '@dimforge/rapier3d-compat';
 
 export class ClawFinger {
   static readonly MIN_ANGLE = -0.50;
-  static readonly MAX_ANGLE = 0.85;
+  static readonly MAX_ANGLE = 0.52;
   readonly body: RAPIER.RigidBody;
   readonly colliders: RAPIER.Collider[] = [];
   private parts: {collider:RAPIER.Collider;position:THREE.Vector3;rotation:THREE.Quaternion}[] = [];
-  angle = 0.85;
+  angle = 0.52;
   private world: RAPIER.World;
   readonly hinge: THREE.Object3D;
 
@@ -132,4 +132,13 @@ export class ClawFinger {
     }
     return null;
   }
+}
+
+export function moveCoupledFingers(fingers: ClawFinger[],angle: number,obstacles: RAPIER.RigidBody[]): number {
+  for (const finger of fingers) finger.move(angle,obstacles);
+  // A single slider drives all three hinges. The most obstructed arm sets its
+  // travel limit; the others reopen to that position without crossing a prize.
+  const collarAngle = Math.max(...fingers.map(finger=>finger.angle));
+  for (const finger of fingers) finger.move(collarAngle,[]);
+  return collarAngle;
 }
