@@ -1,4 +1,5 @@
-const KEY = 'claw_campaign_progress_v1';
+// Bump this key when a new campaign season must invalidate every browser's saved progress.
+const KEY = 'claw_campaign_progress_v2';
 const storageKey = (playerName: string) => `${KEY}:${encodeURIComponent(playerName.trim().toLocaleLowerCase() || 'guest')}`;
 
 export interface CampaignProgress {
