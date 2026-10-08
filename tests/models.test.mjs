@@ -253,9 +253,9 @@ test('a shared collar keeps all three rigid claws level when one finger meets a 
     moveCoupledFingers(fingers,ClawFinger.MAX_ANGLE,[]);
     for(const finger of fingers) {
       const hinge = finger.hinge.getWorldPosition(new THREE.Vector3());
-      const tip = finger.hinge.localToWorld(new THREE.Vector3(0.23,-0.86,0));
+      const tip = finger.hinge.localToWorld(new THREE.Vector3(0.30,-1.24,0));
       assert.ok(hinge.y-tip.y>0.70,'open prong hangs too high');
-      assert.ok(Math.hypot(tip.x,tip.z)<0.96,'open prong spreads too far sideways');
+      assert.ok(Math.hypot(tip.x,tip.z)>1.1 && Math.hypot(tip.x,tip.z)<1.5,'open prong does not have the expected wide reach');
     }
   } finally {world.free();}
 });
@@ -270,7 +270,7 @@ test('moving metal fingers transfer momentum and unsupported prizes fall under g
     root.position.y = 2.5;
     const hinge = root.getObjectByName('ArmHinge_1');
     const finger = new ClawFinger(world,hinge);
-    const tip = hinge.localToWorld(new THREE.Vector3(0.23,-0.86,0));
+    const tip = hinge.localToWorld(new THREE.Vector3(0.30,-1.24,0));
     const prize = world.createRigidBody(RAPIER.RigidBodyDesc.dynamic().setCcdEnabled(true)
       .setTranslation(tip.x+0.18,tip.y,tip.z));
     world.createCollider(RAPIER.ColliderDesc.ball(0.12).setMass(0.35),prize);

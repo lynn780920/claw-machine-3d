@@ -41,7 +41,7 @@ export class SoundEngine {
       this.audioEl.play().then(() => {
         this.isBgmPlaying = true;
       }).catch(() => {
-        // Autoplay policy fallback
+        // Browsers require a user gesture; main.ts retries on the first one.
       });
     }
   }

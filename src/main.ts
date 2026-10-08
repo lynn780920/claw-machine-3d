@@ -1795,6 +1795,15 @@ const raycaster = new THREE.Raycaster();
 const mouseVec = new THREE.Vector2();
 
 function setupKeyboardListeners() {
+  soundEngine.startBGM();
+  const startMusicAfterGesture = () => {
+    document.removeEventListener('pointerdown', startMusicAfterGesture, true);
+    window.removeEventListener('keydown', startMusicAfterGesture);
+    soundEngine.startBGM();
+  };
+  document.addEventListener('pointerdown', startMusicAfterGesture, true);
+  window.addEventListener('keydown', startMusicAfterGesture);
+
   window.addEventListener('keydown', (e) => {
     const k = e.key.toLowerCase();
     if (k in keys) keys[k] = true;

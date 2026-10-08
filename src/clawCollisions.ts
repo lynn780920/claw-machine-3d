@@ -3,11 +3,11 @@ import * as RAPIER from '@dimforge/rapier3d-compat';
 
 export class ClawFinger {
   static readonly MIN_ANGLE = -0.50;
-  static readonly MAX_ANGLE = 0.32;
+  static readonly MAX_ANGLE = 0.62;
   readonly body: RAPIER.RigidBody;
   readonly colliders: RAPIER.Collider[] = [];
   private parts: {collider:RAPIER.Collider;position:THREE.Vector3;rotation:THREE.Quaternion}[] = [];
-  angle = 0.32;
+  angle = 0.62;
   private world: RAPIER.World;
   readonly hinge: THREE.Object3D;
 
