@@ -44,6 +44,7 @@ function cylinder(parent, name, radius, length, pos, mat, orientation) {
   return mesh;
 }
 async function save(root, filename) {
+  if (process.argv.includes('--claw-only') && filename !== 'claw.glb') return;
   root.updateMatrixWorld(true);
   const binary = await new GLTFExporter().parseAsync(root, { binary: true });
   await fs.writeFile(new URL(filename, out), Buffer.from(binary));
@@ -134,11 +135,11 @@ for (let i = 0; i < 3; i++) {
   hinge.name = `ArmHinge_${i + 1}`;
   pivot.add(hinge);
   cylinder(hinge, 'HingePin', 0.025, 0.1, [0, 0, 0], chrome, 'z');
-  const curve = new THREE.CatmullRomCurve3([[0,0,0],[0.12,-0.2,0],[0.24,-0.45,0],[0.20,-0.68,0],[0.08,-0.84,0]].map(p => new THREE.Vector3(...p)));
+  const curve = new THREE.CatmullRomCurve3([[0,0,0],[0.15,-0.05,0],[0.32,-0.20,0],[0.36,-0.38,0],[0.34,-0.67,0],[0.23,-0.90,0]].map(p => new THREE.Vector3(...p)));
   const arm = new THREE.Mesh(new THREE.TubeGeometry(curve, 32, 0.024, 10, false), chrome);
   arm.name = `Prong_${i + 1}`;
   hinge.add(arm);
-  box(hinge, 'ClawTip', [0.085, 0.20, 0.07], [0.1, -0.79, 0], chrome, 0.012).rotation.z = -0.25;
+  box(hinge, 'ClawTip', [0.085, 0.20, 0.07], [0.23, -0.86, 0], chrome, 0.012).rotation.z = -0.35;
   const anchor = new THREE.Object3D();
   anchor.name = `LinkBracket_${i + 1}`;
   anchor.position.set(0.10, -0.16, 0);

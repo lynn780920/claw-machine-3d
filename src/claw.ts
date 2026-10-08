@@ -67,7 +67,7 @@ export class Claw {
     weakHeightThreshold: 0.76,  // 76% 電壓轉弱高度 (照片)
     topHitForce: 6.0,
 
-    clawOpenAngle: 0.52,       // Rigid prongs hang mostly downward at rest.
+    clawOpenAngle: 0.32,       // Hinge opens while the long rigid shanks stay downward.
     clawCloseAngle: -0.50,     // Tight closed angle (authentic 密爪: tips touch at center)
 
     // Admin / DIP Switch Overrides
@@ -101,8 +101,8 @@ export class Claw {
   private swayVelZ = 0;
 
   // Arm animation angle
-  private currentArmAngle = 0.52;
-  private targetArmAngle = 0.52;
+  private currentArmAngle = 0.32;
+  private targetArmAngle = 0.32;
   private gripContactLostTime = 0;
 
   constructor(scene: THREE.Scene, physics: PhysicsSystem) {
@@ -462,8 +462,8 @@ export class Claw {
     if (!prizesManager || prizesManager.bodies.length === 0) return null;
     const basePos = this.baseMesh.position;
     const clawScale = this.baseMesh ? this.baseMesh.scale.x : 1.0;
-    const lowestTipY = basePos.y - 0.78 * clawScale;
-    const maxDistXZ = 0.85 * clawScale;
+    const lowestTipY = basePos.y - 0.88 * clawScale;
+    const maxDistXZ = 0.98 * clawScale;
 
     let candidateBody: RAPIER.RigidBody | null = null;
     let bestScore = -Infinity;

@@ -154,7 +154,7 @@ test('actual claw stops descending on finger contact and then raises instead of 
     const end = new THREE.Vector3().fromBufferAttribute(claw.cableLine.geometry.getAttribute('position'),1);
     assert.ok(anchor.distanceTo(end)<0.00001,'cable detached from rotated eyelet');
     claw.reset();claw.update(1/120,physics);world.step();
-    const tip = claw.baseMesh.getObjectByName('ArmHinge_1').localToWorld(new THREE.Vector3(0.1,-0.79,0));
+    const tip = claw.baseMesh.getObjectByName('ArmHinge_1').localToWorld(new THREE.Vector3(0.23,-0.86,0));
     const prize = world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(tip.x,tip.y-1,tip.z));
     world.createCollider(RAPIER.ColliderDesc.ball(0.2),prize);
     const stock = {bodies:[prize]};
