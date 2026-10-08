@@ -9,7 +9,7 @@ export interface CampaignProgress {
 export function loadCampaignProgress(stageCount: number, playerName = ''): CampaignProgress {
   try {
     const saved = JSON.parse(localStorage.getItem(storageKey(playerName)) || '{}');
-    const unlockedStage = Number.isInteger(saved.unlockedStage)
+    const unlockedStage = saved.completed === true ? stageCount : Number.isInteger(saved.unlockedStage)
       ? Math.max(1, Math.min(stageCount, saved.unlockedStage)) : 1;
     return {unlockedStage, completed: saved.completed === true};
   } catch {

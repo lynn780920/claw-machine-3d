@@ -148,6 +148,12 @@ export class LevelSystem {
   
   private totalCampaignWins: number = 0;
   private totalCampaignSeconds: number = 0;
+  private clearedStages = new Map<number,number>();
+
+  public getFullCampaignSeconds():number|null {
+    return this.clearedStages.size===LEVEL_CONFIGS.length
+      ? [...this.clearedStages.values()].reduce((sum,time)=>sum+time,0) : null;
+  }
   private timerInterval: number | null = null;
   private callbacks: LevelCallbacks;
 
@@ -168,6 +174,7 @@ export class LevelSystem {
   private stageEndTime: number = 0;
 
   public startLevel(levelIndex: number, initialPrizeCount?: number) {
+    if (levelIndex!==this.currentLevelIndex+1 || !this.clearedStages.has(this.currentLevelIndex)) this.clearedStages.clear();
     this.stopTimer();
     this.currentLevelIndex = Math.max(0, Math.min(levelIndex, LEVEL_CONFIGS.length - 1));
     const config = this.getCurrentConfig();
@@ -299,6 +306,7 @@ export class LevelSystem {
   }
 
   public forceStageClear() {
+    this.clearedStages.clear();
     this.triggerStageClear();
   }
 
@@ -321,6 +329,8 @@ export class LevelSystem {
     this.stopTimer();
     const config = this.getCurrentConfig();
     const elapsedSeconds = Math.max(1, config.timeLimitSeconds - this.remainingSeconds);
+
+    this.clearedStages.set(this.currentLevelIndex,elapsedSeconds);
 
     if (this.currentLevelIndex === LEVEL_CONFIGS.length - 1) {
       // Final level cleared! Grand Victory!

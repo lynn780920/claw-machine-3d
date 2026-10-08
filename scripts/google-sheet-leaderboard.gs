@@ -30,8 +30,8 @@ function doGet() {
       var rows = sheet.getRange(2,1,count-1,6).getDisplayValues();
       rows.forEach(function(row,index) {
         var event = row[2];
-        var match = String(row[3]).match(/第\s*([1-4])\s*關/);
-        var key = event === '打破全破總紀錄' ? 'campaign' : event === '打破單關紀錄' && match ? 'stage-'+match[1] : null;
+        var match = String(row[3]).match(/第\s*([1-7])\s*關/);
+        var key = event === '打破全破總紀錄' ? (/7大關全破/.test(row[4]) ? 'campaign-7' : 'campaign') : event === '打破單關紀錄' && match ? 'stage-'+match[1] : null;
         var seconds = durationSeconds_(row[5]);
         if (!key || seconds === null || !row[1]) return;
         if (best[key] && seconds >= best[key].bestTimeSeconds) return;
@@ -41,7 +41,7 @@ function doGet() {
           stageName:row[4],timeFormatted:row[5],date:row[0]});
       });
     }
-    return jsonOutput_({records:Object.keys(best).map(function(key) {return best[key];}),events:events.slice(-50)});
+    return jsonOutput_({schemaVersion:2,records:Object.keys(best).map(function(key) {return best[key];}),events:events.slice(-50)});
   } catch (error) {return jsonOutput_({error:String(error.message)});}
 }
 

@@ -53,6 +53,19 @@ test('player text cannot inject HTML into the record hall or timeline',()=>{
   assert.equal(escapeLeaderboardText('<img src=x onerror="alert(1)">'),'&lt;img src=x onerror=&quot;alert(1)&quot;&gt;');
 });
 
+test('stages five to seven persist and remain visible while cloud confirmation is pending',async()=>{
+  globalThis.fetch=async()=>({ok:true,json:async()=>({records:[],events:[]})});
+  const manager=new LeaderboardManager();
+  manager.sendToGoogleSheets=async()=>false;
+  await manager.refreshFromGoogleSheets();
+  for(const n of [5,6,7]) assert.equal(manager.checkAndRecordStageWin(n,`第${n}關`,60,'01:00',2,3).isNewRecord,true);
+  assert.deepEqual(manager.getBestRecords().map(r=>r.recordKey),['stage-5','stage-6','stage-7']);
+  await manager.refreshFromGoogleSheets();
+  assert.equal(manager.getBestRecords().length,3);
+  assert.equal(new LeaderboardManager().getBestRecords().length,3);
+  assert.equal(manager.getRecentBreakEvents().length,3);
+});
+
 test('record detection uses cloud scores, rejects ties and invalid times',async()=>{
   globalThis.fetch=async()=>({ok:true,json:async()=>({records:[record('保持人',10)],events:[]})});
   const manager=new LeaderboardManager();
@@ -100,4 +113,16 @@ test('Apps Script POST retains six original columns, locks writes and neutralize
   assert.equal(response.text,'OK');
   assert.equal(writes[0].length,6);
   assert.ok(writes[0][1].startsWith("'="));
+});
+
+test('cloud returns stages five to seven and separates four-stage and seven-stage totals',()=>{
+  const {context,writes}=scriptFixture([
+    ...[5,6,7].map(n=>['2026-10-08 12:00','玩家','打破單關紀錄',`第 ${n} 關 最速紀錄`,`第${n}關`,'01:00']),
+    ['2026-10-08 12:00','舊玩家','打破全破總紀錄','全破紀錄','4大關全破','04:00'],
+    ['2026-10-08 12:00','新玩家','打破全破總紀錄','七關全破紀錄','7大關全破','07:00']]);
+  const data=JSON.parse(context.doGet().text);
+  assert.equal(data.schemaVersion,2);
+  assert.deepEqual(data.records.map(r=>r.recordKey),['stage-5','stage-6','stage-7','campaign','campaign-7']);
+  assert.doesNotThrow(()=>parseCloudLeaderboard(data));
+  assert.equal(writes.length,0);
 });

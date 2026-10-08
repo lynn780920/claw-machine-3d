@@ -717,7 +717,7 @@ function setupUIEventListeners() {
 
   const renderLeaderboardUI = () => {
     const status = document.getElementById('leaderboard-sync-status');
-    if (status) status.textContent = leaderboardManager.cloudStatus==='connected' ? 'Google Sheet 已更新' :
+    if (status) status.textContent = leaderboardManager.hasPendingRecords ? '新紀錄已保存在本機，等待 Google Sheet 確認' : leaderboardManager.cloudStatus==='connected' ? 'Google Sheet 已更新' :
       leaderboardManager.cloudStatus==='loading' ? '正在讀取 Google Sheet…' : '雲端暫時無法讀取，顯示本機紀錄';
     // 1. Records Hall (各關最高紀錄保持人)
     const hallContainer = document.getElementById('records-hall-container');
@@ -739,7 +739,8 @@ function setupUIEventListeners() {
             <span>投幣累積：${rec.plays===null ? '未記錄' : `${rec.plays} 次`}</span>
           </div>
         </div>
-      `).join('') || '<div class="empty-events">目前尚無通關紀錄</div>';
+      `).join('') + LEVEL_CONFIGS.filter(level=>!records.some(record=>record.recordKey===`stage-${level.stageNum}`))
+        .map(level=>`<div class="record-hall-card"><span class="record-badge">第 ${level.stageNum} 關 最速紀錄</span><p>尚無通關紀錄</p></div>`).join('');
     }
 
     // 2. Break Events Timeline (即時打破紀錄歷史動態)
@@ -875,25 +876,21 @@ function setupUIEventListeners() {
     window.addEventListener('touchcancel', handleTouchEnd);
   }
 
-  // Start BGM on first user click gesture
-  window.addEventListener('click', () => {
-    soundEngine.startBGM();
-  }, { once: true });
-
-  // BGM Mute/Unmute Toggle
-  const bgmBtn = document.getElementById('bgm-toggle-btn');
-  if (bgmBtn) {
-    bgmBtn.addEventListener('click', () => {
-      const isMuted = soundEngine.toggleMute();
-      bgmBtn.innerHTML = `<span class="nav-btn-label">${isMuted ? '靜音' : '音樂'}</span>`;
-    });
-  }
-
   // 📋 Open & Close Stage Briefing Modal
   const openBriefingBtn = document.getElementById('open-briefing-btn');
   const briefingModal = document.getElementById('briefing-modal');
   const closeBriefingBtn = document.getElementById('close-briefing-btn');
   const startChallengeBtn = document.getElementById('start-challenge-btn');
+  const openFreeStageSelect = () => {
+    if (!campaignProgress.completed) return;
+    for (const id of ['game-victory-modal','stage-clear-modal','game-over-modal']) {
+      const modal = document.getElementById(id);
+      if (modal) modal.style.display='none';
+    }
+    if (briefingModal) briefingModal.style.display='flex';
+  };
+  document.getElementById('open-stage-select-btn')?.addEventListener('click',openFreeStageSelect);
+  document.getElementById('victory-select-stage-btn')?.addEventListener('click',openFreeStageSelect);
 
   if (openBriefingBtn && briefingModal) {
     openBriefingBtn.addEventListener('click', () => {
@@ -1269,8 +1266,6 @@ function setupUIEventListeners() {
       prizesManager.spawnPrizes(5, 'blindbox', 2.2, chuteBounds);
 
       cameraViewMode = 'front';
-      const camBtnLabel = document.querySelector('#toggle-camera-btn .nav-btn-label');
-      if (camBtnLabel) camBtnLabel.textContent = '視角: 正面';
       applyCameraView('small', 'front');
     } else if (mode === 'large') {
       // 中大機台 (第二關：動漫公仔 10分鐘夾4樣 - 嚴格按照照片參數)
@@ -1364,25 +1359,9 @@ function setupUIEventListeners() {
     layoutArcadeNeighbors(scene,cabinet.width);
   }
 
-  // 🎥 Perspective Angle Toggle (Front eye-level / Side chute depth inspection)
-  function toggleCameraView() {
-    cameraViewMode = (cameraViewMode === 'front') ? 'side' : 'front';
-    const btnLabel = document.querySelector('#toggle-camera-btn .nav-btn-label');
-    if (btnLabel) {
-      btnLabel.textContent = (cameraViewMode === 'front') ? '視角: 正面' : '視角: 側面 (出貨口)';
-    }
-
-    applyCameraView(currentMachineMode, cameraViewMode);
-  }
-
   // Expose globally for instant button bindings
   (window as any).switchMachineMode = switchMachineMode;
-  (window as any).toggleCameraView = toggleCameraView;
   (window as any).applyCameraView = applyCameraView;
-
-  document.getElementById('toggle-camera-btn')?.addEventListener('click', () => {
-    toggleCameraView();
-  });
 
   document.getElementById('power-saver-btn')?.addEventListener('click', () => {
     (window as any).togglePowerSaver();
@@ -1740,6 +1719,8 @@ function setupUIEventListeners() {
   }
 
   const refreshStageUnlocks = () => {
+    const selectButton = document.getElementById('open-stage-select-btn');
+    if (selectButton) selectButton.style.display=campaignProgress.completed ? '' : 'none';
     document.querySelectorAll<HTMLButtonElement>('.stage-jump-btn').forEach(button => {
       const number = Number(button.dataset.stage) + 1;
       button.disabled = number > campaignProgress.unlockedStage;
@@ -1865,6 +1846,13 @@ function setupUIEventListeners() {
       if (gameOverModal) gameOverModal.style.display = 'flex';
     },
     onGameVictory: (totalElapsedSeconds, totalWins) => {
+      const finalLevel = levelSystem.getCurrentConfig();
+      const finalSeconds = Math.max(1,finalLevel.timeLimitSeconds-levelSystem.remainingSeconds);
+      leaderboardManager.checkAndRecordStageWin(finalLevel.stageNum,finalLevel.name,finalSeconds,
+        levelSystem.getFormattedTime(finalSeconds),levelSystem.stageWins,plays);
+      const fullCampaignSeconds = levelSystem.getFullCampaignSeconds();
+      if (fullCampaignSeconds!==null) leaderboardManager.checkAndRecordGrandVictory(fullCampaignSeconds,
+        levelSystem.getFormattedTime(fullCampaignSeconds),totalWins,plays);
       campaignProgress = {unlockedStage:LEVEL_CONFIGS.length,completed:true};
       saveCampaignProgress(campaignProgress,leaderboardManager.getPlayerName());
       refreshStageUnlocks();
