@@ -29,6 +29,56 @@ function configSheet_() {
   return sheets[1];
 }
 
+function announcementSheet_() {
+  var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  if (!spreadsheet || spreadsheet.getId() !== RECORD_SPREADSHEET_ID) throw new Error('Wrong record workbook');
+  var sheets = spreadsheet.getSheets();
+  if (sheets.length < 3) throw new Error('工作表3不存在');
+  return sheets[2];
+}
+
+function setupAnnouncementSheet() {
+  var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  if (!spreadsheet || spreadsheet.getId() !== RECORD_SPREADSHEET_ID) throw new Error('Wrong record workbook');
+  while (spreadsheet.getSheets().length < 3) spreadsheet.insertSheet('工作表' + (spreadsheet.getSheets().length + 1));
+  var sheet = spreadsheet.getSheets()[2];
+  var values = [
+    ['設定項目','設定內容'],
+    ['啟用',true],
+    ['公告版本','2026-10-08-machine-reset'],
+    ['標題','開發者公告'],
+    ['日期','2026/10/08'],
+    ['公告內容','已全面更新機台參數，\n並且將所有挑戰者紀錄清零\n歡迎玩家重新挑戰至尊魔王寶座']
+  ];
+  sheet.clear();
+  sheet.getRange(1,1,values.length,2).setValues(values);
+  sheet.setFrozenRows(1);
+  sheet.getRange(1,1,1,2).setFontWeight('bold').setBackground('#17324d').setFontColor('#ffffff');
+  sheet.getRange(2,1,values.length-1,1).setFontWeight('bold').setBackground('#e8f0f7');
+  sheet.getRange(1,1,values.length,2).setVerticalAlignment('top');
+  sheet.getRange(6,2).setWrap(true);
+  sheet.setColumnWidth(1,140);
+  sheet.setColumnWidth(2,520);
+  sheet.setRowHeight(6,90);
+  return '工作表3已建立開發者公告設定';
+}
+
+function readAnnouncement_() {
+  var sheet = announcementSheet_();
+  if (sheet.getLastRow() < 2) return null;
+  var settings = {};
+  sheet.getRange(2,1,sheet.getLastRow()-1,2).getValues().forEach(function(row) {
+    settings[String(row[0]).trim()] = row[1];
+  });
+  return {
+    enabled: settings['啟用'] === true || String(settings['啟用']).toUpperCase() === 'TRUE',
+    version: String(settings['公告版本'] || '').slice(0,80),
+    title: String(settings['標題'] || '開發者公告').slice(0,80),
+    date: String(settings['日期'] || '').slice(0,40),
+    message: String(settings['公告內容'] || '').slice(0,1000)
+  };
+}
+
 function setupStageConfigSheet() {
   var sheet = configSheet_();
   var values = [STAGE_CONFIG_HEADERS].concat(STAGE_CONFIG_DEFAULTS);
@@ -71,6 +121,9 @@ function doGet(e) {
   try {
     if (e && e.parameter && e.parameter.action === 'stage-config') {
       return jsonOutput_({schemaVersion:1,configs:readStageConfigs_()});
+    }
+    if (e && e.parameter && e.parameter.action === 'announcement') {
+      return jsonOutput_({schemaVersion:1,announcement:readAnnouncement_()});
     }
     var sheet = recordSheet_();
     var count = sheet.getLastRow();

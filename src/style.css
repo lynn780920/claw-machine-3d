@@ -1282,6 +1282,67 @@ input:checked + .slider.round:before {
   -webkit-overflow-scrolling: touch !important;
 }
 
+.announcement-overlay {
+  z-index: 10100;
+  background: rgba(3, 8, 18, 0.9);
+}
+
+.announcement-card {
+  max-width: 560px;
+  overflow: hidden;
+  border-color: #22d3ee;
+  background: #0b1220;
+  box-shadow: 0 22px 70px rgba(0,0,0,0.72), 0 0 36px rgba(34,211,238,0.18);
+}
+
+.announcement-accent {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 5px;
+  background: linear-gradient(90deg,#22d3ee 0 33%,#facc15 33% 66%,#f43f5e 66%);
+}
+
+.announcement-card .header-badge-title {
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.announcement-label {
+  color: #facc15;
+  font: 700 0.7rem/1 'Orbitron',sans-serif;
+  letter-spacing: 0;
+}
+
+.announcement-body {
+  padding: 12px 2px 8px;
+}
+
+.announcement-body time {
+  display: inline-block;
+  margin-bottom: 14px;
+  color: #67e8f9;
+  font: 700 0.85rem/1 'Orbitron',sans-serif;
+}
+
+.announcement-body p {
+  margin: 0;
+  color: #f8fafc;
+  font-size: 1.05rem;
+  line-height: 1.85;
+  white-space: pre-line;
+}
+
+.announcement-confirm-btn {
+  background: #0891b2;
+  border: 1px solid #67e8f9;
+  color: #fff;
+}
+
+.announcement-confirm-btn:hover {
+  background: #0e7490;
+}
+
 .modal-header-banner {
   display: flex;
   justify-content: space-between;

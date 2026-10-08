@@ -2,6 +2,8 @@ import * as THREE from 'three';
 import * as RAPIER from '@dimforge/rapier3d-compat';
 
 export class ClawFinger {
+  static readonly MIN_ANGLE = -0.50;
+  static readonly MAX_ANGLE = 0.85;
   readonly body: RAPIER.RigidBody;
   readonly colliders: RAPIER.Collider[] = [];
   private parts: {collider:RAPIER.Collider;position:THREE.Vector3;rotation:THREE.Quaternion}[] = [];
@@ -74,6 +76,8 @@ export class ClawFinger {
   }
 
   move(angle: number, obstacles: RAPIER.RigidBody[]) {
+    // Real arcade prongs are rigid links with hard mechanical end stops.
+    angle = Math.max(ClawFinger.MIN_ANGLE,Math.min(ClawFinger.MAX_ANGLE,angle));
     const previous = this.angle;
     const position = new THREE.Vector3(), rotation = new THREE.Quaternion();
     const blockedAt = (candidate: number) => {

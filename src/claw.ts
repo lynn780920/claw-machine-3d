@@ -307,9 +307,11 @@ export class Claw {
     }
     for (const finger of this.fingers) {
       const angle = this.grabbedBody && this.state !== 'OPENING'
-        ? finger.angle
+        ? this.grabbedContactAngle
         : finger.angle + (effectiveTargetAngle-finger.angle)*Math.min(1,9.5*deltaTime);
-      finger.move(angle,prizesManager?.bodies ?? []);
+      // Once a prize is captured, the shared collar locks all three rigid prongs
+      // to one angle. The prize may still rotate or slip out under Rapier physics.
+      finger.move(angle,this.grabbedBody ? [] : prizesManager?.bodies ?? []);
     }
     this.currentArmAngle = this.fingers.reduce((sum,finger)=>sum+finger.angle,0)/3;
 
@@ -506,9 +508,11 @@ export class Claw {
       const prizeAnchor = anchor.clone().sub(new THREE.Vector3(bPos.x,bPos.y,bPos.z))
         .applyQuaternion(new THREE.Quaternion().copy(targetBody.rotation()).invert());
 
-      // 嚴格計算外圍貼合角，抱住物體外殼
-      this.grabbedContactAngle = this.currentArmAngle;
+      // 真實三爪由同一個滑套連動：採用最外側的安全接觸角，避免單爪
+      // 停在不同角度後看起來像軟折或翻進獎品內。
+      this.grabbedContactAngle = Math.max(...this.fingers.map(finger=>finger.angle));
       this.targetArmAngle = this.grabbedContactAngle;
+      for (const finger of this.fingers) finger.move(this.grabbedContactAngle,[]);
 
 
       for (let i = 0; i < targetBody.numColliders(); i++) {

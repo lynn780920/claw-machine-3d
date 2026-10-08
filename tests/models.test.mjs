@@ -297,7 +297,23 @@ for(const type of ['tea_box','fruit_box','milk_box']) {
     assert.ok(bounds.getCenter(new THREE.Vector3()).length()<0.0001);
     assert.ok(bounds.getSize(new THREE.Vector3()).y>1.4);
   });
+
 }
+
+test('claw finger respects rigid mechanical end stops',async()=>{
+  await RAPIER.init();
+  const world = new RAPIER.World({x:0,y:-9.81,z:0});
+  try {
+    const asset = await load('claw');
+    const root = asset.getObjectByName('ClawRoot');
+    root.updateWorldMatrix(true,true);
+    const finger = new ClawFinger(world,root.getObjectByName('ArmHinge_1'));
+    finger.move(-4,[]);
+    assert.equal(finger.angle,ClawFinger.MIN_ANGLE);
+    finger.move(4,[]);
+    assert.equal(finger.angle,ClawFinger.MAX_ANGLE);
+  } finally {world.free();}
+});
 
 const chute={minX:-3.3,maxX:-1.1,minZ:0.85,maxZ:2.85};
 test('a prize must pass below the actual chute footprint before it scores',() => {

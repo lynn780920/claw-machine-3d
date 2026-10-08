@@ -14,6 +14,7 @@ import { isDelivered, isWedgedInChute, isPrizeEnteringChute } from './delivery';
 import { buildArcadeEnvironment, layoutArcadeNeighbors } from './arcadeEnvironment';
 import { loadCampaignProgress, saveCampaignProgress } from './campaignProgress';
 import { getStageRuntimeConfig, loadStageConfigsFromGoogleSheets } from './stageConfig';
+import { loadAnnouncementFromGoogleSheets, SiteAnnouncement } from './announcement';
 
 // Game Statistics
 let coins = 0;
@@ -42,6 +43,21 @@ function clearStageMarkers() {
 function updateStageHint(message: string) {
   const hint = document.getElementById('stage-hint');
   if (hint) { hint.textContent = message; hint.hidden = !message; }
+}
+
+function showSiteAnnouncement(announcement: SiteAnnouncement) {
+  if (!announcement.enabled) return;
+  const modal = document.getElementById('announcement-modal');
+  const title = document.getElementById('announcement-title');
+  const date = document.getElementById('announcement-date');
+  const message = document.getElementById('announcement-message');
+  if (!modal || !title || !date || !message) return;
+  title.textContent = announcement.title;
+  date.textContent = announcement.date;
+  date.hidden = !announcement.date;
+  message.textContent = announcement.message;
+  modal.dataset.version = announcement.version;
+  modal.style.display = 'flex';
 }
 
 function spawnMarkedTarget(type: string, id: string, x: number, z: number) {
@@ -112,10 +128,12 @@ async function init() {
     loading.querySelector('[role="progressbar"]')?.setAttribute('aria-valuenow',String(percent));
   };
   const stageConfigTask = loadStageConfigsFromGoogleSheets();
+  const announcementTask = loadAnnouncementFromGoogleSheets();
   await preloadModels((loaded,total) => {
     setLoadingProgress(Math.round(loaded/total*85));
   });
   await stageConfigTask;
+  const announcement = await announcementTask;
   setLoadingProgress(88,'初始化物理引擎');
   // 1. Initialize physics compat environment
   physics = new PhysicsSystem();
@@ -278,6 +296,7 @@ async function init() {
   animate(0);
   setLoadingProgress(100);
   loading.remove();
+  showSiteAnnouncement(announcement);
 }
 
 const chuteStalls = new WeakMap<object, number>();
@@ -715,6 +734,13 @@ function triggerActionButtonAction() {
 }
 
 function setupUIEventListeners() {
+  const announcementModal = document.getElementById('announcement-modal');
+  const closeAnnouncement = () => {
+    if (announcementModal) announcementModal.style.display = 'none';
+  };
+  document.getElementById('close-announcement-btn')?.addEventListener('click',closeAnnouncement);
+  document.getElementById('confirm-announcement-btn')?.addEventListener('click',closeAnnouncement);
+
   // ── Leaderboard & Player Nickname Management ──
   leaderboardManager = new LeaderboardManager();
 
