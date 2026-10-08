@@ -19,8 +19,8 @@
     <link rel="apple-touch-icon" sizes="180x180" href="./assets/apple-touch-icon-180x180-D0xw-ZwL.png" />
     <link rel="apple-touch-icon" href="./assets/apple-touch-icon-96QgC70_.png" />
     <link rel="manifest" href="./assets/manifest-DWV-rB2U.json" />
-    <script type="module" crossorigin src="./assets/index-BjnSCrBt.js"></script>
-    <link rel="stylesheet" crossorigin href="./assets/index-DiSFi95f.css">
+    <script type="module" crossorigin src="./assets/index-BLhLNTzO.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-CTtcjNiy.css">
   </head>
   <body>
     <div id="app">
@@ -553,6 +553,27 @@
         <button id="victory-select-stage-btn" class="modal-action-btn">自由選擇關卡</button>
       </div>
     </div>
+  </div>
+
+  <!-- Developer announcement loaded from Google Sheet worksheet 3 -->
+  <div id="announcement-modal" class="challenge-modal-overlay announcement-overlay" style="display: none;">
+    <section class="challenge-modal-card announcement-card" role="dialog" aria-modal="true" aria-labelledby="announcement-title">
+      <div class="announcement-accent" aria-hidden="true"></div>
+      <div class="modal-header-banner">
+        <div class="header-badge-title">
+          <span class="announcement-label">SYSTEM UPDATE</span>
+          <h2 id="announcement-title">開發者公告</h2>
+        </div>
+        <button id="close-announcement-btn" class="modal-close-icon" aria-label="關閉公告"><svg viewBox="0 0 20 20" fill="currentColor" class="close-icon-svg"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg></button>
+      </div>
+      <div class="announcement-body">
+        <time id="announcement-date">2026/10/08</time>
+        <p id="announcement-message">已全面更新機台參數，並且將所有挑戰者紀錄清零，歡迎玩家重新挑戰至尊魔王寶座</p>
+      </div>
+      <div class="modal-footer-row">
+        <button id="confirm-announcement-btn" class="modal-action-btn announcement-confirm-btn">我知道了，開始挑戰</button>
+      </div>
+    </section>
   </div>
 
   <!-- Player Nickname Modal (設定玩家暱稱視窗) -->
