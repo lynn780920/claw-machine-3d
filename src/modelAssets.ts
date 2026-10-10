@@ -89,7 +89,7 @@ export function modelPreloadEntries(includeBattleTops = true): [string,string][]
     ['cabinet', 'reference/cabinet.glb'], ['claw', 'reference/claw.glb'],
     ...POKEMON_TYPES.map(type => [type, `pokemon/${type}.glb`] as [string,string]),
     ...PRIZE_TYPES.filter(type => includeBattleTops || !type.startsWith('battle_top_'))
-      .map(type => [type, `${reference.has(type) ? 'reference' : 'prizes'}/${type}.glb`] as [string,string])
+      .map(type => [type, `${reference.has(type) ? 'reference' : 'prizes'}/${type}${type.startsWith('battle_top_') ? '_v2' : ''}.glb`] as [string,string])
   ];
 }
 

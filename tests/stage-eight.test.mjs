@@ -18,6 +18,8 @@ test('new players do not wait for the two stage-eight models',()=>{
   assert.equal(startup.includes('battle_top_bx50'),false);
   assert.ok(stageEight.includes('battle_top_cx13'));
   assert.ok(stageEight.includes('battle_top_bx50'));
+  assert.equal(modelPreloadEntries(true).find(([key])=>key==='battle_top_cx13')?.[1],
+    'prizes/battle_top_cx13_v2.glb');
 });
 
 test('stage eight has eight randomly placed boxed prizes inside the compact playfield',()=>{
@@ -48,7 +50,7 @@ test('stage eight has eight randomly placed boxed prizes inside the compact play
 
 test('both supplied retail GLBs retain wedge geometry and embedded package artwork',async()=>{
   for (const type of ['battle_top_cx13','battle_top_bx50']) {
-    const bytes=await fs.readFile(new URL(`../public/models/prizes/${type}.glb`,import.meta.url));
+    const bytes=await fs.readFile(new URL(`../public/models/prizes/${type}_v2.glb`,import.meta.url));
     assert.equal(bytes.toString('utf8',0,4),'glTF');
     assert.equal(bytes.readUInt32LE(4),2);
     const jsonLength=bytes.readUInt32LE(12);
