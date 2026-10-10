@@ -80,13 +80,22 @@ async function fetchModel(url: string, path: string): Promise<ArrayBuffer> {
   throw new Error(`${path}: loading failed`);
 }
 
-export function preloadModels(progress: (loaded: number, total: number) => void): Promise<void> {
-  if (loading) return loading;
-  const entries = [
+export function areBattleTopModelsLoaded(): boolean {
+  return templates.has('battle_top_cx13') && templates.has('battle_top_bx50');
+}
+
+export function modelPreloadEntries(includeBattleTops = true): [string,string][] {
+  return [
     ['cabinet', 'reference/cabinet.glb'], ['claw', 'reference/claw.glb'],
-    ...POKEMON_TYPES.map(type => [type, `pokemon/${type}.glb`]),
-    ...PRIZE_TYPES.map(type => [type, `${reference.has(type) ? 'reference' : 'prizes'}/${type}.glb`])
+    ...POKEMON_TYPES.map(type => [type, `pokemon/${type}.glb`] as [string,string]),
+    ...PRIZE_TYPES.filter(type => includeBattleTops || !type.startsWith('battle_top_'))
+      .map(type => [type, `${reference.has(type) ? 'reference' : 'prizes'}/${type}.glb`] as [string,string])
   ];
+}
+
+export function preloadModels(progress: (loaded: number, total: number) => void, includeBattleTops = true): Promise<void> {
+  if (loading) return loading;
+  const entries = modelPreloadEntries(includeBattleTops);
   let loaded = 0, next = 0;
   progress(0,entries.length);
   const worker = async () => {
@@ -102,10 +111,7 @@ export function preloadModels(progress: (loaded: number, total: number) => void)
       await new Promise(resolve=>setTimeout(resolve,0));
     }
   };
-  loading = Promise.all([worker(),worker(),worker()]).then(() => undefined).catch(error => {
-    loading = undefined;
-    throw error;
-  });
+  loading = Promise.all([worker(),worker(),worker()]).then(() => undefined).finally(() => {loading = undefined;});
   return loading;
 }
 

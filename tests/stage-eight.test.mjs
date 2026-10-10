@@ -7,8 +7,18 @@ import {LEVEL_CONFIGS} from '../src/levelSystem.ts';
 import {STAGE_RUNTIME_CONFIGS} from '../src/stageConfig.ts';
 import {isPrizeEnteringChute,isBoxBelowRaisedChuteLip} from '../src/delivery.ts';
 import {chuteWellWallSpecs,compactChuteBaffleSpans} from '../src/chuteWell.ts';
+import {modelPreloadEntries} from '../src/modelAssets.ts';
 
 const chute={minX:-2.145,maxX:-0.715,minZ:0.5525,maxZ:1.8525};
+
+test('new players do not wait for the two stage-eight models',()=>{
+  const startup=modelPreloadEntries(false).map(([key])=>key);
+  const stageEight=modelPreloadEntries(true).map(([key])=>key);
+  assert.equal(startup.includes('battle_top_cx13'),false);
+  assert.equal(startup.includes('battle_top_bx50'),false);
+  assert.ok(stageEight.includes('battle_top_cx13'));
+  assert.ok(stageEight.includes('battle_top_bx50'));
+});
 
 test('stage eight has eight randomly placed boxed prizes inside the compact playfield',()=>{
   const level=LEVEL_CONFIGS[7],runtime=STAGE_RUNTIME_CONFIGS[7];

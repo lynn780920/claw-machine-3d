@@ -8,7 +8,7 @@ import { PrizesManager } from './prizes';
 import { soundEngine } from './audio';
 import { LevelSystem, LevelConfig, LEVEL_CONFIGS } from './levelSystem';
 import { LeaderboardManager, escapeLeaderboardText } from './leaderboard';
-import { preloadModels, disposeModel, withTimeout } from './modelAssets';
+import { preloadModels, areBattleTopModelsLoaded, disposeModel, withTimeout } from './modelAssets';
 import { setupStudio, fitMachineCamera } from './renderSetup';
 import { isDelivered, isWedgedInChute, isPrizeEnteringChute, isBoxBelowRaisedChuteLip } from './delivery';
 import { buildArcadeEnvironment, layoutArcadeNeighbors } from './arcadeEnvironment';
@@ -25,6 +25,9 @@ let wins = 0;
 let levelSystem: LevelSystem;
 let leaderboardManager: LeaderboardManager;
 let campaignProgress = loadCampaignProgress(LEVEL_CONFIGS.length,localStorage.getItem('claw_player_nickname') || '');
+const previewStage = import.meta.env.DEV ? Number(new URLSearchParams(location.search).get('previewStage')) : 0;
+const initialStageIndex = previewStage >= 1 && previewStage <= LEVEL_CONFIGS.length
+  ? Math.floor(previewStage)-1 : campaignProgress.currentStage-1;
 let stageDrops = 0;
 let stageExhaustedAt = 0;
 let stagePlaysStart = 0;
@@ -122,6 +125,25 @@ const rateEl = document.getElementById('stat-rate')!;
 const dropBtn = document.getElementById('drop-btn') as HTMLButtonElement;
 const insertCoinBtn = document.getElementById('insert-coin-btn') as HTMLButtonElement;
 
+async function ensureStageModels(stageIndex: number): Promise<boolean> {
+  if (LEVEL_CONFIGS[stageIndex]?.prizeType !== 'battle_top_box' || areBattleTopModelsLoaded()) return true;
+  const overlay = document.getElementById('asset-loading') as HTMLElement;
+  overlay.style.display = 'flex';
+  const progress = document.getElementById('asset-progress')!;
+  progress.textContent = '載入第八關獎品…';
+  try {
+    await preloadModels((loaded,total) => {
+      (document.getElementById('asset-progress-fill') as HTMLElement).style.width = `${Math.round(loaded/total*100)}%`;
+    });
+    overlay.style.display = 'none';
+    return true;
+  } catch (error) {
+    overlay.classList.add('failed');
+    progress.textContent = `載入失敗：${error instanceof Error ? error.message : String(error)}`;
+    return false;
+  }
+}
+
 async function init() {
   const loading = document.getElementById('asset-loading')!;
   let loadingPercent = 0;
@@ -141,7 +163,7 @@ async function init() {
   try {
     await preloadModels((loaded,total) => {
       setLoadingProgress(15+Math.round(loaded/total*70));
-    });
+    },LEVEL_CONFIGS[initialStageIndex]?.prizeType === 'battle_top_box');
   } finally {
     clearInterval(warmupTimer);
   }
@@ -308,7 +330,7 @@ async function init() {
   
   animate(0);
   setLoadingProgress(100);
-  loading.remove();
+  loading.style.display = 'none';
   showSiteAnnouncement(announcement);
 }
 
@@ -820,7 +842,9 @@ function setupUIEventListeners() {
       if (val) {
         leaderboardManager.setPlayerName(val);
         campaignProgress = loadCampaignProgress(LEVEL_CONFIGS.length,val);
-        if (levelSystem) levelSystem.startLevel(campaignProgress.currentStage-1);
+        if (levelSystem) void ensureStageModels(campaignProgress.currentStage-1).then(ready => {
+          if (ready) levelSystem.startLevel(campaignProgress.currentStage-1);
+        });
         refreshStageUnlocks();
         updateHudPlayerName();
       }
@@ -1071,16 +1095,18 @@ function setupUIEventListeners() {
 
   // 🚀 Quick Stage Jump Buttons inside Briefing Modal
   document.querySelectorAll('.stage-jump-btn').forEach((btn) => {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', async () => {
       const stageIdx = Number((btn as HTMLButtonElement).dataset.stage);
       if (stageIdx + 1 > campaignProgress.unlockedStage) return;
+      if (!await ensureStageModels(stageIdx)) return;
       if (briefingModal) briefingModal.style.display = 'none';
       if (levelSystem) levelSystem.startLevel(stageIdx);
     });
   });
 
   // 🎉 Stage Clear Modal Action Button
-  document.getElementById('next-stage-btn')?.addEventListener('click', () => {
+  document.getElementById('next-stage-btn')?.addEventListener('click', async () => {
+    if (levelSystem && !await ensureStageModels(levelSystem.currentLevelIndex+1)) return;
     const clearModal = document.getElementById('stage-clear-modal');
     if (clearModal) clearModal.style.display = 'none';
     if (levelSystem) levelSystem.nextLevel();
@@ -1657,9 +1683,10 @@ function setupUIEventListeners() {
 
   const adminStageSelect = document.getElementById('admin-stage-select') as HTMLSelectElement | null;
   adminStageSelect?.replaceChildren(...LEVEL_CONFIGS.map(level=>new Option(level.shortName,String(level.stageNum))));
-  document.getElementById('admin-jump-stage-btn')?.addEventListener('click', () => {
+  document.getElementById('admin-jump-stage-btn')?.addEventListener('click', async () => {
     const stage = Number(adminStageSelect?.value);
     if (!Number.isInteger(stage) || stage < 1 || stage > LEVEL_CONFIGS.length) return;
+    if (!await ensureStageModels(stage-1)) return;
     levelSystem.startLevel(stage - 1);
     settingsPanel?.classList.remove('open');
     settingsPanel?.classList.add('collapsed');
@@ -1828,11 +1855,12 @@ function setupUIEventListeners() {
       if (!levelSystem.isAssistedClear) leaderboardManager.checkAndRecordStageWin(finalLevel.stageNum,finalLevel.name,finalSeconds,
         levelSystem.getFormattedTime(finalSeconds),levelSystem.stageWins,finalStagePlays);
       const fullCampaignSeconds = levelSystem.getFullCampaignSeconds();
-      const completedCampaign = true;
+      const completedCampaign = campaignProgress.completed ||
+        campaignProgress.unlockedStage >= LEVEL_CONFIGS.length || fullCampaignSeconds !== null;
       const grandRecord = !levelSystem.isAssistedCampaign && fullCampaignSeconds!==null
         ? leaderboardManager.checkAndRecordGrandVictory(fullCampaignSeconds,
           levelSystem.getFormattedTime(fullCampaignSeconds),totalWins,campaignPlays) : null;
-      const canReceiveReward = !levelSystem.isAssistedCampaign;
+      const canReceiveReward = completedCampaign && !levelSystem.isAssistedCampaign;
       campaignProgress = {unlockedStage:completedCampaign ? LEVEL_CONFIGS.length : campaignProgress.unlockedStage,
         currentStage:completedCampaign ? LEVEL_CONFIGS.length : campaignProgress.unlockedStage,completed:completedCampaign};
       saveCampaignProgress(campaignProgress,leaderboardManager.getPlayerName());
@@ -1892,9 +1920,7 @@ function setupUIEventListeners() {
   // Restore tuning only after the level configuration API is initialized.
   loadTuningConfigFromStorage();
 
-  const previewStage = import.meta.env.DEV ? Number(new URLSearchParams(location.search).get('previewStage')) : 0;
-  levelSystem.startLevel(previewStage >= 1 && previewStage <= LEVEL_CONFIGS.length
-    ? Math.floor(previewStage)-1 : campaignProgress.currentStage-1);
+  levelSystem.startLevel(initialStageIndex);
   updateStatsUI();
 }
 
