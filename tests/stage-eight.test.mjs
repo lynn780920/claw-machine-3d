@@ -59,6 +59,9 @@ test('both supplied retail GLBs retain wedge geometry and embedded package artwo
     }
     assert.equal(gltf.images.length,2);
     assert.ok(gltf.images.every(image=>Number.isInteger(image.bufferView)));
+    assert.ok(gltf.images.every(image=>image.mimeType==='image/jpeg'));
+    assert.ok(bytes.length<250000,`${type} is too large for a slow first visit`);
+    assert.ok(gltf.bufferViews.every(view=>(view.byteOffset??0)+view.byteLength<=gltf.buffers[0].byteLength));
     const face=name=>gltf.meshes[gltf.nodes.find(node=>node.name===name).mesh].primitives[0];
     assert.equal(face('back_body').material,face('body_front').material);
     assert.equal(face('back_header').material,face('header_front').material);
