@@ -6,7 +6,7 @@ import {randomCompactBoxStock} from '../src/prizeStock.ts';
 import {LEVEL_CONFIGS} from '../src/levelSystem.ts';
 import {STAGE_RUNTIME_CONFIGS} from '../src/stageConfig.ts';
 import {isPrizeEnteringChute,isBoxBelowRaisedChuteLip} from '../src/delivery.ts';
-import {chuteWellWallSpecs} from '../src/chuteWell.ts';
+import {chuteWellWallSpecs,compactChuteBaffleSpans} from '../src/chuteWell.ts';
 
 const chute={minX:-2.145,maxX:-0.715,minZ:0.5525,maxZ:1.8525};
 
@@ -82,6 +82,22 @@ test('stage-eight chute well physically blocks a box from escaping under the baf
     box.setLinvel({x:9,y:0,z:0},true);
     for(let i=0;i<30;i++) world.step();
     assert.ok(box.translation().x<chute.maxX-0.18,'box escaped through the right wall below the baffle');
+  } finally {world.free();}
+});
+
+test('compact side baffle blocks a box at the former gap beside the front rail',async()=>{
+  await RAPIER.init();
+  const bounds={minX:-2.14*0.65,maxX:-0.71*0.65,minZ:0.55*0.65,maxZ:1.85*0.65};
+  const spans=compactChuteBaffleSpans(bounds,4.8*0.65/2,4.16*0.65/2);
+  const world=new RAPIER.World({x:0,y:0,z:0});
+  try {
+    const wall=world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(bounds.maxX,1.35,spans.right.center));
+    world.createCollider(RAPIER.ColliderDesc.cuboid(0.09,0.55,spans.right.length/2),wall);
+    const box=world.createRigidBody(RAPIER.RigidBodyDesc.dynamic().setTranslation(-0.9,1.3,1.25).setCcdEnabled(true));
+    world.createCollider(RAPIER.ColliderDesc.cuboid(0.1,0.1,0.1),box);
+    box.setLinvel({x:9,y:0,z:0},true);
+    for(let i=0;i<20;i++) world.step();
+    assert.ok(box.translation().x<bounds.maxX-0.08,'box slipped around the side baffle');
   } finally {world.free();}
 });
 

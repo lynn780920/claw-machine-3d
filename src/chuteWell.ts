@@ -14,3 +14,14 @@ export function chuteWellWallSpecs(
     {name:'ChuteWellFront',size:[width,depth,thickness],position:[centerX,y,chute.maxZ]}
   ];
 }
+
+export function compactChuteBaffleSpans(
+  chute: {minX:number;maxX:number;minZ:number;maxZ:number},
+  halfWidth: number,
+  halfDepth: number
+) {
+  return {
+    right: {length:halfDepth-chute.minZ,center:(chute.minZ+halfDepth)/2},
+    back: {length:chute.maxX+halfWidth,center:(chute.maxX-halfWidth)/2}
+  };
+}

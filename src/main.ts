@@ -1828,11 +1828,11 @@ function setupUIEventListeners() {
       if (!levelSystem.isAssistedClear) leaderboardManager.checkAndRecordStageWin(finalLevel.stageNum,finalLevel.name,finalSeconds,
         levelSystem.getFormattedTime(finalSeconds),levelSystem.stageWins,finalStagePlays);
       const fullCampaignSeconds = levelSystem.getFullCampaignSeconds();
-      const completedCampaign = campaignProgress.completed || fullCampaignSeconds !== null;
+      const completedCampaign = true;
       const grandRecord = !levelSystem.isAssistedCampaign && fullCampaignSeconds!==null
         ? leaderboardManager.checkAndRecordGrandVictory(fullCampaignSeconds,
           levelSystem.getFormattedTime(fullCampaignSeconds),totalWins,campaignPlays) : null;
-      const canReceiveReward = completedCampaign && !levelSystem.isAssistedCampaign;
+      const canReceiveReward = !levelSystem.isAssistedCampaign;
       campaignProgress = {unlockedStage:completedCampaign ? LEVEL_CONFIGS.length : campaignProgress.unlockedStage,
         currentStage:completedCampaign ? LEVEL_CONFIGS.length : campaignProgress.unlockedStage,completed:completedCampaign};
       saveCampaignProgress(campaignProgress,leaderboardManager.getPlayerName());
@@ -1871,7 +1871,8 @@ function setupUIEventListeners() {
         void (async()=>{
           try {
             await renderRewardCard(playerName,formattedTotalTime,campaignPlays,false);
-            if (!await leaderboardManager.confirmCurrentCampaignChampion(playerName) ||
+            if (!grandRecord?.isNewRecord ||
+              !await leaderboardManager.confirmCurrentCampaignChampion(playerName) ||
               !levelSystem.isGameVictory || victoryModal?.style.display!=='flex') return;
             victoryCard?.classList.add('is-champion');
             if (subtitle) subtitle.textContent = '榮登 3D 娃娃機「至尊魔王」！';

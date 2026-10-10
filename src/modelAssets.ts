@@ -65,6 +65,21 @@ export async function withTimeout<T>(operation: Promise<T>, milliseconds: number
   } finally { clearTimeout(timer!); }
 }
 
+async function fetchModel(url: string, path: string): Promise<ArrayBuffer> {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const response = await fetch(url,{signal:AbortSignal.timeout(30000)});
+      if (!response.ok) throw new Error(`${path}: HTTP ${response.status}`);
+      return await response.arrayBuffer();
+    } catch (error) {
+      if (error instanceof Error && /: HTTP \d+$/.test(error.message)) throw error;
+      if (attempt === 2) throw new Error(`${path}: ${error instanceof Error ? error.message : String(error)}`);
+      await new Promise(resolve => setTimeout(resolve,500 * (attempt + 1)));
+    }
+  }
+  throw new Error(`${path}: loading failed`);
+}
+
 export function preloadModels(progress: (loaded: number, total: number) => void): Promise<void> {
   if (loading) return loading;
   const entries = [
@@ -79,9 +94,7 @@ export function preloadModels(progress: (loaded: number, total: number) => void)
       const [key,path] = entries[next++];
       if (!templates.has(key)) {
         const url = `${import.meta.env.BASE_URL}models/${path}`;
-        const response = await fetch(url,{signal:AbortSignal.timeout(20000)});
-        if (!response.ok) throw new Error(`${path}: HTTP ${response.status}`);
-        const bytes = await response.arrayBuffer();
+        const bytes = await fetchModel(url,path);
         const gltf = await withTimeout(new GLTFLoader().parseAsync(bytes,url.slice(0,url.lastIndexOf('/')+1)),20000,path);
         templates.set(key,gltf.scene);
       }

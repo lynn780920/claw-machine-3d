@@ -4,7 +4,7 @@ import { PhysicsSystem } from './physics';
 import { instantiateModel, disposeModel } from './modelAssets';
 import { CABINET_PALETTES, colorCabinetModel } from './cabinetPalette';
 import { ElasticBed } from './elasticBed';
-import { chuteWellWallSpecs } from './chuteWell';
+import { chuteWellWallSpecs, compactChuteBaffleSpans } from './chuteWell';
 
 /**
  * 3D Arcade Claw Machine Cabinet
@@ -594,10 +594,17 @@ export class Cabinet {
       }
     };
 
-    // Right baffle wall of the chute
-    addBaffleWall(wallThick, chuteD, this.chuteMaxX, chuteCenterZ, true);
-    // Back baffle wall of the chute
-    addBaffleWall(chuteW, wallThick, chuteCenterX, this.chuteMinZ, false);
+    // On the compact playfield, join both baffles to the inset rails so a box
+    // cannot slip around an exposed end and appear to pass through the wall.
+    const halfW = this.width * this.playfieldScale / 2;
+    const halfD = this.depth * this.playfieldScale / 2;
+    const spans = this.compactStage8 ? compactChuteBaffleSpans({
+      minX:this.chuteMinX,maxX:this.chuteMaxX,minZ:this.chuteMinZ,maxZ:this.chuteMaxZ
+    },halfW,halfD) : null;
+    addBaffleWall(wallThick, spans?.right.length ?? chuteD,
+      this.chuteMaxX, spans?.right.center ?? chuteCenterZ, true);
+    addBaffleWall(spans?.back.length ?? chuteW, wallThick,
+      spans?.back.center ?? chuteCenterX, this.chuteMinZ, false);
 
     // Chrome Metal Corner Bracket Post (金屬固定角柱)
     const postGeo = new THREE.CylinderGeometry(0.045, 0.045, height + 0.08, 16);
