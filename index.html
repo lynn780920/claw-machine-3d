@@ -3,7 +3,18 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-    <title>線上娃娃機</title>
+    <title>線上娃娃機挑戰｜Lynn 夾到你心裡</title>
+    <meta name="description" content="線上娃娃機挑戰：操控 3D 爪機，挑戰各式機台與獎品，刷新最速與投幣紀錄，分享你的通關戰績。" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Lynn 夾到你心裡" />
+    <meta property="og:title" content="線上娃娃機挑戰｜Lynn 夾到你心裡" />
+    <meta property="og:description" content="挑戰 3D 線上娃娃機，夾取獎品、突破關卡，登上最速排行榜！" />
+    <meta property="og:image" content="https://lynn780920.github.io/claw-machine-3d/lynn-logo.png" />
+    <meta property="og:url" content="https://lynn780920.github.io/claw-machine-3d/" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="線上娃娃機挑戰｜Lynn 夾到你心裡" />
+    <meta name="twitter:description" content="挑戰 3D 線上娃娃機，夾取獎品、突破關卡，登上最速排行榜！" />
+    <meta name="twitter:image" content="https://lynn780920.github.io/claw-machine-3d/lynn-logo.png" />
 
     <!-- Apple iOS Add to Home Screen Fullscreen PWA -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -19,16 +30,20 @@
     <link rel="apple-touch-icon" sizes="180x180" href="./assets/apple-touch-icon-180x180-D0xw-ZwL.png" />
     <link rel="apple-touch-icon" href="./assets/apple-touch-icon-96QgC70_.png" />
     <link rel="manifest" href="./assets/manifest-DWV-rB2U.json" />
-    <script type="module" crossorigin src="./assets/index-B4HOTmrK.js"></script>
-    <link rel="stylesheet" crossorigin href="./assets/index-BbRc0yE4.css">
+    <script type="module" crossorigin src="./assets/index-N4XMb87w.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-BaRpY054.css">
   </head>
   <body>
     <div id="app">
-      <div id="asset-loading" role="status" aria-live="polite">
-        <span class="loading-title">Lynn夾到你心裡</span>
-        <div class="loading-track" role="progressbar" aria-label="載入進度" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="asset-progress-fill"></div></div>
-        <span id="asset-progress">0%</span>
-        <button id="asset-retry" hidden>重新載入</button>
+      <div id="asset-loading" role="status" aria-live="polite" style="background-image: url('./loading-arcade.jpg')">
+        <video class="loading-video" autoplay muted loop playsinline preload="auto" poster="./loading-arcade.jpg" aria-hidden="true"><source src="./loading-arcade.mp4" type="video/mp4"></video>
+        <div class="loading-shade" aria-hidden="true"></div>
+        <div class="loading-content">
+          <span class="loading-title">Lynn夾到你心裡</span>
+          <div class="loading-track" role="progressbar" aria-label="載入進度" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="asset-progress-fill"></div></div>
+          <span id="asset-progress">0%</span>
+          <button id="asset-retry" hidden>重新載入</button>
+        </div>
       </div>
       <!-- 3D Viewport -->
       <div id="canvas-container">
@@ -48,8 +63,8 @@
 
       <!-- Unified Floating Top Nav Bar (Two-Tier Responsive Challenge HUD & Action Pills) -->
       <div class="top-nav-container">
-        <div class="champion-marquee" aria-label="最新七關通關者">
-          <span id="champion-marquee-text" class="champion-marquee-text">七關全破大魔王等你來挑戰！</span>
+        <div class="champion-marquee" aria-label="最新全關通關者">
+          <span id="champion-marquee-text" class="champion-marquee-text">全關通關大魔王等你來挑戰！</span>
         </div>
         <!-- Tier 1: Challenge HUD Status Row -->
         <div class="hud-status-row">
@@ -85,7 +100,7 @@
         <!-- Tier 2: Functional Control Action Pills -->
         <div class="hud-actions-row">
           <!-- Other Stages Button -->
-          <button id="open-briefing-btn" class="nav-pill-btn briefing" disabled title="全破七關後開放自由選關">
+          <button id="open-briefing-btn" class="nav-pill-btn briefing" title="查看關卡">
             <span class="btn-icon"><svg viewBox="0 0 20 20" fill="currentColor" class="hud-svg"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/><path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clip-rule="evenodd"/></svg></span>
             <span class="nav-btn-label">其他關卡</span>
           </button>
@@ -172,10 +187,7 @@
         <!-- 關卡測試捷徑 -->
         <div class="stage-debug-row">
           <label for="admin-stage-select">跳轉關卡</label>
-          <select id="admin-stage-select" aria-label="選擇跳轉關卡">
-            <option value="1">第 1 關</option><option value="2">第 2 關</option><option value="3">第 3 關</option>
-            <option value="4">第 4 關</option><option value="5">第 5 關</option><option value="6">第 6 關</option><option value="7">第 7 關</option>
-          </select>
+          <select id="admin-stage-select" aria-label="選擇跳轉關卡"></select>
           <button id="admin-jump-stage-btn" class="stage-quick-btn jump">跳轉</button>
           <button id="force-clear-btn" class="stage-quick-btn clear">一鍵直接通關</button>
           <button id="copy-config-btn" class="stage-quick-btn copy" style="grid-column: 1 / -1; background: linear-gradient(135deg, #0284c7, #0369a1); border: 1px solid #38bdf8; padding: 10px; margin-top: 4px;"><svg viewBox="0 0 20 20" fill="currentColor" class="inline-svg-icon"><path d="M8 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z"/><path d="M6 3a2 2 0 00-2 2v11a2 2 0 002 2h8a2 2 0 002-2V5a2 2 0 00-2-2 3 3 0 01-3 3H9a3 3 0 01-3-3z"/></svg> 複製當前調參代碼 (傳給助理寫入原始碼)</button>
@@ -357,7 +369,6 @@
       </div>
 
       <div class="briefing-content-body">
-        <p id="stage-select-progress" class="briefing-intro"></p>
         <div id="stage-select-list" class="stages-roadmap-grid stage-select-grid"></div>
       </div>
     </div>
@@ -427,11 +438,11 @@
     <div class="challenge-modal-card victory-card">
       <div class="victory-banner">
         <h2 class="victory-title">全破大通關！</h2>
-        <p class="victory-subtitle">榮登 3D 娃娃機「至尊夾王」！</p>
+        <p id="victory-subtitle" class="victory-subtitle">恭喜完成全部關卡！</p>
       </div>
 
       <div class="victory-body">
-        <p class="victory-msg">恭喜完成第七關！七個關卡都已解鎖，可隨時回來重玩。</p>
+        <p id="victory-message" class="victory-msg">所有關卡都已解鎖，可隨時回來重玩。</p>
         
         <div id="victory-new-record-banner" class="record-break-alert-box" style="display: none;">
           <span class="record-break-tag"><svg viewBox="0 0 20 20" fill="currentColor" class="inline-svg-icon" style="color: #facc15;"><path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clip-rule="evenodd"/></svg> 打破歷史總紀錄</span>
@@ -454,7 +465,7 @@
         </div>
 
         <div class="reward-card-area">
-          <canvas id="reward-card-canvas" width="1686" height="2528" aria-label="七關全破獎勵卡"></canvas>
+          <canvas id="reward-card-canvas" width="1686" height="2528" aria-label="全關通關獎勵卡"></canvas>
           <div class="reward-card-actions">
             <button id="share-reward-btn" class="modal-action-btn reward-share-btn" disabled>分享戰績</button>
             <button id="download-reward-btn" class="modal-action-btn reward-download-btn" disabled>下載圖片</button>
@@ -463,8 +474,8 @@
       </div>
 
       <div class="modal-footer-row">
-        <button id="victory-restart-btn" class="modal-action-btn champion-restart-btn">再次挑戰破關模式</button>
         <button id="victory-select-stage-btn" class="modal-action-btn">自由選擇關卡</button>
+        <button id="victory-restart-btn" class="modal-action-btn champion-restart-btn">再次挑戰破關模式</button>
       </div>
     </div>
   </div>
