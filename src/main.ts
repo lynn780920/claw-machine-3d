@@ -668,7 +668,6 @@ function handleKeyboardMove(dt: number) {
   if (vx !== 0 || vz !== 0) {
     claw.moveCarriage(vx, vz, dt);
     cabinet.setJoystickTilt(vx, vz);
-    soundEngine.playMotorStepSFX();
   } else if (!isMouseDraggingJoystick) {
     cabinet.setJoystickTilt(0, 0);
   }
@@ -782,6 +781,7 @@ function updateClawStateUI() {
 
 // Action button logic that routes based on current claw state (Free unlimited play without coins requirement!)
 function triggerActionButtonAction() {
+  soundEngine.startBGM();
   if (claw.state === 'IDLE') {
     const dropLimit = levelSystem ? getStageRuntimeConfig(levelSystem.getCurrentConfig().stageNum).maxDrops : 0;
     if (dropLimit > 0 && stageDrops >= dropLimit) return;
@@ -809,6 +809,7 @@ function setupUIEventListeners() {
   const announcementModal = document.getElementById('announcement-modal');
   const closeAnnouncement = () => {
     if (announcementModal) announcementModal.style.display = 'none';
+    soundEngine.startBGM();
   };
   document.getElementById('close-announcement-btn')?.addEventListener('click',closeAnnouncement);
   document.getElementById('confirm-announcement-btn')?.addEventListener('click',closeAnnouncement);
@@ -1431,6 +1432,7 @@ function setupUIEventListeners() {
       cabinet.playfieldScale = 1;
       cabinet.rebuildCabinet(mode, physics);
       prizesManager.playfieldY = cabinet.floorY;
+      claw.setFloorY(cabinet.floorY);
     }
 
     // 3. Dynamic chute & home positions
@@ -1937,13 +1939,17 @@ const mouseVec = new THREE.Vector2();
 
 function setupKeyboardListeners() {
   soundEngine.startBGM();
-  const startMusicAfterGesture = () => {
-    document.removeEventListener('pointerdown', startMusicAfterGesture, true);
-    window.removeEventListener('keydown', startMusicAfterGesture);
+  const ensureBGM = () => {
     soundEngine.startBGM();
+    if (soundEngine.isPlayingBGM()) {
+      window.removeEventListener('pointerdown', ensureBGM);
+      window.removeEventListener('keydown', ensureBGM);
+      window.removeEventListener('touchstart', ensureBGM);
+    }
   };
-  document.addEventListener('pointerdown', startMusicAfterGesture, true);
-  window.addEventListener('keydown', startMusicAfterGesture);
+  window.addEventListener('pointerdown', ensureBGM, { passive: true });
+  window.addEventListener('keydown', ensureBGM, { passive: true });
+  window.addEventListener('touchstart', ensureBGM, { passive: true });
 
   window.addEventListener('keydown', (e) => {
     const k = e.key.toLowerCase();

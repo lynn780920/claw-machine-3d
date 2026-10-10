@@ -223,3 +223,28 @@ test('braking excites a damped swing, longer cables restore more slowly, steady 
   assert.ok(Math.abs(p.angle)<0.01 && Math.abs(p.velocity)<0.02);
   assert.deepEqual(stepSuspension(0,0,0,1,1/120,1.4,false),{angle:0,velocity:0});
 });
+
+test('stage-eight raised floor prevents claw from sinking even with 3.5 cable length and swing',async()=>{
+  await RAPIER.init();
+  const bytes = await fs.readFile(new URL('../public/models/reference/claw.glb',import.meta.url));
+  globalThis.clawTestModel = (await new GLTFLoader().parseAsync(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.length),'')).scene;
+  const world = new RAPIER.World({x:0,y:0,z:0});
+  try {
+    const physics = {world,wakeUpAllDynamicBodies(){},wakeUpNear(){}};
+    const claw = new Claw(new THREE.Scene(),physics);
+    claw.setClawScale(0.45);
+    claw.setFloorY(0.8);
+    claw.setMachineBounds(0,0,2.0,4.9);
+    claw.config.maxRopeLength = 3.5;
+    claw.actionButtonPressed();
+    for (let i=0;i<500 && claw.state==='DESCENDING';i++) {
+      claw.swayAngleX = 0.35;
+      claw.swayAngleZ = -0.35;
+      claw.update(1/120,physics);
+      world.step();
+      const bounds = new THREE.Box3().setFromObject(claw.baseMesh);
+      assert.ok(bounds.min.y >= 0.78, `claw penetrated raised floor: ${bounds.min.y} < 0.78`);
+    }
+    assert.equal(claw.state,'GRABBING');
+  } finally {world.free();delete globalThis.clawTestModel;}
+});

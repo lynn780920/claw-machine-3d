@@ -21,7 +21,13 @@ export class SoundEngine {
       
       this.audioEl = new Audio(bgmPath);
       this.audioEl.loop = true;
-      this.audioEl.volume = 0.18; // Soft cute background volume
+      this.audioEl.preload = 'auto';
+      this.audioEl.volume = 0.22;
+      this.audioEl.addEventListener('play', () => { this.isBgmPlaying = true; });
+      this.audioEl.addEventListener('pause', () => { this.isBgmPlaying = false; });
+      this.audioEl.addEventListener('error', (e) => {
+        console.warn('BGM audio error:', e, this.audioEl?.error);
+      });
     }
   }
 
@@ -35,14 +41,21 @@ export class SoundEngine {
     }
   }
 
+  public isPlayingBGM(): boolean {
+    return this.isBgmPlaying && !!this.audioEl && !this.audioEl.paused;
+  }
+
   public startBGM() {
     this.initAudio();
-    if (this.audioEl && !this.isBgmPlaying && !this.isMuted) {
-      this.audioEl.play().then(() => {
-        this.isBgmPlaying = true;
-      }).catch(() => {
-        // Browsers require a user gesture; main.ts retries on the first one.
-      });
+    this.initCtx();
+    if (this.audioEl && !this.isMuted) {
+      if (this.audioEl.paused) {
+        this.audioEl.play().then(() => {
+          this.isBgmPlaying = true;
+        }).catch(() => {
+          this.isBgmPlaying = false;
+        });
+      }
     }
   }
 
@@ -163,29 +176,9 @@ export class SoundEngine {
     osc.stop(t + 0.065);
   }
 
-  // 🚗 Carriage Servo Motor Movement Pulse (天車移動伺服馬達嗡鳴)
-  private lastMotorSFXTime = 0;
+  // 🚗 Carriage Servo Motor Movement Pulse (Disabled as requested)
   public playMotorStepSFX() {
-    this.initCtx();
-    if (!this.ctx || this.isMuted) return;
-    const now = performance.now();
-    if (now - this.lastMotorSFXTime < 120) return; // Throttle sound pulses
-    this.lastMotorSFXTime = now;
-
-    const t = this.ctx.currentTime;
-    const osc = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
-    osc.type = 'sawtooth';
-    osc.frequency.setValueAtTime(140, t);
-    osc.frequency.linearRampToValueAtTime(180, t + 0.05);
-
-    gain.gain.setValueAtTime(0.04, t);
-    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
-
-    osc.connect(gain);
-    gain.connect(this.ctx.destination);
-    osc.start(t);
-    osc.stop(t + 0.055);
+    // Disabled
   }
 
   // 🏆 關卡突破音效 (Stage Clear Fanfare)

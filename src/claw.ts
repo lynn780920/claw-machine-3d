@@ -116,6 +116,11 @@ export class Claw {
   private zBounds: [number, number] = [-4.2, 4.2];
   public homeX = -3.0;
   public homeZ = 3.0;
+  public floorY = 0;
+
+  public setFloorY(floorY: number) {
+    this.floorY = floorY;
+  }
 
   public setPlayfieldBounds(width: number, depth: number) {
     // Reserve the open fingers and their tilted sweep, not just the claw center.
@@ -236,7 +241,8 @@ export class Claw {
     this.lastCarrX = carrPos.x;
     this.lastCarrZ = carrPos.z;
 
-    const minBaseY = 1.1;
+    const clawScale = this.baseMesh ? this.baseMesh.scale.x : 1.0;
+    const minBaseY = this.floorY + 0.94 * clawScale + 0.16;
 
     // ── B. Cable Length Animation ──
     if (this.state === 'DESCENDING' && prizesManager) {
@@ -287,7 +293,7 @@ export class Claw {
     const cableBottom = cableTop.clone().add(new THREE.Vector3(offset.x,offset.y,offset.z));
     const finalX = cableBottom.x-anchorOffset.x;
     const finalZ = cableBottom.z-anchorOffset.z;
-    const targetY = cableBottom.y-anchorOffset.y;
+    const targetY = Math.max(minBaseY, cableBottom.y-anchorOffset.y);
     this.baseBody.setNextKinematicTranslation({ x: finalX, y: targetY, z: finalZ });
     this.baseBody.setNextKinematicRotation({ x: swayQuat.x, y: swayQuat.y, z: swayQuat.z, w: swayQuat.w });
 
@@ -361,7 +367,10 @@ export class Claw {
           }) ?? null;
         }
 
-        if (touchedFloor || hitPrizeBody || this.stateTimer > 4.5) {
+        const ropeReachedBottom = (this.ropeLength >= this.targetRopeLength - 0.02) ||
+          (this.ropeLength >= carrPos.y - minBaseY - 0.02);
+
+        if (touchedFloor || hitPrizeBody || ropeReachedBottom || this.stateTimer > 4.5) {
           this.targetRopeLength = this.ropeLength;
           this.triggerGrab(prizesManager);
         }
