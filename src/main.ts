@@ -1952,6 +1952,7 @@ function setupKeyboardListeners() {
   window.addEventListener('touchstart', ensureBGM, { passive: true });
 
   window.addEventListener('keydown', (e) => {
+    if (!e.key) return;
     const k = e.key.toLowerCase();
     if (k in keys) keys[k] = true;
     if (e.key in keys) keys[e.key] = true;
@@ -1964,6 +1965,7 @@ function setupKeyboardListeners() {
   });
 
   window.addEventListener('keyup', (e) => {
+    if (!e.key) return;
     const k = e.key.toLowerCase();
     if (k in keys) keys[k] = false;
     if (e.key in keys) keys[e.key] = false;
