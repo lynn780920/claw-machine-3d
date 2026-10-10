@@ -1906,18 +1906,27 @@ function setupUIEventListeners() {
         const playerName=leaderboardManager.getPlayerName();
         void (async()=>{
           try {
-            await renderRewardCard(playerName,formattedTotalTime,campaignPlays,false);
-            // 至尊魔王 = 刷新最終關最速紀錄且經雲端確認的玩家。
-            if (!finalStageRecord?.isNewRecord ||
-              !await leaderboardManager.confirmCurrentCampaignChampion(playerName) ||
-              !levelSystem.isGameVictory || victoryModal?.style.display!=='flex') return;
-            victoryCard?.classList.add('is-champion');
-            if (subtitle) subtitle.textContent = '榮登 3D 娃娃機「至尊魔王」！';
-            if (recordBanner) {
-              recordBanner.style.display = 'block';
-              if (recordMessage) recordMessage.textContent = `恭喜刷新第 ${finalLevel.stageNum} 關最速紀錄，榮登至尊魔王！`;
+            const isChampion = Boolean(finalStageRecord?.isNewRecord);
+            if (isChampion) {
+              victoryCard?.classList.add('is-champion');
+              if (subtitle) subtitle.textContent = '榮登 3D 娃娃機「至尊魔王」！';
+              if (recordBanner) {
+                recordBanner.style.display = 'block';
+                if (recordMessage) recordMessage.textContent = `恭喜刷新第 ${finalLevel.stageNum} 關最速紀錄，榮登至尊魔王！`;
+              }
+            } else {
+              victoryCard?.classList.remove('is-champion');
+              if (subtitle) subtitle.textContent = '恭喜完成全部關卡！';
+              if (recordBanner) recordBanner.style.display = 'none';
             }
-            await renderRewardCard(playerName,formattedTotalTime,campaignPlays,true);
+            await renderRewardCard(playerName,formattedTotalTime,campaignPlays,isChampion);
+            if (isChampion) {
+              try {
+                await leaderboardManager.confirmCurrentCampaignChampion(playerName);
+              } catch (e) {
+                console.warn('Cloud champion confirmation pending', e);
+              }
+            }
           } catch (error) {console.warn('Reward card unavailable',error);}
         })();
       }
