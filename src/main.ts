@@ -180,7 +180,7 @@ async function init() {
   scene = new THREE.Scene();
 
   // Camera settings matching Kujiflip 40-degree low distortion perspective
-  camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 100);
+  camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.5, 100);
   camera.position.set(0, 5.6, 9.2); // Player eye-level front-facing view matching user screenshot
 
   // Auto-detect Mobile Device & Power Saver Defaults
@@ -189,7 +189,7 @@ async function init() {
   const saverPixelRatio = Math.min(window.devicePixelRatio || 1, isMobileDevice ? 1.5 : 1);
 
   // Limit mobile fill rate before allocating the WebGL drawing buffer.
-  renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('three-canvas') as HTMLCanvasElement, antialias: true, powerPreference: 'high-performance' });
+  renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('three-canvas') as HTMLCanvasElement, antialias: true, powerPreference: 'high-performance', logarithmicDepthBuffer: true });
   renderer.setPixelRatio(powerSaverMode ? saverPixelRatio : normalPixelRatio);
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.shadowMap.enabled = !powerSaverMode;
