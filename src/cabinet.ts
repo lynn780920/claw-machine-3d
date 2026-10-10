@@ -4,6 +4,7 @@ import { PhysicsSystem } from './physics';
 import { instantiateModel, disposeModel } from './modelAssets';
 import { CABINET_PALETTES, colorCabinetModel } from './cabinetPalette';
 import { ElasticBed } from './elasticBed';
+import { chuteWellWallSpecs } from './chuteWell';
 
 /**
  * 3D Arcade Claw Machine Cabinet
@@ -26,6 +27,10 @@ export class Cabinet {
   public chuteMinZ = 1.5;
   public chuteMaxZ = 4.5;
   public chuteWallHeight = 0.5;
+  public playfieldScale = 1;
+  public compactStage8 = false;
+  public floorY = 0;
+  private stageEightFeltTex: THREE.CanvasTexture | null = null;
 
   // Drop Target Indicator
   public dropIndicatorGroup: THREE.Group;
@@ -342,6 +347,22 @@ export class Cabinet {
       this.chuteMinZ = 0.85;
       this.chuteMaxZ = 2.85;
     }
+    if (this.compactStage8) {
+      this.width = 4.8;
+      this.depth = 4.16;
+      this.height = 4.9;
+      this.chuteMinX = -2.14;
+      this.chuteMaxX = -0.71;
+      this.chuteMinZ = 0.55;
+      this.chuteMaxZ = 1.85;
+    }
+    this.floorY = this.compactStage8 ? 0.8 : 0;
+    if (this.playfieldScale !== 1) {
+      this.chuteMinX *= this.playfieldScale;
+      this.chuteMaxX *= this.playfieldScale;
+      this.chuteMinZ *= this.playfieldScale;
+      this.chuteMaxZ *= this.playfieldScale;
+    }
 
     // 4. Update theme materials & backdrop
     this.setTheme(mode);
@@ -401,7 +422,7 @@ export class Cabinet {
       physics.world.createCollider(shape, body);
       this.staticBodies.push(body);
     };
-    const halfW = this.width / 2, halfD = this.depth / 2;
+    const halfW = this.width * this.playfieldScale / 2, halfD = this.depth * this.playfieldScale / 2;
     const baseHeight = 2.65 * sy;
     const baseY = -1.58 * sy;
     const shellMaterial = new THREE.MeshStandardMaterial({ color: palette.base, metalness: 0.32, roughness: 0.48 });
@@ -422,11 +443,16 @@ export class Cabinet {
     const chuteX = (this.chuteMinX + this.chuteMaxX) / 2;
     const chuteZ = (this.chuteMinZ + this.chuteMaxZ) / 2;
     const wellDepth = Math.min(2.3, baseHeight * 0.88);
-    for (const x of [this.chuteMinX, this.chuteMaxX]) addVisualBox('ChuteWellSide', [0.07, wellDepth, chuteD], [x, -wellDepth / 2, chuteZ], wellMaterial);
-    addVisualBox('ChuteWellBack', [chuteW, wellDepth, 0.07], [chuteX, -wellDepth / 2, this.chuteMinZ], wellMaterial);
+    for (const wall of chuteWellWallSpecs({
+      minX:this.chuteMinX,maxX:this.chuteMaxX,minZ:this.chuteMinZ,maxZ:this.chuteMaxZ
+    },this.floorY,wellDepth,this.compactStage8 ? 0.12 : 0.07)) {
+      if (wall.name === 'ChuteWellFront' && !this.compactStage8) continue;
+      addVisualBox(wall.name,wall.size,wall.position,wellMaterial);
+      if (this.compactStage8) addCollider(wall.size,wall.position,0.55);
+    }
     // These two exposed edges frame the opening; the opposite edges already have baffles.
-    addVisualBox('ChuteLipLeft', [0.055, 0.035, chuteD], [this.chuteMinX, 0.018, chuteZ], rimMaterial);
-    addVisualBox('ChuteLipFront', [chuteW, 0.035, 0.055], [chuteX, 0.018, this.chuteMaxZ], rimMaterial);
+    addVisualBox('ChuteLipLeft', [0.055, 0.035, chuteD], [this.chuteMinX, this.floorY+0.018, chuteZ], rimMaterial);
+    addVisualBox('ChuteLipFront', [chuteW, 0.035, 0.055], [chuteX, this.floorY+0.018, this.chuteMaxZ], rimMaterial);
     const sections: [string, number, number, number, number][] = [
       ['FloorRight', this.chuteMaxX, halfW, -halfD, halfD],
       ['FloorBack', -halfW, this.chuteMaxX, -halfD, this.chuteMinZ],
@@ -437,7 +463,7 @@ export class Cabinet {
       const w = maxX-minX, d = maxZ-minZ;
       const floor = root.getObjectByName(name) as THREE.Mesh;
       floor.scale.set(w/sx,0.3/sy,d/sz);
-      floor.position.set((minX+maxX)/2/sx,-0.15/sy,(minZ+maxZ)/2/sz);
+      floor.position.set((minX+maxX)/2/sx,(this.floorY-0.15)/sy,(minZ+maxZ)/2/sz);
       const mat = floor.material as THREE.MeshStandardMaterial;
       if (this.bounceFloor && !this.bounceClothTex) {
         const canvas = document.createElement('canvas'); canvas.width = canvas.height = 256;
@@ -453,21 +479,49 @@ export class Cabinet {
         this.bounceClothTex.repeat.set(3,3);
         this.bounceClothTex.anisotropy=8;
       }
-      mat.map = this.bounceFloor ? this.bounceClothTex! : this.floorMatTex;
+      if (this.compactStage8 && !this.stageEightFeltTex) {
+        const felt = document.createElement('canvas'); felt.width = felt.height = 128;
+        const ctx = felt.getContext('2d')!;
+        ctx.fillStyle = '#376d4b'; ctx.fillRect(0,0,128,128);
+        for (let i=0;i<1100;i++) {
+          ctx.fillStyle = i%3 ? 'rgba(190,231,158,0.12)' : 'rgba(6,42,33,0.16)';
+          ctx.fillRect((i*73)%128,(i*47)%128,1,2);
+        }
+        this.stageEightFeltTex = new THREE.CanvasTexture(felt);
+        this.stageEightFeltTex.colorSpace = THREE.SRGBColorSpace;
+        this.stageEightFeltTex.wrapS = this.stageEightFeltTex.wrapT = THREE.RepeatWrapping;
+        this.stageEightFeltTex.repeat.set(3,3);
+      }
+      mat.map = this.bounceFloor ? this.bounceClothTex! : this.compactStage8 ? this.stageEightFeltTex : this.floorMatTex;
       mat.bumpMap = mat.map;
-      mat.bumpScale = this.bounceFloor ? 0.025 : 0.005;
+      mat.bumpScale = this.bounceFloor ? 0.025 : this.compactStage8 ? 0.012 : 0.005;
       if (this.bounceFloor) { mat.color.setHex(0xffffff); mat.metalness = 0; mat.roughness = 0.95; }
+      if (this.compactStage8) { mat.color.setHex(0xffffff); mat.metalness = 0; mat.roughness = 0.94; }
       mat.needsUpdate = true;
       if (this.bounceFloor) floor.visible=false;
-      else addCollider([w,0.3,d],[(minX+maxX)/2,-0.15,(minZ+maxZ)/2],0.65);
+      else addCollider([w,0.3,d],[(minX+maxX)/2,this.floorY-0.15,(minZ+maxZ)/2],0.65);
     }
     if (this.bounceFloor) {
       const material=new THREE.MeshStandardMaterial({map:this.bounceClothTex,roughness:0.95,side:THREE.DoubleSide});
       this.elasticBed=new ElasticBed(physics.world,sections,material);
       for(const mesh of this.elasticBed.meshes) this.mesh.add(mesh);
     }
-    for (const x of [-halfW,halfW]) addCollider([0.12,this.height,this.depth],[x,this.height/2,0]);
-    for (const z of [-halfD,halfD]) addCollider([this.width,this.height,0.12],[0,this.height/2,z]);
+    for (const x of [-this.width/2,this.width/2]) addCollider([0.12,this.height,this.depth],[x,this.height/2,0]);
+    for (const z of [-this.depth/2,this.depth/2]) addCollider([this.width,this.height,0.12],[0,this.height/2,z]);
+    if (this.playfieldScale !== 1) {
+      const insetMaterial = new THREE.MeshStandardMaterial({color:palette.trim,metalness:0.5,roughness:0.42});
+      const insetGlass = new THREE.MeshBasicMaterial({color:0x9defff,transparent:true,opacity:0.06,depthWrite:false,side:THREE.DoubleSide});
+      for (const x of [-halfW,halfW]) {
+        addVisualBox('PlayfieldSideRail',[0.09,0.08,halfD*2],[x,0.04,0],insetMaterial);
+        addVisualBox('PlayfieldSideGlass',[0.025,3,halfD*2],[x,1.5,0],insetGlass);
+        addCollider([0.09,3,halfD*2],[x,1.5,0]);
+      }
+      for (const z of [-halfD,halfD]) {
+        addVisualBox('PlayfieldEndRail',[halfW*2,0.08,0.09],[0,0.04,z],insetMaterial);
+        addVisualBox('PlayfieldEndGlass',[halfW*2,3,0.025],[0,1.5,z],insetGlass);
+        addCollider([halfW*2,3,0.09],[0,1.5,z]);
+      }
+    }
     addCollider([this.width,0.15,this.depth],[0,this.height+0.075,0]);
     this.rebuildBaffles(this.chuteWallHeight, physics);
     if (!this.outerRing) {
@@ -503,7 +557,7 @@ export class Cabinet {
     this.baffleBodies = [];
     if (height === 0) return;
 
-    const wallThick = 0.08;
+    const wallThick = this.compactStage8 ? 0.18 : 0.08;
     const chuteW = this.chuteMaxX - this.chuteMinX;
     const chuteD = this.chuteMaxZ - this.chuteMinZ;
     const chuteCenterX = (this.chuteMinX + this.chuteMaxX) / 2;
@@ -514,7 +568,7 @@ export class Cabinet {
     const addBaffleWall = (w: number, d: number, x: number, z: number, isRightWall: boolean) => {
       const geo = new THREE.BoxGeometry(w, height, d);
       const mesh = new THREE.Mesh(geo, this.baffleMat);
-      mesh.position.set(x, height / 2, z);
+      mesh.position.set(x, this.floorY+height / 2, z);
       this.baffleGroup.add(mesh);
 
       // Rounded Safety Bumper Trim Tube (防撞膠條 / 護邊圓條)
@@ -526,14 +580,14 @@ export class Cabinet {
       } else {
         bumperMesh.rotation.z = Math.PI / 2;
       }
-      bumperMesh.position.set(x, height + 0.02, z);
+      bumperMesh.position.set(x, this.floorY+height + 0.02, z);
       this.baffleGroup.add(bumperMesh);
 
       if (physics && physics.world) {
-        const bodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(x, height / 2, z);
+        const bodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(x, this.floorY+height / 2, z);
         const body = physics.world.createRigidBody(bodyDesc);
         const colDesc = RAPIER.ColliderDesc.cuboid(w / 2, height / 2, d / 2)
-          .setFriction(0.1)
+          .setFriction(this.compactStage8 ? 0.5 : 0.1)
           .setRestitution(0.2);
         physics.world.createCollider(colDesc, body);
         this.baffleBodies.push(body);
@@ -548,7 +602,7 @@ export class Cabinet {
     // Chrome Metal Corner Bracket Post (金屬固定角柱)
     const postGeo = new THREE.CylinderGeometry(0.045, 0.045, height + 0.08, 16);
     const postMesh = new THREE.Mesh(postGeo, chromeMat);
-    postMesh.position.set(this.chuteMaxX, (height + 0.08) / 2, this.chuteMinZ);
+    postMesh.position.set(this.chuteMaxX, this.floorY+(height + 0.08) / 2, this.chuteMinZ);
     this.baffleGroup.add(postMesh);
   }
 
@@ -565,7 +619,7 @@ export class Cabinet {
   }
 
   public updateIndicator(x: number, z: number, y: number = 0.05) {
-    this.dropIndicatorGroup.position.set(x, 0.05, z);
+    this.dropIndicatorGroup.position.set(x, this.floorY+0.05, z);
     this.dropIndicatorGroup.visible = x < this.chuteMinX || x > this.chuteMaxX || z < this.chuteMinZ || z > this.chuteMaxZ;
   }
 

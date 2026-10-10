@@ -1,7 +1,7 @@
 {
   "name": "線上娃娃機",
   "short_name": "娃娃機",
-  "description": "3D 台灣街機線上娃娃機",
+  "description": "線上娃娃機挑戰：操控 3D 爪機，突破關卡並分享戰績。",
   "start_url": "/claw-machine-3d/",
   "scope": "/claw-machine-3d/",
   "display": "standalone",

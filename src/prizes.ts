@@ -3,7 +3,7 @@ import * as RAPIER from '@dimforge/rapier3d-compat';
 import { PhysicsSystem } from './physics';
 import { instantiateModel, disposeModel, cartonLabel, APPLIANCE_TYPES, MIXED_PRIZE_TYPES, prizeStockScale, LARGE_POKEMON_DIMENSIONS, FEATURED_POKEMON_TYPES, POKEMON_TYPES } from './modelAssets';
 import { collectHullPoints, centerAndScaleHullPoints } from './prizeGeometry';
-import { randomPrizeStock, prizePhysicsProfile } from './prizeStock';
+import { randomPrizeStock, randomCompactBoxStock, prizePhysicsProfile } from './prizeStock';
 
 export class PrizesManager {
   public prizes: THREE.Object3D[] = [];
@@ -14,6 +14,7 @@ export class PrizesManager {
   public weightMultiplier = 1;
   public rollingResistance = 1;
   public applianceLightweight = false;
+  public playfieldY = 0;
 
   applyPrizePhysics() {
     this.bodies.forEach((body,index) => {
@@ -45,6 +46,8 @@ export class PrizesManager {
       case 'tea_box': return { radius: 0.87, height: 2.18 };
       case 'fruit_box': return { radius: 0.98, height: 2.4 };
       case 'milk_box': return { radius: 0.52, height: 1.6 };
+      case 'battle_top_cx13':
+      case 'battle_top_bx50': return { radius: 0.54, height: 1.0 };
       case 'chiikawa':
         return { radius: 0.68, height: 1.4 };
       case 'kirby':
@@ -102,6 +105,16 @@ export class PrizesManager {
     chuteBounds?: { minX: number; maxX: number; minZ: number; maxZ: number }
   ) {
     this.clearPrizes();
+    if (typeFilter === 'battle_top_box') {
+      const types = ['battle_top_cx13','battle_top_bx50'];
+      const stock = randomCompactBoxStock(count,types);
+      for (const item of stock) {
+        this.spawnModelPrize(item.x,this.playfieldY+item.y,item.z,item.type,
+          new THREE.Euler(-Math.PI/2,item.ry,0,'YXZ'));
+      }
+      this.physics.prewarmSimulation(12);
+      return;
+    }
     if (typeFilter === 'pokemon' || typeFilter === 'mixed') {
       const types = typeFilter === 'mixed' ? MIXED_PRIZE_TYPES : FEATURED_POKEMON_TYPES;
       const chuteClearance = Math.max(...types.map(type => this.getPrizeDimensions(type).radius))+0.12;
@@ -290,7 +303,7 @@ export class PrizesManager {
         }
       });
     }
-    const body = this.makeDynBodyWithRotation(x,y,z,rotation.x,rotation.y,rotation.z);
+    const body = this.makeDynBodyWithRotation(x,y,z,rotation.x,rotation.y,rotation.z,rotation.order);
     const half = size.multiplyScalar(ratio/2);
     const capsuleRadius = Math.min(half.x,half.y,half.z);
     let shape = RAPIER.ColliderDesc.cuboid(half.x,half.y,half.z);
@@ -320,8 +333,8 @@ export class PrizesManager {
     this.bodies = [];
   }
 
-  private makeDynBodyWithRotation(x: number, y: number, z: number, rx = 0, ry = 0, rz = 0) {
-    const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(rx, ry, rz));
+  private makeDynBodyWithRotation(x: number, y: number, z: number, rx = 0, ry = 0, rz = 0, order: THREE.EulerOrder = 'XYZ') {
+    const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(rx, ry, rz, order));
     const body = this.physics.world.createRigidBody(
       RAPIER.RigidBodyDesc.dynamic()
         .setTranslation(x, y, z)

@@ -26,3 +26,14 @@ export function isPrizeEnteringChute(
   const depth=Math.max(0.001,bounds.max.z-bounds.min.z);
   return bounds.min.y<0.05 && overlapX*overlapZ/(width*depth)>0.45;
 }
+
+export function isBoxBelowRaisedChuteLip(
+  position: {x:number;y:number;z:number},
+  floorY: number,
+  chute: ChuteBounds
+): boolean {
+  const inset = 0.12;
+  return position.y < floorY - 0.25
+    && position.x > chute.minX + inset && position.x < chute.maxX - inset
+    && position.z > chute.minZ + inset && position.z < chute.maxZ - inset;
+}

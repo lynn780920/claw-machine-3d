@@ -11,11 +11,13 @@ export interface CampaignProgress {
 export function loadCampaignProgress(stageCount: number, playerName = ''): CampaignProgress {
   try {
     const saved = JSON.parse(localStorage.getItem(storageKey(playerName)) || '{}');
-    const unlockedStage = saved.completed === true ? stageCount : Number.isInteger(saved.unlockedStage)
+    const completed = saved.completed === true && Number(saved.unlockedStage) >= stageCount;
+    const previouslyCompleted = saved.completed === true && Number(saved.unlockedStage) === stageCount - 1;
+    const unlockedStage = completed || previouslyCompleted ? stageCount : Number.isInteger(saved.unlockedStage)
       ? Math.max(1, Math.min(stageCount, saved.unlockedStage)) : 1;
-    const currentStage = Number.isInteger(saved.currentStage)
-      ? Math.max(1, Math.min(stageCount, saved.currentStage)) : unlockedStage;
-    return {unlockedStage, currentStage, completed: saved.completed === true};
+    const currentStage = previouslyCompleted ? stageCount : Number.isInteger(saved.currentStage)
+      ? Math.max(1, Math.min(unlockedStage, saved.currentStage)) : unlockedStage;
+    return {unlockedStage, currentStage, completed};
   } catch {
     return {unlockedStage: 1, currentStage: 1, completed: false};
   }

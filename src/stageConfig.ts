@@ -35,14 +35,15 @@ export const STAGE_RUNTIME_CONFIGS: StageRuntimeConfig[] = [
   {stageNum:4,strong:75,weakenHeight:55,weak:43,topHit:35,carriageSpeed:2,dropSpeed:2,sway:1.4,cableLength:9.5,baffleHeight:0,antiSwing:false,clawSize:4,clawScale:1.35,spawnSpread:6,weight:0.6,rollingResistance:0.35,basePrizeCount:18,targetPrizeCount:0,maxDrops:0,bounceFloor:false,forceTopRelease:false,physicsSubsteps:2,stageHint:''},
   {stageNum:5,strong:75,weakenHeight:55,weak:43,topHit:35,carriageSpeed:2,dropSpeed:2,sway:1.4,cableLength:9.5,baffleHeight:0.3,antiSwing:false,clawSize:2,clawScale:1,spawnSpread:4.8,weight:1,rollingResistance:1,basePrizeCount:18,targetPrizeCount:0,maxDrops:30,bounceFloor:false,forceTopRelease:false,physicsSubsteps:2,stageHint:'剩餘下爪次數：30 次'},
   {stageNum:6,strong:88,weakenHeight:76,weak:65,topHit:20,carriageSpeed:2.6,dropSpeed:2,sway:1.6,cableLength:9.5,baffleHeight:0.6,antiSwing:false,clawSize:2,clawScale:1,spawnSpread:4.8,weight:0.6,rollingResistance:0.35,basePrizeCount:12,targetPrizeCount:3,maxDrops:0,bounceFloor:false,forceTopRelease:false,physicsSubsteps:2,stageHint:'指定夾出 3 件微微發光的獎品'},
-  {stageNum:7,strong:98,weakenHeight:76,weak:98,topHit:100,carriageSpeed:2,dropSpeed:2,sway:1.4,cableLength:9.5,baffleHeight:0.7,antiSwing:false,clawSize:2,clawScale:1,spawnSpread:3.8,weight:1,rollingResistance:1,basePrizeCount:2,targetPrizeCount:0,maxDrops:0,bounceFloor:true,forceTopRelease:true,physicsSubsteps:8,stageHint:'彈跳台：觸頂必掉，兩盒一番賞都出貨才過關'}
+  {stageNum:7,strong:98,weakenHeight:76,weak:98,topHit:100,carriageSpeed:2,dropSpeed:2,sway:1.4,cableLength:9.5,baffleHeight:0.7,antiSwing:false,clawSize:2,clawScale:1,spawnSpread:3.8,weight:1,rollingResistance:1,basePrizeCount:2,targetPrizeCount:0,maxDrops:0,bounceFloor:true,forceTopRelease:true,physicsSubsteps:8,stageHint:'彈跳台：觸頂必掉，兩盒一番賞都出貨才過關'},
+  {stageNum:8,strong:40,weakenHeight:76,weak:40,topHit:20,carriageSpeed:2,dropSpeed:2,sway:1.1,cableLength:9.5,baffleHeight:1.1,antiSwing:false,clawSize:5,clawScale:0.45,spawnSpread:2.9,weight:1,rollingResistance:1,basePrizeCount:8,targetPrizeCount:0,maxDrops:0,bounceFloor:false,forceTopRelease:false,physicsSubsteps:2,stageHint:'迷你檯面：夾出 2 盒盒裝戰鬥陀螺'}
 ];
 
 const numberFields: Array<keyof StageRuntimeConfig> = [
   'strong','weakenHeight','weak','topHit','carriageSpeed','dropSpeed','sway','cableLength','baffleHeight',
   'clawScale','spawnSpread','weight','rollingResistance','basePrizeCount','targetPrizeCount','maxDrops','physicsSubsteps'
 ];
-const clawSizeScales = [0.85,1,1.15,1.35] as const;
+const clawSizeScales = [0.85,1,1.15,1.35,0.45] as const;
 const CONFIG_CACHE_KEY = 'claw_stage_config_cache_v1';
 export let stageConfigSource: 'sheet' | 'cache' | 'default' = 'default';
 
@@ -53,7 +54,7 @@ function finiteNumber(value: unknown, fallback: number) {
 
 export function applyRemoteStageConfigs(value: unknown): boolean {
   const rows = (value as {configs?: unknown})?.configs;
-  if (!Array.isArray(rows) || rows.length !== LEVEL_CONFIGS.length) return false;
+  if (!Array.isArray(rows) || (rows.length !== LEVEL_CONFIGS.length && rows.length !== LEVEL_CONFIGS.length-1)) return false;
   const seen = new Set<number>();
   for (const raw of rows) {
     if (!raw || typeof raw !== 'object') return false;
@@ -81,7 +82,7 @@ export function applyRemoteStageConfigs(value: unknown): boolean {
     const runtimeValues = runtime as unknown as Record<string,unknown>;
     for (const field of numberFields) runtimeValues[field] = finiteNumber(row[field],Number(runtimeValues[field]));
     const requestedClawSize = Math.round(finiteNumber(row.clawSize,0));
-    if (requestedClawSize >= 1 && requestedClawSize <= 4) {
+    if (requestedClawSize >= 1 && requestedClawSize <= 5) {
       runtime.clawSize = requestedClawSize;
       runtime.clawScale = clawSizeScales[requestedClawSize-1];
     } else {
@@ -93,7 +94,7 @@ export function applyRemoteStageConfigs(value: unknown): boolean {
     runtime.bounceFloor = row.bounceFloor === true || String(row.bounceFloor).toUpperCase() === 'TRUE';
     runtime.forceTopRelease = row.forceTopRelease === true || String(row.forceTopRelease).toUpperCase() === 'TRUE';
   }
-  return seen.size === LEVEL_CONFIGS.length;
+  return seen.size === rows.length;
 }
 
 export async function loadStageConfigsFromGoogleSheets(): Promise<boolean> {

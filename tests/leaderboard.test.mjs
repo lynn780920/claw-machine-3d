@@ -66,6 +66,36 @@ test('stages five to seven persist and remain visible while cloud confirmation i
   assert.equal(manager.getRecentBreakEvents().length,3);
 });
 
+test('stage eight and its full-campaign record use time then coin count',async()=>{
+  const manager=new LeaderboardManager();
+  manager.sendToGoogleSheets=async()=>false;
+  assert.equal(manager.checkAndRecordStageWin(8,'第八關',60,'01:00',2,4).isNewRecord,true);
+  assert.equal(manager.checkAndRecordStageWin(8,'第八關',60,'01:00',2,5).isNewRecord,false);
+  assert.equal(manager.checkAndRecordStageWin(8,'第八關',60,'01:00',2,3).isNewRecord,true);
+  assert.equal(manager.checkAndRecordGrandVictory(600,'10:00',20,28).isNewRecord,true);
+  assert.deepEqual(manager.getBestRecords().map(r=>r.recordKey),['campaign-8','stage-8']);
+});
+
+test('only the current campaign is ranked and trophy requires cloud confirmation',async()=>{
+  const old={...record('舊七關冠軍',420,12),recordKey:'campaign-7',title:'七關全破紀錄'};
+  let champion={...record('原冠軍',600,30),recordKey:'campaign-8',title:'八關全破紀錄'};
+  globalThis.fetch=async()=>({ok:true,json:async()=>({records:[old,champion],events:[
+    {...event('舊七關冠軍','2026-10-08 12:00:00'),stageName:'7大關全破'},
+    {...event('原冠軍','2026-10-09 12:00:00'),stageName:'8大關全破'}
+  ]})});
+  const manager=new LeaderboardManager();
+  manager.sendToGoogleSheets=async()=>false;
+  await manager.refreshFromGoogleSheets();
+  assert.deepEqual(manager.getBestRecords().map(item=>item.recordKey),['campaign-8']);
+  assert.deepEqual(manager.getRecentBreakEvents().map(item=>item.playerName),['原冠軍']);
+  assert.equal(manager.getConfirmedGrandChampion().holderName,'原冠軍');
+  manager.setPlayerName('挑戰者');
+  assert.equal(manager.checkAndRecordGrandVictory(590,'09:50',20,28).isNewRecord,true);
+  assert.equal(await manager.confirmCurrentCampaignChampion('挑戰者'),false);
+  champion={...champion,holderName:'挑戰者',bestTimeSeconds:590,formattedTime:'09:50',plays:28};
+  assert.equal(await manager.confirmCurrentCampaignChampion('挑戰者'),true);
+});
+
 test('record detection uses cloud scores, rejects ties and invalid times',async()=>{
   globalThis.fetch=async()=>({ok:true,json:async()=>({records:[record('保持人',10,8)],events:[]})});
   const manager=new LeaderboardManager();
@@ -139,6 +169,18 @@ test('cloud exposes only genuine seven-stage completions for the champion ticker
   const data=JSON.parse(context.doGet().text);
   assert.equal(data.records.find(r=>r.recordKey==='campaign-7').holderName,'新玩家');
   assert.deepEqual(data.events.map(e=>e.playerName),['新玩家','最新玩家']);
-  assert.equal(data.events.at(-1).recordType,'七關全破');
+  assert.equal(data.events.at(-1).recordType,'7關全破');
+  assert.equal(writes.length,0);
+});
+
+test('Apps Script reads eighth-stage and eight-stage total without changing sheet columns',()=>{
+  const {context,writes}=scriptFixture([
+    ['2026-10-08 13:00','玩家甲','打破單關紀錄','第 8 關 最速紀錄','第八關','01:10',5],
+    ['2026-10-08 13:01','玩家乙','打破單關紀錄','第 8 關 最速紀錄','第八關','01:10',4],
+    ['2026-10-08 13:02','玩家乙','打破全破總紀錄','八關全破 最速總紀錄','8大關全破','12:00',26]
+  ]);
+  const data=JSON.parse(context.doGet().text);
+  assert.equal(data.records.find(r=>r.recordKey==='stage-8').holderName,'玩家乙');
+  assert.equal(data.records.find(r=>r.recordKey==='campaign-8').plays,26);
   assert.equal(writes.length,0);
 });

@@ -1380,7 +1380,8 @@ input:checked + .slider.round:before {
 /* Briefing Roadmap Grid */
 .briefing-card {
   border-color: #38bdf8;
-  box-shadow: 0 0 35px rgba(56, 189, 248, 0.25);
+  max-width: 640px;
+  box-shadow: 0 16px 45px rgba(0, 0, 0, 0.45);
 }
 
 .briefing-intro {
@@ -1396,6 +1397,37 @@ input:checked + .slider.round:before {
   gap: 12px;
   margin-bottom: 12px;
 }
+
+.stage-select-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 14px 0 0;
+}
+
+.stage-jump-btn.stage-select-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+  min-height: 54px;
+  width: 100%;
+  margin: 0;
+  padding: 10px 14px;
+  text-align: left;
+  border-radius: 6px;
+  background: #172536;
+  border: 1px solid #36516a;
+  font-size: 0.9rem;
+}
+
+.stage-select-name { min-width: 0; overflow-wrap: anywhere; }
+.stage-select-lock { flex: none; color: #a7bacb; font-size: 0.75rem; }
+.stage-select-lock[hidden] { display: none; }
+.stage-jump-btn.stage-select-option.active-stage { border-color: #36d4e7; color: #edfcff; }
+.stage-jump-btn.stage-select-option:disabled { opacity: 0.66; background: #111a27; cursor: not-allowed; }
+.stage-jump-btn.stage-select-option:not(:disabled):hover { background: #214158; transform: none; }
+.stage-select-option:focus-visible { outline: 2px solid #4fe0f0; outline-offset: 2px; }
 
 .stage-select-item {
   align-items: center;
@@ -1719,10 +1751,12 @@ input:checked + .slider.round:before {
 /* Grand Victory Modal Styling */
 .victory-card {
   max-width: 560px;
-  border-color: #fbbf24;
-  box-shadow: 0 0 50px rgba(251, 191, 36, 0.4);
+  border-color: #e879f9;
+  box-shadow: 0 0 36px rgba(232, 121, 249, 0.22);
   text-align: center;
 }
+.victory-card.is-champion { border-color: #fbbf24; box-shadow: 0 0 50px rgba(251, 191, 36, 0.4); }
+.victory-card:not(.is-champion) .victory-title { color: #f5b7ff; text-shadow: 0 0 18px rgba(232, 121, 249, 0.55); }
 
 .crown-icon {
   font-size: 3.5rem;
@@ -1799,7 +1833,7 @@ input:checked + .slider.round:before {
   display: block;
   width: 100%;
   max-width: 210px;
-  aspect-ratio: 2 / 3;
+  height: auto;
   border: 1px solid #d6a937;
   border-radius: 6px;
   background: #111827;
@@ -1810,17 +1844,27 @@ input:checked + .slider.round:before {
 .reward-share-btn { background: #c79016; color: #fff; border-color: #f9d56e; }
 .reward-download-btn { background: #183b56; color: #fff; border-color: #38bdf8; }
 .reward-card-actions button:disabled { opacity: 0.45; cursor: wait; }
+.victory-card #victory-select-stage-btn { background: #1476ac; color: #fff; border: 1px solid #5fd7fb; }
 
 @media (max-width: 520px) {
-  .reward-card-area { grid-template-columns: 1fr; }
-  #reward-card-canvas { margin: 0 auto; max-width: 240px; }
-  .reward-card-actions { grid-template-columns: 1fr 1fr; }
+  .victory-card { width: calc(100vw - 16px); max-height: calc(100dvh - 16px); padding: 14px; gap: 12px; }
+  .victory-card .victory-body { min-width: 0; }
+  .reward-card-area { grid-template-columns: 1fr; gap: 12px; margin-top: 12px; padding-top: 12px; }
+  #reward-card-canvas { margin: 0 auto; max-width: min(68vw, 240px); max-height: 42dvh; width: auto; }
+  .reward-card-actions { grid-template-columns: 1fr; width: 100%; gap: 8px; }
+  .reward-card-actions .modal-action-btn { width: 100%; min-height: 48px; padding: 10px 16px; }
+  .reward-download-btn { background: transparent; color: #bde9fa; border: 1px solid #517087; box-shadow: none; }
+  .victory-card .modal-footer-row { position: sticky; bottom: -14px; z-index: 2; display: grid; grid-template-columns: 1fr;
+    width: 100%; gap: 8px; margin-top: 0; padding: 12px 0 calc(12px + env(safe-area-inset-bottom)); background: #0f172a; }
+  .victory-card .modal-footer-row .modal-action-btn { width: 100%; min-height: 48px; padding: 10px 16px; }
+  .victory-card .champion-restart-btn { background: transparent; border-color: #7a7184; color: #d8cddb; box-shadow: none; }
 }
 
 @media (max-width: 680px) {
   .stages-roadmap-grid {
     grid-template-columns: 1fr;
   }
+  .stage-select-grid { grid-template-columns: 1fr; }
   .challenge-modal-card {
     padding: 16px;
   }
@@ -2028,19 +2072,24 @@ input:checked + .slider.round:before {
   position: fixed;
   inset: 0;
   z-index: 10000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-direction: column;
-  gap: 20px;
-  background: #242a27;
+  overflow: hidden;
+  background-color: #101424;
+  background-position: center;
+  background-size: cover;
   color: #f0f2ed;
   font-family: system-ui, sans-serif;
 }
-.loading-title { font-size: 28px; font-weight: 600; }
-.loading-track { width: min(320px, calc(100vw - 64px)); height: 8px; overflow: hidden; border-radius: 4px; background: #50655a; }
+.loading-video { position: absolute; inset: -12px; width: calc(100% + 24px); height: calc(100% + 24px); object-fit: cover; filter: blur(6px) brightness(1.05); }
+.loading-shade { position: absolute; inset: 0; background: rgba(5, 8, 20, 0.38); }
+.loading-content { position: relative; z-index: 1; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 20px; padding: 24px; box-sizing: border-box; }
+.loading-title { font-size: 28px; font-weight: 700; text-align: center; text-shadow: 0 2px 18px #000; }
+.loading-track { position: relative; width: min(320px, calc(100vw - 64px)); height: 8px; overflow: hidden; border-radius: 4px; background: rgba(180, 210, 228, 0.35); }
+.loading-track::before { content: ''; position: absolute; inset: 0 auto 0 0; z-index: 1; width: 0; background: #27e681; animation: loading-startup 5s linear forwards; }
+.loading-track.is-measured::before { display: none; }
+@keyframes loading-startup { to { width: 15%; } }
 #asset-progress-fill { width: 0%; height: 100%; background: #27e681; box-shadow: 0 0 14px #27e681; transition: width 0.24s ease; animation: loading-glow 1.2s ease-in-out infinite alternate; }
 @keyframes loading-glow { from { filter: brightness(0.85); } to { filter: brightness(1.35); } }
+@media (prefers-reduced-motion: reduce) { .loading-video { display: none; } }
 #asset-progress { font-variant-numeric: tabular-nums; color: #b1c6b4; max-width: calc(100% - 40px); overflow-wrap: anywhere; text-align: center; }
 #asset-retry { padding: 10px 18px; border: 1px solid #90ab94; border-radius: 4px; background: #3a493e; color: white; cursor: pointer; }
 #asset-retry[hidden] { display: none; }

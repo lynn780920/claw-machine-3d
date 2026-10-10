@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { clone } from 'three/addons/utils/SkeletonUtils.js';
 
-export const PRIZE_TYPES = ['blindbox', 'cookie_box', 'dragonball', 'dyson', 'lego', 'marshall', 'mug_box', 'onepiece', 'ps5', 'sanrio_bottle', 'snack_pack', 'ssr_glowing_labubu', 'switch', 'tea_box', 'fruit_box', 'milk_box'] as const;
+export const PRIZE_TYPES = ['battle_top_cx13', 'battle_top_bx50', 'blindbox', 'cookie_box', 'dragonball', 'dyson', 'lego', 'marshall', 'mug_box', 'onepiece', 'ps5', 'sanrio_bottle', 'snack_pack', 'ssr_glowing_labubu', 'switch', 'tea_box', 'fruit_box', 'milk_box'] as const;
 const reference = new Set(['tea_box', 'fruit_box', 'milk_box']);
 export const FEATURED_POKEMON_TYPES = ['pikachu', 'eevee', 'squirtle', 'bulbasaur'];
 export const POKEMON_TYPES = [...FEATURED_POKEMON_TYPES, 'gengar', 'snorlax', 'psyduck'];
@@ -13,7 +13,7 @@ export const LARGE_POKEMON_DIMENSIONS: Record<string,{radius:number;height:numbe
   gengar: {radius:1.05,height:2.0},
   psyduck: {radius:1.0,height:1.9}
 };
-export const MIXED_PRIZE_TYPES = [...PRIZE_TYPES.filter(type => !APPLIANCE_TYPES.includes(type)), ...POKEMON_TYPES];
+export const MIXED_PRIZE_TYPES = [...PRIZE_TYPES.filter(type => !type.startsWith('battle_top_') && !APPLIANCE_TYPES.includes(type)), ...POKEMON_TYPES];
 const boxedPrizes = new Set(['blindbox', 'cookie_box', 'dragonball', 'mug_box', 'onepiece', 'ssr_glowing_labubu', 'tea_box', 'fruit_box', 'milk_box']);
 
 export function prizeStockScale(type: string, stock: string): number {

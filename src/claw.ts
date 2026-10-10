@@ -139,7 +139,7 @@ export class Claw {
     this.xBounds = [-limit, limit];
     this.zBounds = [-limit, limit];
     this.carriageY = machineHeight - 0.55;
-    this.ropeLength = (machineHeight >= 7.5) ? 1.25 : 1.05;
+    this.ropeLength = machineHeight < 5.2 ? 0.62 : machineHeight >= 7.5 ? 1.25 : 1.05;
     this.config.minRopeLength = this.ropeLength;
     this.targetRopeLength = this.ropeLength;
 

@@ -1,5 +1,5 @@
 /**
- * 7-Stage Challenge Progression System (破關制關卡系統)
+ * 8-Stage Challenge Progression System (破關制關卡系統)
  *
  * Level 1: 機台 02 (中型機台 · 最簡單) | 限時 15 分鐘 | 目標：夾到 8 樣過關
  * Level 2: 機台 03 (中大機台 · 技術型) | 限時 10 分鐘 | 目標：夾到 4 樣過關
@@ -125,6 +125,15 @@ export const LEVEL_CONFIGS: LevelConfig[] = [
     description: '兩盒一番賞、98% 強爪、100% 觸頂震落，讓彈跳布決定落點！',
     objectiveText: '彈出兩盒一番賞',
     strategyHint: '抓高後掉落，利用彈跳越過 0.7m 擋板，兩盒都出貨才過關。'
+  },
+  {
+    id: 8, stageNum: 8, name: '第八關：盒裝戰鬥陀螺', shortName: '第 8 關',
+    machineMode: 'medium', machineLabel: '迷你盒裝陀螺機台', timeLimitSeconds: 10 * 60,
+    targetWins: 2, isClearAll: false, dollCount: 8, prizeType: 'battle_top_box',
+    difficulty: '地獄魔王', difficultyColor: '#f43f5e',
+    description: '縮小檯面上隨機擺放八盒戰鬥陀螺，夾出兩盒過關。',
+    objectiveText: '夾出 2 盒戰鬥陀螺',
+    strategyHint: '超小爪可卡住包裝盒角，推移盒裝獎品靠近出貨口。'
   }
 ];
 

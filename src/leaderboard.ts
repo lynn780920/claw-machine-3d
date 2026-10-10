@@ -1,3 +1,5 @@
+import { LEVEL_CONFIGS } from './levelSystem.ts';
+
 export interface BestRecordItem {
   recordKey:string;
   title:string;
@@ -32,7 +34,8 @@ const DEFAULT_GSHEET_WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbxYV
 function isRecord(value:unknown):value is BestRecordItem {
   if (!value || typeof value!=='object') return false;
   const r = value as BestRecordItem;
-  return /^(campaign|campaign-7|stage-[1-7])$/.test(r.recordKey) &&
+  return (r.recordKey === 'campaign' || /^campaign-\d+$/.test(r.recordKey) ||
+    (/^stage-\d+$/.test(r.recordKey) && Number(r.recordKey.slice(6)) <= LEVEL_CONFIGS.length)) &&
     ['title','holderName','formattedTime','date'].every(k=>typeof r[k as keyof BestRecordItem]==='string') &&
     Number.isFinite(r.bestTimeSeconds) && r.bestTimeSeconds>=0 &&
     [r.wins,r.plays].every(n=>n===null || (typeof n==='number' && Number.isFinite(n) && n>=0));
@@ -68,6 +71,7 @@ export class LeaderboardManager {
   private cloudRecords:Record<string,BestRecordItem>|null = null;
   private cloudEvents:RecordBreakEvent[]|null = null;
   private refreshTask:Promise<boolean>|null = null;
+  private submissionTasks = new Map<string,Promise<void>>();
   private pendingRecords:Record<string,BestRecordItem> = {};
   public cloudStatus:'loading'|'connected'|'unavailable' = 'unavailable';
   public onRecordsUpdated?:()=>void;
@@ -112,8 +116,19 @@ export class LeaderboardManager {
 
   public getBestRecords():BestRecordItem[] {
     const records = {...(this.cloudRecords ?? this.bestRecords),...this.pendingRecords};
-    return ['campaign-7','campaign','stage-1','stage-2','stage-3','stage-4','stage-5','stage-6','stage-7'].map(key=>records[key]).filter(Boolean)
-      .map(record=>record.recordKey==='campaign' ? {...record,title:'舊版四關全破紀錄'} : record);
+    const stageKeys = LEVEL_CONFIGS.map(level=>`stage-${level.stageNum}`);
+    return [`campaign-${LEVEL_CONFIGS.length}`,...stageKeys].map(key=>records[key]).filter(Boolean);
+  }
+
+  public getConfirmedGrandChampion():BestRecordItem|null {
+    return this.cloudRecords?.[`campaign-${LEVEL_CONFIGS.length}`] ?? null;
+  }
+
+  public async confirmCurrentCampaignChampion(playerName:string):Promise<boolean> {
+    const key=`campaign-${LEVEL_CONFIGS.length}`;
+    await this.submissionTasks.get(key);
+    if (!await this.refreshFromGoogleSheets()) return false;
+    return this.getConfirmedGrandChampion()?.holderName===playerName;
   }
 
   public getRecentBreakEvents():RecordBreakEvent[] {
@@ -124,7 +139,10 @@ export class LeaderboardManager {
           stageName:record.title,timeFormatted:record.formattedTime,date:record.date,plays:record.plays});
       }
     }
-    return events.sort((a,b)=>b.date.localeCompare(a.date) || b.id.localeCompare(a.id));
+    return events.filter(event=>{
+      const campaign=event.stageName.match(/(\d+)大關全破/);
+      return !campaign || Number(campaign[1])===LEVEL_CONFIGS.length;
+    }).sort((a,b)=>b.date.localeCompare(a.date) || b.id.localeCompare(a.id));
   }
 
   public get hasPendingRecords() {return Object.keys(this.pendingRecords).length>0;}
@@ -172,27 +190,29 @@ export class LeaderboardManager {
     this.breakEvents.push({id:crypto.randomUUID(),playerName,recordType:title,stageName,timeFormatted:formattedTime,date,plays});
     this.saveRecords();
     this.onRecordsUpdated?.();
-    void this.sendToGoogleSheets({event:eventName,player:playerName,recordName:title,stage:stageName,time:formattedTime,date,
+    const submission=this.sendToGoogleSheets({event:eventName,player:playerName,recordName:title,stage:stageName,time:formattedTime,date,
       recordKey:key,elapsedSeconds,wins,plays}).then(async sent=>{
         if (sent) {if (this.refreshTask) await this.refreshTask; await this.refreshFromGoogleSheets();}
-      });
+      }).finally(()=>{if (this.submissionTasks.get(key)===submission) this.submissionTasks.delete(key);});
+    this.submissionTasks.set(key,submission);
     return {isNewRecord:true,recordTitle:title,previousBest:prev?.formattedTime || '無前次紀錄'};
   }
 
   public checkAndRecordStageWin(stageNum:number,stageName:string,elapsedSeconds:number,formattedTime:string,wins:number,plays:number) {
-    if (!Number.isInteger(stageNum) || stageNum<1 || stageNum>7) return {isNewRecord:false,recordTitle:'',previousBest:''};
+    if (!Number.isInteger(stageNum) || stageNum<1 || stageNum>LEVEL_CONFIGS.length) return {isNewRecord:false,recordTitle:'',previousBest:''};
     return this.recordWin(`stage-${stageNum}`,`第 ${stageNum} 關 最速紀錄`,stageName,elapsedSeconds,formattedTime,wins,plays,'打破單關紀錄');
   }
 
   public checkAndRecordGrandVictory(totalSeconds:number,formattedTime:string,totalWins:number,totalPlays:number) {
-    const result = this.recordWin('campaign-7','七關全破 最速總紀錄','7大關全破',totalSeconds,formattedTime,totalWins,totalPlays,'打破全破總紀錄');
+    const count = LEVEL_CONFIGS.length;
+    const result = this.recordWin(`campaign-${count}`,`${count}關全破 最速總紀錄`,`${count}大關全破`,totalSeconds,formattedTime,totalWins,totalPlays,'打破全破總紀錄');
     if (!result.isNewRecord && Number.isFinite(totalSeconds) && totalSeconds>=0) {
       const playerName = this.getPlayerName() || '無名英雄';
       const date = this.getNowString();
-      this.breakEvents.push({id:crypto.randomUUID(),playerName,recordType:'七關全破',stageName:'7大關全破',timeFormatted:formattedTime,date,plays:totalPlays});
+      this.breakEvents.push({id:crypto.randomUUID(),playerName,recordType:`${count}關全破`,stageName:`${count}大關全破`,timeFormatted:formattedTime,date,plays:totalPlays});
       this.saveRecords();
       this.onRecordsUpdated?.();
-      void this.sendToGoogleSheets({event:'通關全破',player:playerName,recordName:'通關完成',stage:'7大關全破',time:formattedTime,date,plays:totalPlays})
+      void this.sendToGoogleSheets({event:'通關全破',player:playerName,recordName:'通關完成',stage:`${count}大關全破`,time:formattedTime,date,plays:totalPlays})
         .then(async sent=>{if (sent) {if (this.refreshTask) await this.refreshTask; await this.refreshFromGoogleSheets();}});
     }
     return result;

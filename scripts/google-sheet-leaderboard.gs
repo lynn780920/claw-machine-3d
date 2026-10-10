@@ -3,7 +3,7 @@ var RECORD_SHEET_ID = 0;
 
 var STAGE_CONFIG_HEADERS = ['關卡','關卡名稱','機台模式','機台名稱','時限秒數','目標出貨數','清台模式','總鋪貨數量','獎品類型','難度','關卡說明','過關目標','攻略提示','強爪%','轉弱高度%','弱爪%','觸頂震落%','天車速度','下爪速度','甩幅','探爪長度','擋板高度','防甩','爪子倍率','生成範圍','重量倍率','滾動阻力','一般鋪貨數量','指定發光獎品數','最大下爪次數','彈跳台','觸頂強制釋放','物理子步數','關卡提示','爪子尺寸編號'];
 var STAGE_CONFIG_KEYS = ['stageNum','name','machineMode','machineLabel','timeLimitSeconds','targetWins','isClearAll','dollCount','prizeType','difficulty','description','objectiveText','strategyHint','strong','weakenHeight','weak','topHit','carriageSpeed','dropSpeed','sway','cableLength','baffleHeight','antiSwing','clawScale','spawnSpread','weight','rollingResistance','basePrizeCount','targetPrizeCount','maxDrops','bounceFloor','forceTopRelease','physicsSubsteps','stageHint','clawSize'];
-var STAGE_CLAW_SIZES = [2,3,1,4,2,2,2];
+var STAGE_CLAW_SIZES = [2,3,1,4,2,2,2,5];
 var STAGE_CONFIG_DEFAULTS = [
   [1,'第一關：經典街機 (初試身手)','medium','標準街機 (初試身手)',900,8,false,42,'mixed','簡單','最容易上手的暖身關卡！機台容錯率高，請在 15 分鐘內夾出 8 樣物品即可晉級！','夾出 8 樣娃娃','抓準下爪時機與二收合爪點，利用山頂滾落出貨口！',100,76,69,13,2,2,1.4,9.5,0.7,false,1,4.8,1,1,42,0,0,false,false,2,'',2],
   [2,'第二關：模型公仔 (技術進階)','large','大型機台 (技術進階)',600,4,false,25,'anime','普通','公仔重盒考驗卡爪甩幅！限時 10 分鐘內夾出 4 樣動漫模型盒即可進入清台挑戰！','夾出 4 樣公仔盒','利用甩爪角度或正二拍反擺，卡住外盒角位托出！',95,62,49,15,1.8,2,1.4,7.5,1,false,1.15,4.8,1,1,25,0,0,false,false,2,'',3],
@@ -11,7 +11,8 @@ var STAGE_CONFIG_DEFAULTS = [
   [4,'第四關：K-霸巨無霸專區','kbasket','K霸直立機台 (魔王決戰)',480,3,false,18,'giant_appliances','地獄魔王','1.35x 霸王巨爪、出貨口無擋板，限時 8 分鐘內夾出 3 樣巨型家電！','夾出 3 樣巨型家電','75% 強爪與 2.0 天車速度，抓取重盒邊緣拉拔！',75,55,43,35,2,2,1.4,9.5,0,false,1.35,6,0.6,0.35,18,0,0,false,false,2,'',4],
   [5,'第五關：一爪翻盤台','medium','三爪撥物機台',600,3,false,18,'mixed','困難','限 30 次下爪出貨 3 樣。用爪子撥動獎品入洞。','30 次下爪內出貨 3 樣','不一定要夾起來；用爪子撥動獎品，讓它滑進洞口。',75,55,43,35,2,2,1.4,9.5,0.3,false,1,4.8,1,1,18,0,30,false,false,2,'剩餘下爪次數：30 次',2],
   [6,'第六關：尋寶台','medium','指定獎品尋寶機台',600,3,false,15,'mixed','困難','指定夾出 3 件微微發光的獎品。','指定夾出 3 件發光獎品','先移開擋住目標的獎品；其他物品出貨不計入尋寶進度。',88,76,65,20,2.6,2,1.6,9.5,0.6,false,1,4.8,0.6,0.35,12,3,0,false,false,2,'指定夾出 3 件微微發光的獎品',2],
-  [7,'第七關：幸運彈跳台','medium','彈跳布機台',720,2,false,2,'onepiece','地獄魔王','兩盒一番賞、98% 強爪、100% 觸頂震落，讓彈跳布決定落點！','彈出兩盒一番賞','抓高後掉落，利用彈跳越過 0.7m 擋板，兩盒都出貨才過關。',98,76,98,100,2,2,1.4,9.5,0.7,false,1,3.8,1,1,2,0,0,true,true,8,'彈跳台：觸頂必掉，兩盒一番賞都出貨才過關',2]
+  [7,'第七關：幸運彈跳台','medium','彈跳布機台',720,2,false,2,'onepiece','地獄魔王','兩盒一番賞、98% 強爪、100% 觸頂震落，讓彈跳布決定落點！','彈出兩盒一番賞','抓高後掉落，利用彈跳越過 0.7m 擋板，兩盒都出貨才過關。',98,76,98,100,2,2,1.4,9.5,0.7,false,1,3.8,1,1,2,0,0,true,true,8,'彈跳台：觸頂必掉，兩盒一番賞都出貨才過關',2],
+  [8,'第八關：盒裝戰鬥陀螺','medium','迷你盒裝陀螺機台',600,2,false,8,'battle_top_box','地獄魔王','縮小檯面上隨機擺放八盒戰鬥陀螺，夾出兩盒過關。','夾出 2 盒戰鬥陀螺','超小爪可卡住包裝盒角，推移盒裝獎品靠近出貨口。',40,76,40,20,2,2,1.1,9.5,1.1,false,0.45,2.9,1,1,8,0,0,false,false,2,'迷你檯面：夾出 2 盒盒裝戰鬥陀螺',5]
 ];
 
 function recordSheet_() {
@@ -92,7 +93,26 @@ function setupStageConfigSheet() {
   sheet.setFrozenRows(1);
   sheet.getRange(1,1,1,STAGE_CONFIG_HEADERS.length).setFontWeight('bold').setBackground('#17324d').setFontColor('#ffffff');
   sheet.autoResizeColumns(1,STAGE_CONFIG_HEADERS.length);
-  return '工作表2已寫入七關參數';
+  return '工作表2已寫入八關參數';
+}
+
+function installStageEightConfig() {
+  var sheet = configSheet_();
+  var column = STAGE_CONFIG_HEADERS.length;
+  if (sheet.getLastColumn() < column || String(sheet.getRange(1,column).getValue()).trim() !== '爪子尺寸編號') {
+    throw new Error('工作表2缺少爪子尺寸編號欄，未變更任何資料');
+  }
+  var stageNumbers = sheet.getRange(2,1,Math.max(sheet.getLastRow()-1,1),1).getValues();
+  var existingIndex = stageNumbers.findIndex(function(item) {return Number(item[0]) === 8;});
+  var row = existingIndex >= 0 ? existingIndex + 2 : sheet.getLastRow() + 1;
+  if (row < 9 || (existingIndex < 0 && row === 9 && sheet.getRange(row,1,1,column).getValues()[0].some(function(value) {return value !== '' && value !== null;}))) {
+    throw new Error('第八關預定列已有其他資料，未覆寫');
+  }
+  sheet.getRange(row,1,1,column).setValues([STAGE_CONFIG_DEFAULTS[7]]);
+  sheet.getRange(1,column).setNote('1=小爪 0.85x；2=標準爪 1.0x；3=大爪 1.15x；4=巨爪 1.35x；5=超小爪 0.45x');
+  sheet.getRange(2,column,row-1,1).setDataValidation(SpreadsheetApp.newDataValidation()
+    .requireValueInList(['1','2','3','4','5'],true).setAllowInvalid(false).build());
+  return '工作表2第八關與 5 號爪選項已更新';
 }
 
 function addStageClawSizeColumn() {
@@ -131,7 +151,7 @@ function readStageConfigs_() {
     var config = {};
     STAGE_CONFIG_KEYS.forEach(function(key,index) {config[key] = row[index];});
     return config;
-  }).filter(function(config) {return Number(config.stageNum) >= 1 && Number(config.stageNum) <= 7;});
+  }).filter(function(config) {return Number(config.stageNum) >= 1 && Number(config.stageNum) <= STAGE_CONFIG_DEFAULTS.length;});
 }
 
 function jsonOutput_(value) {
@@ -161,12 +181,15 @@ function doGet(e) {
       var rows = sheet.getRange(2,1,count-1,7).getDisplayValues();
       rows.forEach(function(row,index) {
         var event = row[2];
-        var match = String(row[3]).match(/第\s*([1-7])\s*關/);
-        var key = event === '打破全破總紀錄' ? (/7大關全破/.test(row[4]) ? 'campaign-7' : 'campaign') : event === '打破單關紀錄' && match ? 'stage-'+match[1] : null;
+        var match = String(row[3]).match(/第\s*(\d+)\s*關/);
+        var campaignMatch = String(row[4]).match(/(\d+)大關全破/);
+        var campaignCount = campaignMatch ? Number(campaignMatch[1]) : 0;
+        var key = event === '打破全破總紀錄' ? (campaignCount >= 5 && campaignCount <= STAGE_CONFIG_DEFAULTS.length ? 'campaign-'+campaignCount : 'campaign')
+          : event === '打破單關紀錄' && match && Number(match[1]) >= 1 && Number(match[1]) <= STAGE_CONFIG_DEFAULTS.length ? 'stage-'+match[1] : null;
         var seconds = durationSeconds_(row[5]);
         var plays = /^\d+$/.test(String(row[6])) ? Number(row[6]) : null;
-        if (event === '通關全破' && /7大關全破/.test(row[4]) && seconds !== null && row[1]) {
-          events.push({id:'sheet-'+String(index+2).padStart(10,'0'),playerName:row[1],recordType:'七關全破',
+        if (event === '通關全破' && campaignCount >= 5 && campaignCount <= STAGE_CONFIG_DEFAULTS.length && seconds !== null && row[1]) {
+          events.push({id:'sheet-'+String(index+2).padStart(10,'0'),playerName:row[1],recordType:campaignCount+'關全破',
             stageName:row[4],timeFormatted:row[5],date:row[0],plays:plays});
           return;
         }

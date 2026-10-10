@@ -10,7 +10,7 @@ import { LevelSystem, LevelConfig, LEVEL_CONFIGS } from './levelSystem';
 import { LeaderboardManager, escapeLeaderboardText } from './leaderboard';
 import { preloadModels, disposeModel, withTimeout } from './modelAssets';
 import { setupStudio, fitMachineCamera } from './renderSetup';
-import { isDelivered, isWedgedInChute, isPrizeEnteringChute } from './delivery';
+import { isDelivered, isWedgedInChute, isPrizeEnteringChute, isBoxBelowRaisedChuteLip } from './delivery';
 import { buildArcadeEnvironment, layoutArcadeNeighbors } from './arcadeEnvironment';
 import { loadCampaignProgress, saveCampaignProgress } from './campaignProgress';
 import { getStageRuntimeConfig, loadStageConfigsFromGoogleSheets, stageConfigSource } from './stageConfig';
@@ -124,16 +124,27 @@ const insertCoinBtn = document.getElementById('insert-coin-btn') as HTMLButtonEl
 
 async function init() {
   const loading = document.getElementById('asset-loading')!;
-  const setLoadingProgress = (percent: number, label = `${percent}%`) => {
-    document.getElementById('asset-progress')!.textContent = label;
-    (document.getElementById('asset-progress-fill') as HTMLElement).style.width = `${percent}%`;
-    loading.querySelector('[role="progressbar"]')?.setAttribute('aria-valuenow',String(percent));
+  let loadingPercent = 0;
+  const setLoadingProgress = (percent: number, label?: string) => {
+    loadingPercent = Math.max(loadingPercent,percent);
+    document.getElementById('asset-progress')!.textContent = label ?? `${loadingPercent}%`;
+    (document.getElementById('asset-progress-fill') as HTMLElement).style.width = `${loadingPercent}%`;
+    if (loadingPercent >= 15) loading.querySelector('.loading-track')?.classList.add('is-measured');
+    loading.querySelector('[role="progressbar"]')?.setAttribute('aria-valuenow',String(loadingPercent));
   };
+  const preloadStarted = performance.now();
+  const warmupTimer = window.setInterval(() => {
+    setLoadingProgress(Math.min(15,Math.max(1,Math.floor((performance.now()-preloadStarted)/300))));
+  }, 200);
   const stageConfigTask = loadStageConfigsFromGoogleSheets();
   const announcementTask = loadAnnouncementFromGoogleSheets();
-  await preloadModels((loaded,total) => {
-    setLoadingProgress(Math.round(loaded/total*85));
-  });
+  try {
+    await preloadModels((loaded,total) => {
+      setLoadingProgress(15+Math.round(loaded/total*70));
+    });
+  } finally {
+    clearInterval(warmupTimer);
+  }
   await stageConfigTask;
   const announcement = await announcementTask;
   setLoadingProgress(88,'初始化物理引擎');
@@ -319,12 +330,17 @@ function checkWinCondition() {
     const nearChute = pos.x > minX-0.7 && pos.x < maxX+0.7 && pos.z > minZ-0.7 && pos.z < maxZ+0.7 && pos.y < 1.5;
     const prizeBounds = nearChute ? new THREE.Box3().setFromObject(prizeMesh) : null;
     const bottomY = prizeBounds?.min.y ?? Infinity;
-    const wedged = isWedgedInChute(pos,bottomY,body.linvel().y,chute);
+    const wedged = isWedgedInChute(pos,bottomY-cabinet.floorY,body.linvel().y,chute);
     const stalledFor = wedged ? (chuteStalls.get(body) ?? 0) + 1 / 60 : 0;
     chuteStalls.set(body,stalledFor);
-    const isEnteringChuteHole = isDelivered(pos,chute) || stalledFor >= 0.3
-      || (prizeBounds !== null && isPrizeEnteringChute(prizeBounds,chute));
-    const isFallenBelowFloor = pos.y < -12;
+    const isEnteringChuteHole = cabinet.compactStage8
+      ? isBoxBelowRaisedChuteLip(pos,cabinet.floorY,chute)
+      : isDelivered(pos,chute) || stalledFor >= 0.3
+      || (prizeBounds !== null && isPrizeEnteringChute({
+        min:{x:prizeBounds.min.x,y:prizeBounds.min.y-cabinet.floorY,z:prizeBounds.min.z},
+        max:prizeBounds.max
+      },chute));
+    const isFallenBelowFloor = pos.y < -12 && (!cabinet.compactStage8 || isBoxBelowRaisedChuteLip(pos,cabinet.floorY,chute));
 
     if (isEnteringChuteHole || isFallenBelowFloor) {
       const startY = prizeMesh.position.y;
@@ -339,7 +355,12 @@ function checkWinCondition() {
           requestAnimationFrame(fallThroughChute);
         }
       };
-      requestAnimationFrame(fallThroughChute);
+      if (cabinet.compactStage8) {
+        scene.remove(prizeMesh);
+        disposeModel(prizeMesh);
+      } else {
+        requestAnimationFrame(fallThroughChute);
+      }
 
       physics.unregisterBody(body);
       physics.world.removeRigidBody(body);
@@ -470,12 +491,13 @@ function launchConfetti() {
 }
 
 let rewardCardBlob: Blob | null = null;
+let rewardIsChampion = false;
 
 function canvasBlob(canvas: HTMLCanvasElement): Promise<Blob | null> {
   return new Promise(resolve=>canvas.toBlob(resolve,'image/png',0.94));
 }
 
-async function renderRewardCard(playerName: string, formattedTime: string, totalWins: number, totalPlays: number) {
+async function renderRewardCard(playerName: string, formattedTime: string, totalPlays: number, isChampion: boolean) {
   const canvas = document.getElementById('reward-card-canvas') as HTMLCanvasElement | null;
   const context = canvas?.getContext('2d');
   if (!canvas || !context) return;
@@ -484,8 +506,10 @@ async function renderRewardCard(playerName: string, formattedTime: string, total
   rewardCardBlob = null;
   if (shareButton) shareButton.disabled = true;
   if (downloadButton) downloadButton.disabled = true;
+  rewardIsChampion = isChampion;
+  canvas.setAttribute('aria-label',isChampion ? '全關冠軍獎狀' : '全關通關紀念圖');
   const image = new Image();
-  image.src = `${import.meta.env.BASE_URL}reward-card-base.jpg`;
+  image.src = `${import.meta.env.BASE_URL}${isChampion ? 'reward-card-base.jpg' : 'reward-card-player.jpg'}`;
   await new Promise<void>((resolve,reject)=>{image.onload=()=>resolve();image.onerror=()=>reject(new Error('Reward card image failed to load'));});
   canvas.width = image.naturalWidth;
   canvas.height = image.naturalHeight;
@@ -495,20 +519,40 @@ async function renderRewardCard(playerName: string, formattedTime: string, total
   const now = new Date();
   const stamp = `${now.getFullYear()}/${String(now.getMonth()+1).padStart(2,'0')}/${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
   const safePlayer = playerName.trim().slice(0,16) || '神秘玩家';
-  context.beginPath();
-  context.roundRect(canvas.width*0.19,canvas.height*0.888,canvas.width*0.62,canvas.height*0.065,canvas.width*0.015);
-  context.fillStyle = '#fff0c7';
-  context.fill();
-  context.strokeStyle = '#d3a046';
-  context.lineWidth = canvas.width*0.003;
-  context.stroke();
   context.textAlign = 'center';
-  context.fillStyle = '#843019';
-  context.font = `900 ${Math.round(canvas.width*0.038)}px "Microsoft JhengHei", sans-serif`;
-  context.fillText(`玩家 ID：${safePlayer}`,centerX,canvas.height*0.918,canvas.width*0.57);
-  context.fillStyle = '#683b18';
-  context.font = `700 ${Math.round(canvas.width*0.026)}px "Microsoft JhengHei", sans-serif`;
-  context.fillText(`通關 ${formattedTime} · ${totalPlays} 次投幣 · ${stamp}`,centerX,canvas.height*0.942,canvas.width*0.57);
+  if (isChampion) {
+    context.beginPath();
+    context.roundRect(canvas.width*0.19,canvas.height*0.888,canvas.width*0.62,canvas.height*0.065,canvas.width*0.015);
+    context.fillStyle = '#fff0c7';
+    context.fill();
+    context.strokeStyle = '#d3a046';
+    context.lineWidth = canvas.width*0.003;
+    context.stroke();
+    context.fillStyle = '#843019';
+    context.font = `900 ${Math.round(canvas.width*0.038)}px "Microsoft JhengHei", sans-serif`;
+    context.fillText(`玩家 ID：${safePlayer}`,centerX,canvas.height*0.918,canvas.width*0.57);
+    context.fillStyle = '#683b18';
+    context.font = `700 ${Math.round(canvas.width*0.026)}px "Microsoft JhengHei", sans-serif`;
+    context.fillText(`通關 ${formattedTime} · ${totalPlays} 次投幣 · ${stamp}`,centerX,canvas.height*0.942,canvas.width*0.57);
+  } else {
+    context.beginPath();
+    context.roundRect(canvas.width*0.292,canvas.height*0.696,canvas.width*0.3,canvas.height*0.078,canvas.width*0.025);
+    context.fillStyle = '#100d29';
+    context.fill();
+    context.strokeStyle = '#f7dcff';
+    context.lineWidth = canvas.width*0.003;
+    context.setLineDash([canvas.width*0.009,canvas.width*0.006]);
+    context.stroke();
+    context.setLineDash([]);
+    context.fillStyle = '#fff8ff';
+    context.font = `900 ${Math.round(canvas.width*0.04)}px "Microsoft JhengHei", sans-serif`;
+    context.fillText(safePlayer,canvas.width*0.442,canvas.height*0.748,canvas.width*0.26);
+    context.fillStyle = 'rgba(10, 10, 30, 0.86)';
+    context.fillRect(0,canvas.height*0.946,canvas.width,canvas.height*0.054);
+    context.fillStyle = '#ffffff';
+    context.font = `700 ${Math.round(canvas.width*0.019)}px "Microsoft JhengHei", sans-serif`;
+    context.fillText(`${stamp} · ${formattedTime} · ${totalPlays} 次投幣`,centerX,canvas.height*0.979,canvas.width*0.94);
+  }
   rewardCardBlob = await canvasBlob(canvas);
   if (shareButton) shareButton.disabled = !rewardCardBlob;
   if (downloadButton) downloadButton.disabled = !rewardCardBlob;
@@ -518,15 +562,15 @@ function downloadRewardCard() {
   if (!rewardCardBlob) return;
   const link = document.createElement('a');
   link.href = URL.createObjectURL(rewardCardBlob);
-  link.download = `Lynn-claw-champion-${leaderboardManager.getPlayerName() || 'player'}.png`;
+  link.download = `Lynn-claw-${rewardIsChampion ? 'champion' : 'clear'}-${leaderboardManager.getPlayerName() || 'player'}.png`;
   link.click();
   window.setTimeout(()=>URL.revokeObjectURL(link.href),1000);
 }
 
 async function shareRewardCard() {
   if (!rewardCardBlob) return;
-  const file = new File([rewardCardBlob],'Lynn-claw-champion.png',{type:'image/png'});
-  const shareData = {title:'Lynn夾到你心裡七關全破',text:`${leaderboardManager.getPlayerName()} 已完成七關挑戰！`,files:[file]};
+  const file = new File([rewardCardBlob],`Lynn-claw-${rewardIsChampion ? 'champion' : 'clear'}.png`,{type:'image/png'});
+  const shareData = {title:'線上娃娃機挑戰',text:`${leaderboardManager.getPlayerName()} 已完成全部 ${LEVEL_CONFIGS.length} 關挑戰！`,files:[file]};
   if (navigator.share && (!navigator.canShare || navigator.canShare(shareData))) {
     try { await navigator.share(shareData); return; } catch (error) {
       if ((error as Error).name === 'AbortError') return;
@@ -820,14 +864,12 @@ function setupUIEventListeners() {
   const renderLeaderboardUI = () => {
     const championText = document.getElementById('champion-marquee-text');
     if (championText) {
-      const champion = leaderboardManager.getBestRecords()
-        .filter(record => record.recordKey === 'stage-7' || record.recordKey === 'campaign-7')
-        .sort((a,b)=>b.date.localeCompare(a.date) || (b.recordKey === 'campaign-7' ? 1 : -1))[0];
+      const champion = leaderboardManager.getConfirmedGrandChampion();
       if (champion) {
         const minutes = Math.floor(champion.bestTimeSeconds / 60);
         const seconds = Math.floor(champion.bestTimeSeconds % 60);
         championText.textContent = `恭喜${champion.holderName}玩家榮登至尊魔王，耗時${minutes}分${String(seconds).padStart(2,'0')}秒，次數${champion.plays ?? '未記錄'}次，歡迎大家挑戰魔王！`;
-      } else championText.textContent = '七關全破大魔王等你來挑戰！';
+      } else championText.textContent = `全 ${LEVEL_CONFIGS.length} 關大魔王等你來挑戰！`;
     }
     const status = document.getElementById('leaderboard-sync-status');
     if (status) status.textContent = leaderboardManager.hasPendingRecords ? '新紀錄已保存在本機，等待 Google Sheet 確認' : leaderboardManager.cloudStatus==='connected' ? 'Google Sheet 已更新' :
@@ -838,7 +880,7 @@ function setupUIEventListeners() {
       const records = leaderboardManager.getBestRecords().map(rec=>({...rec,title:escapeLeaderboardText(rec.title),
         holderName:escapeLeaderboardText(rec.holderName),formattedTime:escapeLeaderboardText(rec.formattedTime),date:escapeLeaderboardText(rec.date)}));
       hallContainer.innerHTML = records.map((rec) => `
-        <div class="record-hall-card ${rec.recordKey==='campaign-7' ? 'grand-record' : ''}">
+        <div class="record-hall-card ${rec.recordKey===`campaign-${LEVEL_CONFIGS.length}` ? 'grand-record' : ''}">
           <span class="record-badge">${rec.title}</span>
           <strong class="holder-name">${rec.holderName}</strong>
           <strong class="record-time">${rec.formattedTime}</strong>
@@ -986,7 +1028,6 @@ function setupUIEventListeners() {
   const briefingModal = document.getElementById('briefing-modal');
   const closeBriefingBtn = document.getElementById('close-briefing-btn');
   const openFreeStageSelect = () => {
-    if (!campaignProgress.completed) return;
     for (const id of ['game-victory-modal','stage-clear-modal','game-over-modal']) {
       const modal = document.getElementById(id);
       if (modal) modal.style.display='none';
@@ -997,19 +1038,21 @@ function setupUIEventListeners() {
 
   const stageSelectList = document.getElementById('stage-select-list');
   if (stageSelectList) {
-    LEVEL_CONFIGS.forEach((level,index) => {
-      const card = document.createElement('div');
-      card.className = 'stage-roadmap-item stage-select-item';
-      card.id = `stage-card-${level.stageNum}`;
-      const label = document.createElement('span');
-      label.className = 'stage-select-number';
-      label.textContent = `第 ${level.stageNum} 關`;
+    stageSelectList.replaceChildren(...LEVEL_CONFIGS.map((level,index) => {
       const button = document.createElement('button');
-      button.className = 'stage-jump-btn';
+      button.type = 'button';
+      button.className = 'stage-jump-btn stage-select-option';
+      button.id = `stage-card-${level.stageNum}`;
       button.dataset.stage = String(index);
-      card.append(label,button);
-      stageSelectList.appendChild(card);
-    });
+      const name = document.createElement('span');
+      name.className = 'stage-select-name';
+      name.textContent = level.name;
+      const lock = document.createElement('span');
+      lock.className = 'stage-select-lock';
+      lock.textContent = '未解鎖';
+      button.append(name,lock);
+      return button;
+    }));
   }
 
   if (openBriefingBtn && briefingModal) {
@@ -1028,8 +1071,8 @@ function setupUIEventListeners() {
 
   // 🚀 Quick Stage Jump Buttons inside Briefing Modal
   document.querySelectorAll('.stage-jump-btn').forEach((btn) => {
-    btn.addEventListener('click', (e) => {
-      const stageIdx = parseInt((e.target as HTMLElement).getAttribute('data-stage') || '0');
+    btn.addEventListener('click', () => {
+      const stageIdx = Number((btn as HTMLButtonElement).dataset.stage);
       if (stageIdx + 1 > campaignProgress.unlockedStage) return;
       if (briefingModal) briefingModal.style.display = 'none';
       if (levelSystem) levelSystem.startLevel(stageIdx);
@@ -1126,7 +1169,7 @@ function setupUIEventListeners() {
       minZ: cabinet.chuteMinZ,
       maxZ: cabinet.chuteMaxZ
     };
-    let spreadRadius = 5.0;
+    let spreadRadius = levelSystem?.getCurrentConfig().stageNum === 8 ? getStageRuntimeConfig(8).spawnSpread : 5.0;
     if (currentMachineMode === 'small') spreadRadius = 3.4;
     else if (currentMachineMode === 'large') spreadRadius = 6.4;
     else if (currentMachineMode === 'kbasket') spreadRadius = 8.0;
@@ -1353,7 +1396,10 @@ function setupUIEventListeners() {
     // 2. Rebuild the single physical cabinet to target scale & theme
     if (cabinet) {
       cabinet.bounceFloor = runtime.bounceFloor;
+      cabinet.compactStage8 = stageNum === 8;
+      cabinet.playfieldScale = 1;
       cabinet.rebuildCabinet(mode, physics);
+      prizesManager.playfieldY = cabinet.floorY;
     }
 
     // 3. Dynamic chute & home positions
@@ -1401,7 +1447,7 @@ function setupUIEventListeners() {
       applyCameraView('kbasket', cameraViewMode);
     } else if (stageNum >= 5) {
       claw.setClawScale(runtime.clawScale);
-      claw.setMachineBounds(chuteHomeX,chuteHomeZ,3.0,cabinet.height);
+      claw.setMachineBounds(chuteHomeX,chuteHomeZ,stageNum === 8 ? 2.0 : 3.0,cabinet.height);
       applyRuntimeSettings();
       spawnRuntimePrizes();
       if (stageNum === 7) {
@@ -1413,6 +1459,7 @@ function setupUIEventListeners() {
         }
       }
       applyCameraView(mode,cameraViewMode);
+      if (stageNum === 8) { camera.position.multiplyScalar(1.14); controls.update(); }
     } else {
       // 中型機台 (第一關：初試身手 15分鐘夾8樣 - 嚴格按照照片參數)
       claw.setClawScale(runtime.clawScale);
@@ -1421,7 +1468,7 @@ function setupUIEventListeners() {
       spawnRuntimePrizes();
       applyCameraView('medium', cameraViewMode);
     }
-    claw.setPlayfieldBounds(cabinet.width,cabinet.depth);
+    claw.setPlayfieldBounds(cabinet.width*cabinet.playfieldScale,cabinet.depth*cabinet.playfieldScale);
     layoutArcadeNeighbors(scene,cabinet.width);
   }
 
@@ -1608,8 +1655,10 @@ function setupUIEventListeners() {
     }
   });
 
+  const adminStageSelect = document.getElementById('admin-stage-select') as HTMLSelectElement | null;
+  adminStageSelect?.replaceChildren(...LEVEL_CONFIGS.map(level=>new Option(level.shortName,String(level.stageNum))));
   document.getElementById('admin-jump-stage-btn')?.addEventListener('click', () => {
-    const stage = Number((document.getElementById('admin-stage-select') as HTMLSelectElement | null)?.value);
+    const stage = Number(adminStageSelect?.value);
     if (!Number.isInteger(stage) || stage < 1 || stage > LEVEL_CONFIGS.length) return;
     levelSystem.startLevel(stage - 1);
     settingsPanel?.classList.remove('open');
@@ -1636,18 +1685,21 @@ function setupUIEventListeners() {
   }
 
   const refreshStageUnlocks = () => {
-    const progress = document.getElementById('stage-select-progress');
-    if (progress) progress.textContent = campaignProgress.completed ? '七關已全數通過，可自由選擇重玩。' : '完成全部七關後即可自由選擇關卡。';
-    if (openBriefingBtn instanceof HTMLButtonElement) openBriefingBtn.disabled = !campaignProgress.completed;
+    if (openBriefingBtn instanceof HTMLButtonElement) {
+      openBriefingBtn.disabled = false;
+      openBriefingBtn.title = '查看關卡';
+    }
     document.querySelectorAll<HTMLButtonElement>('.stage-jump-btn').forEach(button => {
       const number = Number(button.dataset.stage) + 1;
       button.disabled = number > campaignProgress.unlockedStage;
-      button.textContent = button.disabled ? `第 ${number} 關尚未解鎖` : `挑戰第 ${number} 關`;
+      const lock = button.querySelector<HTMLElement>('.stage-select-lock');
+      if (lock) lock.hidden = !button.disabled;
+      button.setAttribute('aria-label',`${LEVEL_CONFIGS[number-1]?.name || `第 ${number} 關`}${button.disabled ? '，未解鎖' : ''}`);
     });
   };
   refreshStageUnlocks();
 
-  // 🎮 Initialize 7-Stage Challenge Progression System
+  // Initialize progression from the current level list.
   levelSystem = new LevelSystem({
     onLevelStarted: (level) => {
       campaignProgress.currentStage = level.stageNum;
@@ -1776,9 +1828,13 @@ function setupUIEventListeners() {
       if (!levelSystem.isAssistedClear) leaderboardManager.checkAndRecordStageWin(finalLevel.stageNum,finalLevel.name,finalSeconds,
         levelSystem.getFormattedTime(finalSeconds),levelSystem.stageWins,finalStagePlays);
       const fullCampaignSeconds = levelSystem.getFullCampaignSeconds();
-      if (!levelSystem.isAssistedCampaign && fullCampaignSeconds!==null) leaderboardManager.checkAndRecordGrandVictory(fullCampaignSeconds,
-        levelSystem.getFormattedTime(fullCampaignSeconds),totalWins,campaignPlays);
-      campaignProgress = {unlockedStage:LEVEL_CONFIGS.length,currentStage:LEVEL_CONFIGS.length,completed:true};
+      const completedCampaign = campaignProgress.completed || fullCampaignSeconds !== null;
+      const grandRecord = !levelSystem.isAssistedCampaign && fullCampaignSeconds!==null
+        ? leaderboardManager.checkAndRecordGrandVictory(fullCampaignSeconds,
+          levelSystem.getFormattedTime(fullCampaignSeconds),totalWins,campaignPlays) : null;
+      const canReceiveReward = completedCampaign && !levelSystem.isAssistedCampaign;
+      campaignProgress = {unlockedStage:completedCampaign ? LEVEL_CONFIGS.length : campaignProgress.unlockedStage,
+        currentStage:completedCampaign ? LEVEL_CONFIGS.length : campaignProgress.unlockedStage,completed:completedCampaign};
       saveCampaignProgress(campaignProgress,leaderboardManager.getPlayerName());
       refreshStageUnlocks();
       soundEngine.playGameVictorySFX();
@@ -1790,12 +1846,43 @@ function setupUIEventListeners() {
       const totalPlaysEl = document.getElementById('victory-total-plays');
 
       const formattedTotalTime = levelSystem.getFormattedTime(totalElapsedSeconds);
+      const victoryCard = document.querySelector('#game-victory-modal .victory-card');
+      victoryCard?.classList.remove('is-champion');
+      const title = document.querySelector('#game-victory-modal .victory-title');
+      if (title) title.textContent = completedCampaign ? '全破大通關！' : `完成第 ${finalLevel.stageNum} 關！`;
+      const recordBanner = document.getElementById('victory-new-record-banner');
+      if (recordBanner) recordBanner.style.display = 'none';
+      const recordMessage = document.getElementById('victory-record-msg');
+      const subtitle = document.getElementById('victory-subtitle');
+      if (subtitle) subtitle.textContent = '恭喜完成全部關卡！';
+      const message = document.getElementById('victory-message');
+      if (message) message.textContent = completedCampaign
+        ? `全部 ${LEVEL_CONFIGS.length} 關已解鎖，可隨時回來重玩。`
+        : `已完成第 ${finalLevel.stageNum} 關；請依序通過其他關卡，才能取得全破資格。`;
+      const rewardArea = document.querySelector<HTMLElement>('.reward-card-area');
+      if (rewardArea) rewardArea.style.display = canReceiveReward ? '' : 'none';
 
       if (totalTimeEl) totalTimeEl.textContent = formattedTotalTime;
       if (totalWinsEl) totalWinsEl.textContent = `${totalWins} 樣`;
       if (totalPlaysEl) totalPlaysEl.textContent = `${campaignPlays} 次`;
 
-      void renderRewardCard(leaderboardManager.getPlayerName(),formattedTotalTime,totalWins,campaignPlays);
+      if (canReceiveReward) {
+        const playerName=leaderboardManager.getPlayerName();
+        void (async()=>{
+          try {
+            await renderRewardCard(playerName,formattedTotalTime,campaignPlays,false);
+            if (!await leaderboardManager.confirmCurrentCampaignChampion(playerName) ||
+              !levelSystem.isGameVictory || victoryModal?.style.display!=='flex') return;
+            victoryCard?.classList.add('is-champion');
+            if (subtitle) subtitle.textContent = '榮登 3D 娃娃機「至尊魔王」！';
+            if (grandRecord?.isNewRecord && recordBanner) {
+              recordBanner.style.display = 'block';
+              if (recordMessage) recordMessage.textContent = `恭喜刷新全部 ${LEVEL_CONFIGS.length} 關總榜紀錄，榮登至尊魔王！`;
+            }
+            await renderRewardCard(playerName,formattedTotalTime,campaignPlays,true);
+          } catch (error) {console.warn('Reward card unavailable',error);}
+        })();
+      }
 
       if (victoryModal) victoryModal.style.display = 'flex';
     }

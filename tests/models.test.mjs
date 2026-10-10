@@ -168,7 +168,7 @@ test('desktop camera frames the playfield at the original arcade distance', () =
 
 test('first stage stocks a playable mixed assortment without changing later stage counts', () => {
   assert.equal(LEVEL_CONFIGS[0].prizeType,'mixed');
-  assert.deepEqual(LEVEL_CONFIGS.map(level=>level.dollCount),[42,25,5,12,18,15,13]);
+  assert.deepEqual(LEVEL_CONFIGS.map(level=>level.dollCount),[42,25,5,12,18,15,13,8]);
 });
 
 for (const type of ['pikachu','eevee','gengar','snorlax','psyduck','charizard','squirtle','bulbasaur']) {

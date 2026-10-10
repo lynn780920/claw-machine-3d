@@ -93,12 +93,28 @@ export function randomPrizeStock(
   return stock;
 }
 
+export function randomCompactBoxStock(count:number, types:readonly string[], random = Math.random) {
+  if (!types.length) throw new RangeError('Prize stock requires at least one type');
+  const slots = shuffled([
+    {x:-1.55,z:-1.4},{x:0,z:-1.4},{x:1.55,z:-1.4},
+    {x:-1.55,z:-0.18},{x:0,z:-0.05},{x:1.55,z:-0.05},
+    {x:0.12,z:1.14},{x:1.55,z:1.14}
+  ],random);
+  const inventory:string[] = [];
+  while (inventory.length<count) inventory.push(...shuffled(types,random));
+  return inventory.slice(0,count).map((type,index)=>{
+    const slot=slots[index%slots.length];
+    return {type,x:slot.x+(random()-0.5)*0.12,z:slot.z+(random()-0.5)*0.12,
+      y:0.18+Math.floor(index/slots.length)*0.36,ry:random()*Math.PI*2};
+  });
+}
+
 export function prizePhysicsProfile(type:string, plush:boolean, weight=1, rolling=1) {
   // Kilogram estimates for stuffed fabric, filled cartons and packaged retail prizes.
   const estimates:Record<string,number> = {pikachu:0.12,eevee:0.12,squirtle:0.13,bulbasaur:0.14,
     gengar:0.15,snorlax:0.22,psyduck:0.13,milk_box:0.25,tea_box:0.35,fruit_box:0.35,
     blindbox:0.12,ssr_glowing_labubu:0.12,sanrio_bottle:0.16,mug_box:0.38,cookie_box:0.2,
-    snack_pack:0.1,dragonball:0.22,onepiece:0.22,ps5:2.6,switch:0.8,dyson:1.1,marshall:1.4,lego:0.45};
+    snack_pack:0.1,dragonball:0.22,onepiece:0.22,battle_top_cx13:0.16,battle_top_bx50:0.16,ps5:2.6,switch:0.8,dyson:1.1,marshall:1.4,lego:0.45};
   const mass = estimates[type] ?? (plush ? 0.13 : 0.25);
   return {mass:mass*Math.max(0.25,Math.min(3,weight)),friction:plush ? 0.85 : 1.05,restitution:0.015,
     linearDamping:0.25,angularDamping:(plush ? 1.8 : 1.2)*Math.max(0.25,Math.min(3,rolling))};
