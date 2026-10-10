@@ -445,7 +445,9 @@ export class Cabinet {
     const wellDepth = Math.min(2.3, baseHeight * 0.88);
     for (const wall of chuteWellWallSpecs({
       minX:this.chuteMinX,maxX:this.chuteMaxX,minZ:this.chuteMinZ,maxZ:this.chuteMaxZ
-    },this.floorY,wellDepth,this.compactStage8 ? 0.12 : 0.07)) {
+    },this.floorY,wellDepth,this.compactStage8 ? 0.12 : 0.07,
+      this.compactStage8 ? halfW : undefined,
+      this.compactStage8 ? halfD : undefined)) {
       if (wall.name === 'ChuteWellFront' && !this.compactStage8) continue;
       addVisualBox(wall.name,wall.size,wall.position,wellMaterial);
       if (this.compactStage8) addCollider(wall.size,wall.position,0.55);
@@ -584,11 +586,14 @@ export class Cabinet {
       this.baffleGroup.add(bumperMesh);
 
       if (physics && physics.world) {
-        const bodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(x, this.floorY+height / 2, z);
+        const extraDown = this.compactStage8 ? 0.25 : 0;
+        const colHeight = height + extraDown;
+        const bodyY = this.floorY + height / 2 - extraDown / 2;
+        const bodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(x, bodyY, z);
         const body = physics.world.createRigidBody(bodyDesc);
-        const colDesc = RAPIER.ColliderDesc.cuboid(w / 2, height / 2, d / 2)
-          .setFriction(this.compactStage8 ? 0.5 : 0.1)
-          .setRestitution(0.2);
+        const colDesc = RAPIER.ColliderDesc.cuboid(w / 2, colHeight / 2, d / 2)
+          .setFriction(this.compactStage8 ? 0.6 : 0.1)
+          .setRestitution(0.15);
         physics.world.createCollider(colDesc, body);
         this.baffleBodies.push(body);
       }

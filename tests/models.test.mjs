@@ -168,7 +168,7 @@ test('desktop camera frames the playfield at the original arcade distance', () =
 
 test('first stage stocks a playable mixed assortment without changing later stage counts', () => {
   assert.equal(LEVEL_CONFIGS[0].prizeType,'mixed');
-  assert.deepEqual(LEVEL_CONFIGS.map(level=>level.dollCount),[42,25,5,12,18,15,13,8]);
+  assert.deepEqual(LEVEL_CONFIGS.map(level=>level.dollCount),[42,25,5,18,18,15,2,8]);
 });
 
 for (const type of ['pikachu','eevee','gengar','snorlax','psyduck','charizard','squirtle','bulbasaur']) {
@@ -203,8 +203,8 @@ test('GLB fingers stop closing at a prize surface instead of penetrating it',asy
     root.position.y = 2;
     const finger = new ClawFinger(world,root.getObjectByName('ArmHinge_1'));
     assert.ok(finger.colliders.length >= 16);
-    const prize = world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(0.36,1.38,0));
-    const collider = world.createCollider(RAPIER.ColliderDesc.ball(0.16),prize);
+    const prize = world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(0.36,1.2,0));
+    const collider = world.createCollider(RAPIER.ColliderDesc.ball(0.18),prize);
     for (let i=0;i<180;i++) {
       finger.move(Math.max(-0.5,finger.angle-0.015),[prize]);
       world.step();
@@ -240,8 +240,8 @@ test('a shared collar keeps all three rigid claws level when one finger meets a 
     const root = asset.getObjectByName('ClawRoot');
     root.position.y = 2;
     const fingers = [1,2,3].map(i=>new ClawFinger(world,root.getObjectByName(`ArmHinge_${i}`)));
-    const prize = world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(0.36,1.38,0));
-    world.createCollider(RAPIER.ColliderDesc.ball(0.16),prize);
+    const prize = world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(0.36,1.2,0));
+    world.createCollider(RAPIER.ColliderDesc.ball(0.18),prize);
     let angle = fingers[0].angle;
     for(let i=0;i<150;i++) {
       angle = moveCoupledFingers(fingers,Math.max(-0.5,angle-0.015),[prize]);

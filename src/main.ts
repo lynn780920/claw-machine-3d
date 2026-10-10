@@ -356,13 +356,18 @@ function checkWinCondition() {
     const stalledFor = wedged ? (chuteStalls.get(body) ?? 0) + 1 / 60 : 0;
     chuteStalls.set(body,stalledFor);
     const isEnteringChuteHole = cabinet.compactStage8
-      ? isBoxBelowRaisedChuteLip(pos,cabinet.floorY,chute)
+      ? (isBoxBelowRaisedChuteLip(pos,cabinet.floorY,chute)
+         || (stalledFor >= 0.25 && pos.y < cabinet.floorY + 0.3)
+         || (prizeBounds !== null && isPrizeEnteringChute({
+             min:{x:prizeBounds.min.x,y:prizeBounds.min.y-cabinet.floorY,z:prizeBounds.min.z},
+             max:prizeBounds.max
+           },chute)))
       : isDelivered(pos,chute) || stalledFor >= 0.3
       || (prizeBounds !== null && isPrizeEnteringChute({
         min:{x:prizeBounds.min.x,y:prizeBounds.min.y-cabinet.floorY,z:prizeBounds.min.z},
         max:prizeBounds.max
       },chute));
-    const isFallenBelowFloor = pos.y < -12 && (!cabinet.compactStage8 || isBoxBelowRaisedChuteLip(pos,cabinet.floorY,chute));
+    const isFallenBelowFloor = pos.y < -10;
 
     if (isEnteringChuteHole || isFallenBelowFloor) {
       const startY = prizeMesh.position.y;
@@ -1852,8 +1857,9 @@ function setupUIEventListeners() {
       const finalSeconds = Math.max(1,finalLevel.timeLimitSeconds-levelSystem.remainingSeconds);
       const finalStagePlays = Math.max(0,plays-stagePlaysStart);
       const campaignPlays = Math.max(0,plays-campaignPlaysStart);
-      if (!levelSystem.isAssistedClear) leaderboardManager.checkAndRecordStageWin(finalLevel.stageNum,finalLevel.name,finalSeconds,
-        levelSystem.getFormattedTime(finalSeconds),levelSystem.stageWins,finalStagePlays);
+      const finalStageRecord = levelSystem.isAssistedClear ? null :
+        leaderboardManager.checkAndRecordStageWin(finalLevel.stageNum,finalLevel.name,finalSeconds,
+          levelSystem.getFormattedTime(finalSeconds),levelSystem.stageWins,finalStagePlays);
       const fullCampaignSeconds = levelSystem.getFullCampaignSeconds();
       const completedCampaign = campaignProgress.completed ||
         campaignProgress.unlockedStage >= LEVEL_CONFIGS.length || fullCampaignSeconds !== null;
@@ -1899,14 +1905,15 @@ function setupUIEventListeners() {
         void (async()=>{
           try {
             await renderRewardCard(playerName,formattedTotalTime,campaignPlays,false);
-            if (!grandRecord?.isNewRecord ||
+            // 至尊魔王 = 刷新最終關最速紀錄且經雲端確認的玩家。
+            if (!finalStageRecord?.isNewRecord ||
               !await leaderboardManager.confirmCurrentCampaignChampion(playerName) ||
               !levelSystem.isGameVictory || victoryModal?.style.display!=='flex') return;
             victoryCard?.classList.add('is-champion');
             if (subtitle) subtitle.textContent = '榮登 3D 娃娃機「至尊魔王」！';
-            if (grandRecord?.isNewRecord && recordBanner) {
+            if (recordBanner) {
               recordBanner.style.display = 'block';
-              if (recordMessage) recordMessage.textContent = `恭喜刷新全部 ${LEVEL_CONFIGS.length} 關總榜紀錄，榮登至尊魔王！`;
+              if (recordMessage) recordMessage.textContent = `恭喜刷新第 ${finalLevel.stageNum} 關最速紀錄，榮登至尊魔王！`;
             }
             await renderRewardCard(playerName,formattedTotalTime,campaignPlays,true);
           } catch (error) {console.warn('Reward card unavailable',error);}

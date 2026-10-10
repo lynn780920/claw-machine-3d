@@ -120,14 +120,20 @@ export class LeaderboardManager {
     return [`campaign-${LEVEL_CONFIGS.length}`,...stageKeys].map(key=>records[key]).filter(Boolean);
   }
 
+  // 至尊魔王 = 最終關（第 8 關）最速紀錄保持人，雲端為準並支援本機快取與相容回退。
   public getConfirmedGrandChampion():BestRecordItem|null {
-    return this.cloudRecords?.[`campaign-${LEVEL_CONFIGS.length}`] ?? null;
+    const stageKey = `stage-${LEVEL_CONFIGS.length}`;
+    const campaignKey = `campaign-${LEVEL_CONFIGS.length}`;
+    return this.cloudRecords?.[stageKey] ?? this.bestRecords[stageKey] ??
+      this.cloudRecords?.[campaignKey] ?? this.bestRecords[campaignKey] ?? null;
   }
 
   public async confirmCurrentCampaignChampion(playerName:string):Promise<boolean> {
-    const key=`campaign-${LEVEL_CONFIGS.length}`;
-    await this.submissionTasks.get(key);
-    if (!await this.refreshFromGoogleSheets()) return false;
+    const stageKey = `stage-${LEVEL_CONFIGS.length}`;
+    const campaignKey = `campaign-${LEVEL_CONFIGS.length}`;
+    await this.submissionTasks.get(stageKey);
+    await this.submissionTasks.get(campaignKey);
+    await this.refreshFromGoogleSheets();
     return this.getConfirmedGrandChampion()?.holderName===playerName;
   }
 

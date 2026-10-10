@@ -146,6 +146,12 @@ export interface LevelCallbacks {
   onGameVictory: (totalElapsedSeconds: number, totalWins: number) => void;
 }
 
+export interface CampaignRunSnapshot {
+  stageTimes: [number, number][];
+  plays: number;
+  assisted: boolean;
+}
+
 export class LevelSystem {
   public currentLevelIndex: number = 0;
   public remainingSeconds: number = 0;
@@ -160,10 +166,51 @@ export class LevelSystem {
   private totalCampaignWins: number = 0;
   private totalCampaignSeconds: number = 0;
   private clearedStages = new Map<number,number>();
+  private campaignRunPlays = 0;
+  /** Fired whenever the persisted campaign run changes (for localStorage). */
+  public onCampaignRunChanged?: (snapshot: CampaignRunSnapshot) => void;
 
   public getFullCampaignSeconds():number|null {
     return this.clearedStages.size===LEVEL_CONFIGS.length
       ? [...this.clearedStages.values()].reduce((sum,time)=>sum+time,0) : null;
+  }
+
+  public getCampaignRunPlays(): number { return this.campaignRunPlays; }
+
+  public addCampaignPlay() {
+    this.campaignRunPlays++;
+    this.emitCampaignRun();
+  }
+
+  public getCampaignRunSnapshot(): CampaignRunSnapshot {
+    return {stageTimes:[...this.clearedStages.entries()],plays:this.campaignRunPlays,assisted:this.isAssistedCampaign};
+  }
+
+  /** Restore a saved run; invalid data is ignored so a corrupt save cannot grant a full clear. */
+  public restoreCampaignRun(snapshot: unknown) {
+    const s = snapshot as Partial<CampaignRunSnapshot> | null;
+    this.clearedStages.clear();
+    this.campaignRunPlays = 0;
+    this.isAssistedCampaign = false;
+    if (!s || !Array.isArray(s.stageTimes)) return;
+    for (const entry of s.stageTimes) {
+      if (!Array.isArray(entry)) continue;
+      const [index,seconds] = entry;
+      if (Number.isInteger(index) && index>=0 && index<LEVEL_CONFIGS.length &&
+        Number.isFinite(seconds) && seconds>0) this.clearedStages.set(index,seconds);
+    }
+    if (Number.isInteger(s.plays) && (s.plays as number)>=0) this.campaignRunPlays = s.plays as number;
+    this.isAssistedCampaign = s.assisted === true;
+  }
+
+  private resetCampaignRun() {
+    this.clearedStages.clear();
+    this.campaignRunPlays = 0;
+    this.isAssistedCampaign = false;
+  }
+
+  private emitCampaignRun() {
+    this.onCampaignRunChanged?.(this.getCampaignRunSnapshot());
   }
   private timerInterval: number | null = null;
   private callbacks: LevelCallbacks;
@@ -185,13 +232,17 @@ export class LevelSystem {
   private stageEndTime: number = 0;
 
   public startLevel(levelIndex: number, initialPrizeCount?: number) {
-    if (levelIndex!==this.currentLevelIndex+1 || !this.clearedStages.has(this.currentLevelIndex)) {
-      this.clearedStages.clear();
-      this.isAssistedCampaign = false;
+    const target = Math.max(0, Math.min(levelIndex, LEVEL_CONFIGS.length - 1));
+    if (target === 0) {
+      this.resetCampaignRun();
+    } else if (levelIndex !== this.currentLevelIndex + 1 || !this.clearedStages.has(this.currentLevelIndex)) {
+      // When retrying current level or jumping, drop current and later stage times but keep earlier progress
+      for (const key of [...this.clearedStages.keys()]) if (key >= target) this.clearedStages.delete(key);
     }
+    this.emitCampaignRun();
     this.stopTimer();
     this.isAssistedClear = false;
-    this.currentLevelIndex = Math.max(0, Math.min(levelIndex, LEVEL_CONFIGS.length - 1));
+    this.currentLevelIndex = target;
     const config = this.getCurrentConfig();
 
     this.remainingSeconds = config.timeLimitSeconds;
@@ -321,7 +372,7 @@ export class LevelSystem {
   }
 
   public forceStageClear() {
-    this.clearedStages.clear();
+    this.resetCampaignRun();
     this.isAssistedClear = true;
     this.isAssistedCampaign = true;
     this.triggerStageClear();
@@ -348,11 +399,15 @@ export class LevelSystem {
     const elapsedSeconds = Math.max(1, config.timeLimitSeconds - this.remainingSeconds);
 
     this.clearedStages.set(this.currentLevelIndex,elapsedSeconds);
+    this.emitCampaignRun();
 
     if (this.currentLevelIndex === LEVEL_CONFIGS.length - 1) {
       // Final level cleared! Grand Victory!
       this.isGameVictory = true;
       this.callbacks.onGameVictory(this.totalCampaignSeconds, this.totalCampaignWins);
+      // The run is settled; replaying the final stage must not reuse earlier stage times.
+      this.resetCampaignRun();
+      this.emitCampaignRun();
     } else {
       this.callbacks.onStageClear(config, elapsedSeconds, this.stageWins);
     }

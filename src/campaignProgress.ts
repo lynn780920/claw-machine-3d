@@ -26,3 +26,15 @@ export function loadCampaignProgress(stageCount: number, playerName = ''): Campa
 export function saveCampaignProgress(progress: CampaignProgress, playerName = '') {
   try { localStorage.setItem(storageKey(playerName), JSON.stringify(progress)); } catch { /* Private browsing may block storage. */ }
 }
+
+// Per-player in-progress campaign run (cleared stage times and coins), so retries and reloads keep it.
+const RUN_KEY = 'claw_campaign_run_v1';
+const runKey = (playerName: string) => `${RUN_KEY}:${encodeURIComponent(playerName.trim().toLocaleLowerCase() || 'guest')}`;
+
+export function loadCampaignRun(playerName = ''): unknown {
+  try { return JSON.parse(localStorage.getItem(runKey(playerName)) || 'null'); } catch { return null; }
+}
+
+export function saveCampaignRun(run: unknown, playerName = '') {
+  try { localStorage.setItem(runKey(playerName), JSON.stringify(run)); } catch { /* Private browsing may block storage. */ }
+}

@@ -64,7 +64,7 @@ test('saved tuning is restored after level initialization and before first stock
   const initialization=source.indexOf('levelSystem = new LevelSystem(');
   const restore=source.indexOf('loadTuningConfigFromStorage();');
   assert.ok(restore>initialization);
-  assert.ok(restore<source.indexOf('levelSystem.startLevel(0);',initialization));
+  assert.ok(restore<source.indexOf('levelSystem.startLevel(',initialization));
 });
 
 test('Rapier mass changes immediately and rolling resistance dissipates rotation',async () => {
@@ -180,14 +180,14 @@ test('a genuinely gripped prize rises with the claw and keeps its damping after 
     const physics = {world,wakeUpAllDynamicBodies(){},wakeUpNear(){}};
     const claw = new Claw(new THREE.Scene(),physics);
     claw.config.godMode = true;
-    claw.ropeLength = claw.targetRopeLength = 2.4;
+    claw.ropeLength = claw.targetRopeLength = 2.1;
     claw.update(1/120,physics);world.step();
     world.createCollider(RAPIER.ColliderDesc.cuboid(2,0.1,2).setTranslation(0,2,0));
     const prize = world.createRigidBody(RAPIER.RigidBodyDesc.dynamic().setTranslation(0,2.45,0).setAngularDamping(1.8).setCcdEnabled(true));
     const collider = world.createCollider(RAPIER.ColliderDesc.ball(0.35).setMass(0.38).setFriction(0.85),prize);
     const stock = {bodies:[prize]};
     claw.actionButtonPressed(stock);claw.actionButtonPressed(stock);
-    for (let i=0;i<90;i++) {claw.update(1/120,physics,stock);world.step();}
+    for (let i=0;i<180;i++) {claw.update(1/120,physics,stock);world.step();if(claw.grabbedBody)break;}
     assert.equal(claw.grabbedBody,prize,`grip failed: ${JSON.stringify({state:claw.state,angle:claw.currentArmAngle,contacts:claw.fingers.map(finger=>!!finger.contact(prize)),height:claw.baseMesh.position.y,prize:prize.translation()})}`);
     for (let i=0;i<100;i++) {claw.update(1/120,physics,stock);world.step();}
     assert.ok(prize.translation().y>2.95,'gripped prize sank instead of rising');

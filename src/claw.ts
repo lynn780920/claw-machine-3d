@@ -119,7 +119,7 @@ export class Claw {
 
   public setPlayfieldBounds(width: number, depth: number) {
     // Reserve the open fingers and their tilted sweep, not just the claw center.
-    const reach = 1.4 * this.baseMesh.scale.x + 0.08;
+    const reach = 1.65 * this.baseMesh.scale.x + 0.08;
     const xLimit = Math.max(0.2, Math.min(this.carriageLimit, width / 2 - reach));
     const rearLimit = Math.max(0.2, Math.min(this.carriageLimit, depth * 3.035 / 6.4 - reach));
     const frontLimit = Math.max(0.2, Math.min(this.carriageLimit, depth / 2 - reach));
