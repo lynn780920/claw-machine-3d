@@ -436,7 +436,7 @@ export class Cabinet {
       this.mesh.add(mesh);
     };
     const shellThickness = 0.12;
-    for (const x of [-halfW, halfW]) addVisualBox('BaseSide', [shellThickness, baseHeight, this.depth], [x, baseY, 0], shellMaterial);
+    for (const x of [-halfW, halfW]) addVisualBox('BaseSide', [shellThickness, baseHeight, this.depth - shellThickness * 2], [x, baseY, 0], shellMaterial);
     for (const z of [-halfD, halfD]) addVisualBox('BaseFace', [this.width, baseHeight, shellThickness], [0, baseY, z], shellMaterial);
     const chuteW = this.chuteMaxX - this.chuteMinX;
     const chuteD = this.chuteMaxZ - this.chuteMinZ;

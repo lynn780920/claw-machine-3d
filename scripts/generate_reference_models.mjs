@@ -60,11 +60,11 @@ for (const x of [-3.7, 3.7]) for (const z of [-3.2, 3.2]) {
   for (const y of [0.22, 3.3, 6.35]) cylinder(cabinet, 'FrameScrew', 0.031, 0.028, [x, y, z + 0.125], chrome, 'z');
 }
 for (const y of [0, 6.6]) {
-  for (const z of [-3.2, 3.2]) box(cabinet, 'HorizontalFrame', [7.6, 0.22, 0.22], [0, y, z], black);
-  for (const x of [-3.7, 3.7]) box(cabinet, 'DepthFrame', [0.22, 0.22, 6.4], [x, y, 0], black);
+  for (const z of [-3.2, 3.2]) box(cabinet, 'HorizontalFrame', [7.18, 0.22, 0.22], [0, y, z], black);
+  for (const x of [-3.7, 3.7]) box(cabinet, 'DepthFrame', [0.22, 0.22, 6.18], [x, y, 0], black);
 }
 box(cabinet, 'BaseCabinet', [7.6, 2.65, 6.5], [0, -1.58, 0], black);
-box(cabinet, 'Roof', [7.65, 0.2, 6.6], [0, 6.72, 0], black);
+box(cabinet, 'Roof', [7.65, 0.2, 6.6], [0, 6.81, 0], black);
 box(cabinet, 'BackPanel', [7.2, 6.25, 0.08], [0, 3.3, -3.1], paper);
 const sign = new THREE.Mesh(new THREE.PlaneGeometry(5.95,4.55),paper);
 sign.name = 'BackSign';
