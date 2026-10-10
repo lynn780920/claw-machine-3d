@@ -902,8 +902,8 @@ function setupUIEventListeners() {
       } else championText.textContent = `全 ${LEVEL_CONFIGS.length} 關大魔王等你來挑戰！`;
     }
     const status = document.getElementById('leaderboard-sync-status');
-    if (status) status.textContent = leaderboardManager.hasPendingRecords ? '新紀錄已保存在本機，等待 Google Sheet 確認' : leaderboardManager.cloudStatus==='connected' ? 'Google Sheet 已更新' :
-      leaderboardManager.cloudStatus==='loading' ? '正在讀取 Google Sheet…' : '雲端暫時無法讀取，顯示本機紀錄';
+    if (status) status.textContent = leaderboardManager.hasPendingRecords ? '新紀錄已保存在本機，等待資料庫確認' : leaderboardManager.cloudStatus==='connected' ? '資料庫已同步更新' :
+      leaderboardManager.cloudStatus==='loading' ? '正在讀取資料庫…' : '雲端暫時無法讀取，顯示本機紀錄';
     // 1. Records Hall (各關最高紀錄保持人)
     const hallContainer = document.getElementById('records-hall-container');
     if (hallContainer) {
@@ -1412,7 +1412,7 @@ function setupUIEventListeners() {
     const runtime = getStageRuntimeConfig(stageNum);
     const configStatus = document.getElementById('stage-config-status');
     if (configStatus) {
-      const source = {sheet:'Google Sheet',cache:'上次成功讀取的工作表設定',default:'預設值（工作表未連線）'}[stageConfigSource];
+      const source = {sheet:'雲端資料庫',cache:'上次成功讀取的資料庫設定',default:'預設值（資料庫未連線）'}[stageConfigSource];
       configStatus.textContent = `第 ${stageNum} 關 · ${runtime.clawSize} 號爪（${runtime.clawScale}×）· ${source}`;
     }
     currentMachineMode = mode;

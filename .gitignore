@@ -3,3 +3,5 @@ dist
 .DS_Store
 *.blend1
 .build-check
+.codex-stage8-release
+PP-*.png

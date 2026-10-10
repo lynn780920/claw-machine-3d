@@ -3,7 +3,18 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-    <title>線上娃娃機</title>
+    <title>線上娃娃機挑戰｜Lynn 夾到你心裡</title>
+    <meta name="description" content="線上娃娃機挑戰：操控 3D 爪機，挑戰各式機台與獎品，刷新最速與投幣紀錄，分享你的通關戰績。" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Lynn 夾到你心裡" />
+    <meta property="og:title" content="線上娃娃機挑戰｜Lynn 夾到你心裡" />
+    <meta property="og:description" content="挑戰 3D 線上娃娃機，夾取獎品、突破關卡，登上最速排行榜！" />
+    <meta property="og:image" content="https://lynn780920.github.io/claw-machine-3d/lynn-logo.png" />
+    <meta property="og:url" content="https://lynn780920.github.io/claw-machine-3d/" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="線上娃娃機挑戰｜Lynn 夾到你心裡" />
+    <meta name="twitter:description" content="挑戰 3D 線上娃娃機，夾取獎品、突破關卡，登上最速排行榜！" />
+    <meta name="twitter:image" content="https://lynn780920.github.io/claw-machine-3d/lynn-logo.png" />
 
     <!-- Apple iOS Add to Home Screen Fullscreen PWA -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -19,15 +30,26 @@
     <link rel="apple-touch-icon" sizes="180x180" href="./assets/apple-touch-icon-180x180-D0xw-ZwL.png" />
     <link rel="apple-touch-icon" href="./assets/apple-touch-icon-96QgC70_.png" />
     <link rel="manifest" href="./assets/manifest-DWV-rB2U.json" />
-    <script type="module" crossorigin src="./assets/index-D91QK1mC.js"></script>
-    <link rel="stylesheet" crossorigin href="./assets/index-CqAUFBTW.css">
+    <script type="module" crossorigin src="./assets/index-CAiGvfUx.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-BaRpY054.css">
   </head>
   <body>
     <div id="app">
+      <div id="asset-loading" role="status" aria-live="polite" style="background-image: url('./loading-arcade.jpg')">
+        <video class="loading-video" autoplay muted loop playsinline preload="auto" poster="./loading-arcade.jpg" aria-hidden="true"><source src="./loading-arcade.mp4" type="video/mp4"></video>
+        <div class="loading-shade" aria-hidden="true"></div>
+        <div class="loading-content">
+          <span class="loading-title">Lynn夾到你心裡</span>
+          <div class="loading-track" role="progressbar" aria-label="載入進度" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="asset-progress-fill"></div></div>
+          <span id="asset-progress">0%</span>
+          <button id="asset-retry" hidden>重新載入</button>
+        </div>
+      </div>
       <!-- 3D Viewport -->
       <div id="canvas-container">
         <canvas id="three-canvas"></canvas>
       </div>
+      <div id="stage-hint" hidden></div>
 
       <!-- Win Toast Popup Notification (Appears for 5s ONLY on winning prize) -->
       <div class="win-toast hidden" id="win-toast">
@@ -41,6 +63,9 @@
 
       <!-- Unified Floating Top Nav Bar (Two-Tier Responsive Challenge HUD & Action Pills) -->
       <div class="top-nav-container">
+        <div class="champion-marquee" aria-label="最新全關通關者">
+          <span id="champion-marquee-text" class="champion-marquee-text">全關通關大魔王等你來挑戰！</span>
+        </div>
         <!-- Tier 1: Challenge HUD Status Row -->
         <div class="hud-status-row">
           <!-- Player Nickname Capsule -->
@@ -74,28 +99,16 @@
 
         <!-- Tier 2: Functional Control Action Pills -->
         <div class="hud-actions-row">
-          <!-- Stage Briefing & Objectives Button -->
-          <button id="open-briefing-btn" class="nav-pill-btn briefing">
+          <!-- Other Stages Button -->
+          <button id="open-briefing-btn" class="nav-pill-btn briefing" title="查看關卡">
             <span class="btn-icon"><svg viewBox="0 0 20 20" fill="currentColor" class="hud-svg"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/><path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clip-rule="evenodd"/></svg></span>
-            <span class="nav-btn-label">說明</span>
+            <span class="nav-btn-label">其他關卡</span>
           </button>
 
           <!-- Record Breaking Leaderboard Button -->
           <button id="open-leaderboard-btn" class="nav-pill-btn records">
             <span class="btn-icon"><svg viewBox="0 0 20 20" fill="currentColor" class="hud-svg"><path fill-rule="evenodd" d="M10 2a1 1 0 011 1v1.323l3.954 1.582 1.599-.8a1 1 0 01.894 1.79l-1.233.616 1.738 5.42a1 1 0 01-.285 1.05A3.989 3.989 0 0115 15a3.989 3.989 0 01-2.667-1.019 1 1 0 01-.285-1.05l1.715-5.349L11 6.477V16h2a1 1 0 110 2H7a1 1 0 110-2h2V6.477L6.237 7.582l1.715 5.349a1 1 0 01-.285 1.05A3.989 3.989 0 015 15a3.989 3.989 0 01-2.667-1.019 1 1 0 01-.285-1.05l1.738-5.42-1.233-.617a1 1 0 01.894-1.788l1.599.799L9 4.323V3a1 1 0 011-1z" clip-rule="evenodd"/></svg></span>
             <span class="nav-btn-label">紀錄榜</span>
-          </button>
-
-          <!-- Perspective Switcher -->
-          <button id="toggle-camera-btn" class="nav-pill-btn camera">
-            <span class="btn-icon"><svg viewBox="0 0 20 20" fill="currentColor" class="hud-svg"><path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z"/></svg></span>
-            <span class="nav-btn-label" id="camera-btn-text">視角: 正面</span>
-          </button>
-
-          <!-- BGM Toggle Button -->
-          <button id="bgm-toggle-btn" class="nav-pill-btn bgm">
-            <span class="btn-icon"><svg viewBox="0 0 20 20" fill="currentColor" class="hud-svg"><path d="M18 3a1 1 0 00-1.196-.98l-10 2A1 1 0 006 5v9.114A4.369 4.369 0 005 14c-1.657 0-3 .895-3 2s1.343 2 3 2 3-.895 3-2V7.82l8-1.6v5.894A4.37 4.37 0 0015 12c-1.657 0-3 .895-3 2s1.343 2 3 2 3-.895 3-2V3z"/></svg></span>
-            <span class="nav-btn-label">音樂</span>
           </button>
 
           <!-- Admin Backend Password Settings Button -->
@@ -171,77 +184,17 @@
           <div class="godmode-desc">開啟後爪子抓到物品 100% 鎖死不放、絕不轉弱、絕不觸頂震落，直達出貨口才鬆爪！</div>
         </div>
 
-        <!-- 🎯 關卡專項難度調校 (解決第三、第四關太難問題) -->
-        <h3 class="section-title special">關卡專項難度調校 (自訂破關難度)</h3>
-
-        <!-- Stage 3 Tuning Card -->
-        <div class="stage-tune-card stage-3">
-          <div class="stage-tune-badge">第 3 關 · 潮玩盲盒清台戰</div>
-          
-          <div class="setting-group compact">
-            <label>目標出貨數 (清台門檻) <span class="value" id="val-stage3-target">5 盒</span></label>
-            <input type="range" id="setting-stage3-target" min="1" max="5" value="5" step="1">
-            <span class="setting-hint">可調降為 1~2 盒輕鬆過關</span>
-          </div>
-
-          <div class="setting-group compact">
-            <label>限時時間 (分鐘) <span class="value" id="val-stage3-time">8 分鐘</span></label>
-            <input type="range" id="setting-stage3-time" min="1" max="30" value="8" step="1">
-          </div>
-
-          <div class="setting-row-toggle">
-            <label>盲盒超強防滑摩擦力 (一夾就起)</label>
-            <label class="switch small">
-              <input type="checkbox" id="setting-stage3-friction" checked>
-              <span class="slider round"></span>
-            </label>
-          </div>
-        </div>
-
-        <!-- Stage 4 Tuning Card -->
-        <div class="stage-tune-card stage-4">
-          <div class="stage-tune-badge boss">第 4 關 · K-霸巨型家電魔王關</div>
-          
-          <div class="setting-group compact">
-            <label>目標出貨數 <span class="value" id="val-stage4-target">3 樣</span></label>
-            <input type="range" id="setting-stage4-target" min="1" max="3" value="3" step="1">
-            <span class="setting-hint">調為 1 樣即可直接全破登頂至尊夾王</span>
-          </div>
-
-          <div class="setting-group compact">
-            <label>限時時間 (分鐘) <span class="value" id="val-stage4-time">8 分鐘</span></label>
-            <input type="range" id="setting-stage4-time" min="1" max="30" value="8" step="1">
-          </div>
-
-          <div class="setting-group compact">
-            <label>出貨口擋板高度 <span class="value" id="val-stage4-baffle">1.1 m</span></label>
-            <input type="range" id="setting-stage4-baffle" min="0.2" max="1.5" value="1.1" step="0.1">
-            <span class="setting-hint">可直接調降至 0.3m 輕鬆將大盒滾落出貨口</span>
-          </div>
-
-          <div class="setting-group compact">
-            <label>霸王爪超級抓力倍率 <span class="value" id="val-stage4-grip">1.0x</span></label>
-            <input type="range" id="setting-stage4-grip" min="1.0" max="3.0" value="1.0" step="0.2">
-          </div>
-
-          <div class="setting-row-toggle">
-            <label>家電羽量化模式 (降低 60% 重量防滑爪)</label>
-            <label class="switch small">
-              <input type="checkbox" id="setting-stage4-lightweight">
-              <span class="slider round"></span>
-            </label>
-          </div>
-        </div>
-
-        <!-- 🚀 關卡測試捷徑 -->
+        <!-- 關卡測試捷徑 -->
         <div class="stage-debug-row">
-          <button id="jump-stage3-btn" class="stage-quick-btn jump3">跳轉第 3 關</button>
-          <button id="jump-stage4-btn" class="stage-quick-btn jump4">跳轉第 4 關</button>
+          <label for="admin-stage-select">跳轉關卡</label>
+          <select id="admin-stage-select" aria-label="選擇跳轉關卡"></select>
+          <button id="admin-jump-stage-btn" class="stage-quick-btn jump">跳轉</button>
           <button id="force-clear-btn" class="stage-quick-btn clear">一鍵直接通關</button>
-          <button id="copy-config-btn" class="stage-quick-btn copy" style="grid-column: span 3; background: linear-gradient(135deg, #0284c7, #0369a1); border: 1px solid #38bdf8; padding: 10px; margin-top: 4px;"><svg viewBox="0 0 20 20" fill="currentColor" class="inline-svg-icon"><path d="M8 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z"/><path d="M6 3a2 2 0 00-2 2v11a2 2 0 002 2h8a2 2 0 002-2V5a2 2 0 00-2-2 3 3 0 01-3 3H9a3 3 0 01-3-3z"/></svg> 複製當前調參代碼 (傳給助理寫入原始碼)</button>
+          <button id="copy-config-btn" class="stage-quick-btn copy" style="grid-column: 1 / -1; background: linear-gradient(135deg, #0284c7, #0369a1); border: 1px solid #38bdf8; padding: 10px; margin-top: 4px;"><svg viewBox="0 0 20 20" fill="currentColor" class="inline-svg-icon"><path d="M8 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z"/><path d="M6 3a2 2 0 00-2 2v11a2 2 0 002 2h8a2 2 0 002-2V5a2 2 0 00-2-2 3 3 0 01-3 3H9a3 3 0 01-3-3z"/></svg> 複製當前調參代碼 (傳給助理寫入原始碼)</button>
         </div>
 
         <h3 class="section-title">主板微調開關 (DIP SWITCH)</h3>
+        <p id="stage-config-status" role="status" style="font-size: 0.85rem; line-height: 1.5; overflow-wrap: anywhere;"></p>
         
         <div class="setting-group" style="flex-direction: row; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 6px; border: 1px solid rgba(0, 240, 255, 0.2);">
           <label style="margin: 0; color: #00f0ff; font-weight: bold;">防甩片功能 (Anti-Swing)</label>
@@ -263,7 +216,7 @@
 
         <div class="setting-group">
           <label>轉弱維持電壓 (弱爪維持力) <span class="value" id="val-weak">69%</span></label>
-          <input type="range" id="setting-weak" min="0" max="80" value="69">
+          <input type="range" id="setting-weak" min="0" max="100" value="69">
         </div>
 
         <div class="setting-group">
@@ -287,25 +240,35 @@
         </div>
 
         <div class="setting-group">
-          <label>下爪下探極限線長 <span class="value" id="val-length">9.0</span></label>
-          <input type="range" id="setting-length" min="1.0" max="15.0" step="0.5" value="9.0">
+          <label>下爪下探極限線長 <span class="value" id="val-length">9.5</span></label>
+          <input type="range" id="setting-length" min="1.0" max="15.0" step="0.5" value="9.5">
         </div>
 
         <div class="setting-group">
           <label>出貨口擋板高度 <span class="value" id="val-baffle">0.7</span></label>
-          <input type="range" id="setting-baffle" min="0.3" max="3.0" step="0.1" value="0.7">
+          <input type="range" id="setting-baffle" min="0" max="3.0" step="0.1" value="0.7">
         </div>
 
         <div class="setting-group">
-          <label>鋪貨娃娃數量 <span class="value" id="val-dolls">40</span></label>
-          <input type="range" id="setting-dolls" min="5" max="100" step="1" value="40">
+          <label>鋪貨娃娃數量 <span class="value" id="val-dolls">42</span></label>
+          <input type="range" id="setting-dolls" min="1" max="100" step="1" value="42">
+        </div>
+
+        <div class="setting-group">
+          <label for="setting-prize-weight">物品重量倍率 <span class="value" id="val-prize-weight">1.00x</span></label>
+          <input type="range" id="setting-prize-weight" min="0.25" max="3" step="0.05" value="1">
+        </div>
+
+        <div class="setting-group">
+          <label for="setting-rolling-resistance">物品滾動阻力 <span class="value" id="val-rolling-resistance">1.00x</span></label>
+          <input type="range" id="setting-rolling-resistance" min="0.25" max="3" step="0.05" value="1">
         </div>
 
         <div class="setting-group" style="flex-direction: column; align-items: stretch; background: rgba(124, 58, 237, 0.12); padding: 12px; border-radius: 10px; border: 1px solid #7c3aed; margin-bottom: 12px; width: 100%; box-sizing: border-box;">
           <label style="margin-bottom: 6px; color: #5b21b6; font-weight: 800; font-size: 0.95rem;">當前機台模式 (Machine Mode)</label>
           <select id="setting-machinemode" style="width: 100%; box-sizing: border-box; padding: 10px 12px; border: 2px solid #7c3aed; background: #ffffff; color: #1e1b4b; border-radius: 8px; font-weight: bold; font-size: 0.9rem; outline: none; cursor: pointer;">
             <option value="small" selected>機台 #01 小型機台 (POP MART 潮玩盲盒精品台)</option>
-            <option value="medium">機台 #02 中型機台 (經典黃色街機)</option>
+            <option value="medium">機台 #02 中型機台 (黑框經典街機)</option>
             <option value="large">機台 #03 中大機台 (動漫模型/潮玩大盒)</option>
             <option value="kbasket">機台 #04 K霸機台 (巨型家電/1.35x霸王爪)</option>
           </select>
@@ -314,13 +277,19 @@
         <div class="setting-group" style="flex-direction: column; align-items: stretch; background: rgba(234, 179, 8, 0.12); padding: 12px; border-radius: 10px; border: 1px solid #d97706; margin-bottom: 12px; width: 100%; box-sizing: border-box;">
           <label style="margin-bottom: 6px; color: #92400e; font-weight: 800; font-size: 0.95rem;">鋪貨形狀種類 (Prize Type)</label>
           <select id="setting-prizetype" style="width: 100%; box-sizing: border-box; padding: 10px 12px; border: 2px solid #d97706; background: #ffffff; color: #1e1b4b; border-radius: 8px; font-weight: bold; font-size: 0.9rem; outline: none; cursor: pointer;">
-            <option value="mixed" selected>繽紛混合 (水豚君/卡比/吉依卡哇/潮玩盲盒/零食包/動漫盒)</option>
-            <option value="ssr_golden_capybara">SSR 24K 純金招財水豚君 (金屬反光+吉利御守)</option>
+            <option value="tea_box">山霧綠茶盒</option>
+            <option value="fruit_box">草莓果飲盒</option>
+            <option value="milk_box">牧場鮮奶盒</option>
+            <option value="mixed" selected>所有物品綜合（玩偶／飲品盒／公仔盒／盲盒）</option>
+            <option value="pokemon">經典角色玩偶</option>
+            <option value="squirtle">傑尼龜玩偶</option>
+            <option value="bulbasaur">妙蛙種子玩偶</option>
+            <option value="pikachu">黃色電氣玩偶</option>
+            <option value="eevee">伊布玩偶</option>
+            <option value="gengar">耿鬼玩偶</option>
+            <option value="snorlax">卡比獸玩偶</option>
+            <option value="psyduck">可達鴨玩偶</option>
             <option value="ssr_glowing_labubu">SSR 夜光拉布布潮玩盲盒 (自發光霓虹流光)</option>
-            <option value="capybara">頂橘子水豚君娃娃</option>
-            <option value="kirby">星之卡比娃娃</option>
-            <option value="chiikawa">吉依卡哇娃娃</option>
-            <option value="my_cat">手作圍巾三花貓</option>
             <option value="blindbox">泡泡瑪特潮玩盲盒 (拉布布/Skullpanda)</option>
             <option value="snack_pack">膨脹洋芋片大零食包</option>
             <option value="dragonball">七龍珠公仔盒 (日版吊把)</option>
@@ -329,7 +298,6 @@
             <option value="cookie_box">丹麥曲奇餅乾鐵盒</option>
             <option value="mug_box">三麗鷗馬克杯禮盒</option>
             <option value="giant_appliances">K-霸 巨型家電玩具大盒 (PS5/Switch/Dyson/Marshall/Lego)</option>
-            <option value="giant_bear">1.5M 巨型泰迪熊娃娃</option>
             <option value="ps5">PS5 主機大盒</option>
             <option value="switch">Switch OLED 遊戲機盒</option>
             <option value="dyson">Dyson 吸塵器大盒</option>
@@ -390,81 +358,18 @@
     </div>
   </div>
 
-  <!-- Stage Briefing Modal (關卡說明視窗) -->
+  <!-- Unlocked Stage Selection -->
   <div id="briefing-modal" class="challenge-modal-overlay" style="display: none;">
     <div class="challenge-modal-card briefing-card">
       <div class="modal-header-banner">
         <div class="header-badge-title">
-          <h2>4 大關卡破關挑戰說明</h2>
+          <h2>選擇關卡</h2>
         </div>
         <button id="close-briefing-btn" class="modal-close-icon"><svg viewBox="0 0 20 20" fill="currentColor" class="close-icon-svg"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg></button>
       </div>
 
       <div class="briefing-content-body">
-        <p class="briefing-intro">歡迎挑戰 3D 娃娃機破關模式！玩家必須依序征服 4 個不同難度與機台的關卡，限時時間到若未達成目標即 <strong>GAME OVER</strong>！全部過關即可榮登「至尊夾王」！</p>
-        
-        <div class="stages-roadmap-grid">
-          <!-- Stage 1 -->
-          <div class="stage-roadmap-item" id="stage-card-1">
-            <div class="stage-tag easy">第 1 關 · 簡單</div>
-            <div class="stage-machine-name">標準街機 (初試身手)</div>
-            <div class="stage-params-row">
-              <span class="param-badge">限時 15 分鐘</span>
-              <span class="param-badge target">目標：夾到 8 樣</span>
-            </div>
-            <p class="stage-desc">初試身手暖身關！機台爪力充沛且容錯率高，抓準下爪時機與二收合爪點即可輕鬆過關。</p>
-            <button class="stage-jump-btn" data-stage="0">立即挑戰第 1 關</button>
-          </div>
-
-          <!-- Stage 2 -->
-          <div class="stage-roadmap-item" id="stage-card-2">
-            <div class="stage-tag medium">第 2 關 · 普通</div>
-            <div class="stage-machine-name">大型機台 (動漫公仔賞)</div>
-            <div class="stage-params-row">
-              <span class="param-badge">限時 10 分鐘</span>
-              <span class="param-badge target">目標：夾到 4 樣</span>
-            </div>
-            <p class="stage-desc">技術進階挑戰！動漫模型重盒考驗卡爪角度與甩幅，需善用反向甩爪卡住角位托出。</p>
-            <button class="stage-jump-btn" data-stage="1">立即挑戰第 2 關</button>
-          </div>
-
-          <!-- Stage 3 -->
-          <div class="stage-roadmap-item" id="stage-card-3">
-            <div class="stage-tag hard">第 3 關 · 困難</div>
-            <div class="stage-machine-name">小型機台 (潮玩盲盒清台)</div>
-            <div class="stage-params-row">
-              <span class="param-badge">限時 8 分鐘</span>
-              <span class="param-badge target-clear">目標：限時清台</span>
-            </div>
-            <p class="stage-desc">極速清台任務！台內 POP MART 盲盒必須在 8 分鐘內全部清空 (清台) ! 時間到即 GAME OVER！</p>
-            <button class="stage-jump-btn" data-stage="2">立即挑戰第 3 關</button>
-          </div>
-
-          <!-- Stage 4 -->
-          <div class="stage-roadmap-item" id="stage-card-4">
-            <div class="stage-tag boss">第 4 關 · 魔王</div>
-            <div class="stage-machine-name">K-霸直立機台 (巨型家電決戰)</div>
-            <div class="stage-params-row">
-              <span class="param-badge">限時 8 分鐘</span>
-              <span class="param-badge target-boss">目標：夾到 3 樣</span>
-            </div>
-            <p class="stage-desc">終極魔王決戰！100% 強爪與 2.4 天車速度對抗 1.1m 高擋板，夾出 3 樣巨型家電即通關全破！</p>
-            <button class="stage-jump-btn" data-stage="3">立即挑戰第 4 關</button>
-          </div>
-        </div>
-
-        <div class="briefing-rules-notice">
-          <strong>通關重要規則：</strong>
-          <ul>
-            <li>每關倒數計時即時進行，時間倒數為 0 時直接判定 <strong>GAME OVER</strong>。</li>
-            <li>達成每關指定出貨數量（或清台）時，將立即過關並獲得下一關晉級資格！</li>
-            <li>可隨時在說明中點擊「立即挑戰」跳轉關卡進行專項特訓。</li>
-          </ul>
-        </div>
-      </div>
-
-      <div class="modal-footer-row">
-        <button id="start-challenge-btn" class="modal-action-btn primary-start">開始挑戰</button>
+        <div id="stage-select-list" class="stages-roadmap-grid stage-select-grid"></div>
       </div>
     </div>
   </div>
@@ -533,11 +438,11 @@
     <div class="challenge-modal-card victory-card">
       <div class="victory-banner">
         <h2 class="victory-title">全破大通關！</h2>
-        <p class="victory-subtitle">榮登 3D 娃娃機「至尊夾王」！</p>
+        <p id="victory-subtitle" class="victory-subtitle">恭喜完成全部關卡！</p>
       </div>
 
       <div class="victory-body">
-        <p class="victory-msg">太神了！你已成功攻破全部 4 大關卡，包含最嚴苛的 K-霸巨型家電魔王關！展現了無與倫比的街機甩爪神技！</p>
+        <p id="victory-message" class="victory-msg">所有關卡都已解鎖，可隨時回來重玩。</p>
         
         <div id="victory-new-record-banner" class="record-break-alert-box" style="display: none;">
           <span class="record-break-tag"><svg viewBox="0 0 20 20" fill="currentColor" class="inline-svg-icon" style="color: #facc15;"><path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clip-rule="evenodd"/></svg> 打破歷史總紀錄</span>
@@ -547,7 +452,7 @@
         <div class="victory-stats-grid">
           <div class="victory-stat-item">
             <span class="v-val" id="victory-total-time">18:42</span>
-            <span class="v-label">全破總耗時</span>
+            <span class="v-label">本次遊玩耗時</span>
           </div>
           <div class="victory-stat-item">
             <span class="v-val" id="victory-total-wins">21</span>
@@ -558,12 +463,42 @@
             <span class="v-label">總累積投幣次數</span>
           </div>
         </div>
+
+        <div class="reward-card-area">
+          <canvas id="reward-card-canvas" width="1686" height="2528" aria-label="全關通關獎勵卡"></canvas>
+          <div class="reward-card-actions">
+            <button id="share-reward-btn" class="modal-action-btn reward-share-btn" disabled>分享戰績</button>
+            <button id="download-reward-btn" class="modal-action-btn reward-download-btn" disabled>下載圖片</button>
+          </div>
+        </div>
       </div>
 
       <div class="modal-footer-row">
+        <button id="victory-select-stage-btn" class="modal-action-btn">自由選擇關卡</button>
         <button id="victory-restart-btn" class="modal-action-btn champion-restart-btn">再次挑戰破關模式</button>
       </div>
     </div>
+  </div>
+
+  <!-- Developer announcement loaded from Google Sheet worksheet 3 -->
+  <div id="announcement-modal" class="challenge-modal-overlay announcement-overlay" style="display: none;">
+    <section class="challenge-modal-card announcement-card" role="dialog" aria-modal="true" aria-labelledby="announcement-title">
+      <div class="announcement-accent" aria-hidden="true"></div>
+      <div class="modal-header-banner">
+        <div class="header-badge-title">
+          <span class="announcement-label">SYSTEM UPDATE</span>
+          <h2 id="announcement-title">開發者公告</h2>
+        </div>
+        <button id="close-announcement-btn" class="modal-close-icon" aria-label="關閉公告"><svg viewBox="0 0 20 20" fill="currentColor" class="close-icon-svg"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg></button>
+      </div>
+      <div class="announcement-body">
+        <time id="announcement-date">2026/10/08</time>
+        <p id="announcement-message">已全面更新機台參數，並且將所有挑戰者紀錄清零，歡迎玩家重新挑戰至尊魔王寶座</p>
+      </div>
+      <div class="modal-footer-row">
+        <button id="confirm-announcement-btn" class="modal-action-btn announcement-confirm-btn">我知道了，開始挑戰</button>
+      </div>
+    </section>
   </div>
 
   <!-- Player Nickname Modal (設定玩家暱稱視窗) -->
@@ -592,11 +527,12 @@
     <div class="challenge-modal-card leaderboard-card">
       <div class="modal-header-banner">
         <div class="header-badge-title">
-          <h2>破紀錄榮譽榜 (誰打破紀錄)</h2>
+          <h2>榮譽榜</h2>
         </div>
         <button id="close-leaderboard-btn" class="modal-close-icon"><svg viewBox="0 0 20 20" fill="currentColor" class="close-icon-svg"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg></button>
       </div>
       <div class="leaderboard-content-body">
+        <p id="leaderboard-sync-status" role="status">正在讀取資料庫…</p>
         <!-- Section A: 各關最高紀錄保持人 -->
         <h3 class="records-section-title">各關卡最高紀錄保持人</h3>
         <div class="records-hall-grid" id="records-hall-container">
@@ -604,7 +540,7 @@
         </div>
 
         <!-- Section B: 即時破紀錄流水動態 (誰在何時打破紀錄) -->
-        <h3 class="records-section-title" style="margin-top: 20px;">最新破紀錄即時動態</h3>
+        <h3 class="records-section-title">最新通關動態</h3>
         <div class="record-events-timeline" id="record-events-container">
           <!-- Dynamically populated via JS -->
         </div>
