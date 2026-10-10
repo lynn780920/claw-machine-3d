@@ -68,8 +68,14 @@ export function buildArcadeEnvironment(scene: THREE.Scene, compact = false) {
     const color=i%2 ? 0xff2189 : 0x00dbe8;
     const neon=new THREE.MeshBasicMaterial({color,toneMapped:false});
     addBox('WallNeon',[0.10,10,0.1],[i*6,2.5,-14.6],neon);
-    addBox('CeilingBeam',[0.14,0.14,30],[i*6,10,-5],metal);
-    addBox('CeilingLight',[0.10,0.06,24],[i*6,9.8,-5],neon);
+  }
+  const ceilingZPositions = [-12, -7, -2, 3, 8];
+  for(let j=0; j<ceilingZPositions.length; j++) {
+    const z = ceilingZPositions[j];
+    const color = j%2 ? 0xff2189 : 0x00dbe8;
+    const neon = new THREE.MeshBasicMaterial({color,toneMapped:false});
+    addBox('CeilingBeam',[56,0.14,0.14],[0,10,z],metal);
+    addBox('CeilingLight',[52,0.06,0.10],[0,9.8,z],neon);
   }
   const fill=new THREE.HemisphereLight(0xdce7ed,0x35303a,0.4); room.add(fill);
   for(const side of [-1,1]) {
